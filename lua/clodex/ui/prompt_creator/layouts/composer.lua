@@ -79,6 +79,12 @@ function Composer:open()
         vim.keymap.set("n", "<Down>", function()
             self:focus_body()
         end, { buffer = self.title_buf, silent = true })
+        vim.keymap.set("i", "<Down>", function()
+            vim.schedule(function()
+                self:focus_body()
+            end)
+            return vim.keycode("<Ignore>")
+        end, { buffer = self.title_buf, silent = true, expr = true })
     end
     if not self.body_win then
         self.body_win = ui_win.open({
@@ -113,6 +119,15 @@ function Composer:open()
             self:focus_title()
         end, { buffer = self.body_buf, silent = true })
         vim.keymap.set("n", "<Up>", function()
+            if self:should_focus_title_from_body() then
+                vim.schedule(function()
+                    self:focus_title()
+                end)
+                return vim.keycode("<Ignore>")
+            end
+            return vim.keycode("<Up>")
+        end, { buffer = self.body_buf, silent = true, expr = true })
+        vim.keymap.set("i", "<Up>", function()
             if self:should_focus_title_from_body() then
                 vim.schedule(function()
                     self:focus_title()

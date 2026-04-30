@@ -777,7 +777,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(creator.footer_win.opts.row() > creator.layout.body_win.opts.row() + creator.layout.body_win.opts.height())
     end)
 
-    it("does not bind insert-mode letters or arrows to project switching", function()
+    it("keeps insert-mode left and right arrows available for text editing", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -801,12 +801,58 @@ describe("clodex.ui.prompt_creator", function()
 
         for _, map in ipairs(title_insert_maps) do
             assert.are_not.equal("<Left>", map.lhs)
+            assert.are_not.equal("<Right>", map.lhs)
             assert.are_not.equal("h", map.lhs)
-            assert.are_not.equal("<Down>", map.lhs)
         end
         for _, map in ipairs(body_insert_maps) do
-            assert.are_not.equal("<Up>", map.lhs)
+            assert.are_not.equal("<Left>", map.lhs)
+            assert.are_not.equal("<Right>", map.lhs)
         end
+    end)
+
+    it("uses insert-mode vertical arrows to move between title and details", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Route prompt",
+                details = "First line\nSecond line",
+            },
+            on_submit = function() end,
+        })
+
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        vim.cmd.startinsert()
+        trigger_buffer_mapping(creator.layout.title_buf, "<Down>", "i")
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+        end)
+
+        vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 2, 0 })
+        local up_key = trigger_buffer_mapping(creator.layout.body_buf, "<Up>", "i")
+
+        assert.are.equal(vim.keycode("<Up>"), up_key)
+        assert.are.equal(creator.layout.body_win.win, vim.api.nvim_get_current_win())
+
+        vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 1, 0 })
+        trigger_buffer_mapping(creator.layout.body_buf, "<Up>", "i")
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.title_win.win
+        end)
     end)
 
     it("changes tabs by mouse hit testing", function()
