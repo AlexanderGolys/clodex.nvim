@@ -112,4 +112,39 @@ describe("clodex.ui.queue_workspace cursor highlights", function()
         vim.api.nvim_win_close(workspace.project_win, true)
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
+
+    it("keeps nearby queue focus when moving implemented prompts to history", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local moved_id
+        local workspace = Workspace.new({
+            queue_actions = {
+                advance_queue_item = function(_, _, item_id)
+                    moved_id = item_id
+                end,
+            },
+        }, {
+            queue_workspace = {
+                preview_max_lines = 3,
+                fold_preview = true,
+            },
+        })
+        workspace.projects = { project }
+        workspace.project_index = 1
+        workspace.queue_index = 2
+        workspace.queue_rows = {
+            { kind = "item", queue = "implemented", item = { id = "item-1", title = "First" } },
+            { kind = "item", queue = "implemented", item = { id = "item-2", title = "Second" } },
+            { kind = "item", queue = "implemented", item = { id = "item-3", title = "Third" } },
+        }
+        workspace.queue_item_rows = { 1, 2, 3 }
+        workspace.refresh = function() end
+
+        workspace:move_queue_item()
+
+        assert.are.equal("item-2", moved_id)
+        assert.are.equal(2, workspace.queue_index)
+    end)
 end)

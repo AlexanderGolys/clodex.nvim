@@ -2009,13 +2009,15 @@ end
 
 function Workspace:move_queue_item()
     local project = self:selected_project()
-    local item = self:selected_queue_item()
+    local item, queue_name = self:selected_queue_item()
     if not project or not item then
         notify.warn("No queue item selected")
         return
     end
     self.app.queue_actions:advance_queue_item(project, item.id)
-    self.queue_index = 1
+    if queue_name ~= "implemented" then
+        self.queue_index = 1
+    end
     self:refresh()
 end
 
