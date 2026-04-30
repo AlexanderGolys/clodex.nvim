@@ -312,8 +312,8 @@ end
 local function footer_lines(insert_mode, has_variants, has_multiple_projects)
     if insert_mode then
         return {
-            "Tab/Shift-Tab: move focus   Ctrl-V: image",
-            "Ctrl-←/→: kind   Ctrl-S: plan   Ctrl-Q: queue   Ctrl-E: run now   Ctrl-L: chat   q: close",
+            "Tab/S-Tab: move focus   C-V: image",
+            "C-←/→: kind   C-S: plan   C-Q: queue   C-E: run now   C-L: chat   q: close",
         }
     end
 
@@ -326,11 +326,11 @@ local function footer_lines(insert_mode, has_variants, has_multiple_projects)
     if has_variants then
         row_one[#row_one + 1] = "[/]: source"
     end
-    row_one[#row_one + 1] = "Ctrl-V: image"
+    row_one[#row_one + 1] = "C-V: image"
 
     return {
         footer_line(row_one),
-        "Ctrl-←/→: kind (insert)   Ctrl-S: plan   Ctrl-Q: queue   Ctrl-E: run now   Ctrl-L: chat   q: close",
+        "C-←/→: kind (insert)   C-S: plan   C-Q: queue   C-E: run now   C-L: chat   q: close",
     }
 end
 
@@ -340,24 +340,24 @@ end
 local function footer_key_labels(insert_mode, has_variants, has_multiple_projects)
     if insert_mode then
         return {
-            { row = 0, text = "Tab/Shift-Tab" },
-            { row = 0, text = "Ctrl-V" },
-            { row = 1, text = "Ctrl-←/→" },
-            { row = 1, text = "Ctrl-S" },
-            { row = 1, text = "Ctrl-Q" },
-            { row = 1, text = "Ctrl-E" },
-            { row = 1, text = "Ctrl-L" },
+            { row = 0, text = "Tab/S-Tab" },
+            { row = 0, text = "C-V" },
+            { row = 1, text = "C-←/→" },
+            { row = 1, text = "C-S" },
+            { row = 1, text = "C-Q" },
+            { row = 1, text = "C-E" },
+            { row = 1, text = "C-L" },
         }
     end
 
     return {
         { row = 0, text = "←/→" },
         { row = 0, text = "h/l" },
-        { row = 0, text = "Ctrl-V" },
-        { row = 1, text = "Ctrl-S" },
-        { row = 1, text = "Ctrl-Q" },
-        { row = 1, text = "Ctrl-E" },
-        { row = 1, text = "Ctrl-L" },
+        { row = 0, text = "C-V" },
+        { row = 1, text = "C-S" },
+        { row = 1, text = "C-Q" },
+        { row = 1, text = "C-E" },
+        { row = 1, text = "C-L" },
         { row = 1, text = "q: close" },
     }
 end
