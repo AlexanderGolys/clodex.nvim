@@ -345,6 +345,29 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal("", title)
     end)
 
+    it("opens with the title focused in normal mode", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
+        assert.is_false(creator:in_insert_mode())
+    end)
+
     it("keeps prompt creator buffers hidden instead of wiping them", function()
         creator = Creator.open({
             app = {
