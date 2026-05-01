@@ -1,0 +1,73 @@
+---@class Clodex.PromptCreatorLayoutConfig
+---@field tab_padding integer
+---@field min_window_offset integer
+---@field project_picker_margin_rows integer
+---@field project_picker_margin_cols integer
+---@field creator_background_margin_rows integer
+---@field creator_background_margin_cols integer
+---@field prompt_background_zindex integer
+---@field prompt_content_zindex integer
+---@field prompt_background_margin integer
+---@field creator_max_height integer
+---@field creator_screen_margin_cols integer
+---@field creator_screen_margin_rows integer
+---@field creator_panel_gap_cols integer
+---@field tab_row_height integer
+---@field title_gap_rows integer
+---@field body_gap_rows integer
+---@field footer_gap_rows integer
+---@field preview_width_ratio number
+---@field preview_min_width integer
+---@field preview_max_width integer
+---@field preview_min_height integer
+---@field preview_image_inset integer
+---@field project_list_min_width integer
+---@field project_list_max_width integer
+---@field project_name_padding integer
+---@field content_min_width integer
+---@field body_min_height integer
+---@field clipboard_note_min_height integer
+---@field clipboard_note_max_height integer
+---@field clipboard_note_reserved_rows integer
+---@field clipboard_preview_gap_rows integer
+---@field clipboard_preview_min_height integer
+---@field base_width_with_image integer
+---@field base_width_without_image integer
+
+---@type Clodex.PromptCreatorLayoutConfig
+return {
+    tab_padding = 1,
+    min_window_offset = 1,
+    project_picker_margin_rows = 1,
+    project_picker_margin_cols = 2,
+    creator_background_margin_rows = 1,
+    creator_background_margin_cols = 1,
+    prompt_background_zindex = 1,
+    prompt_content_zindex = 20,
+    prompt_background_margin = 1,
+    creator_max_height = 32,
+    creator_screen_margin_cols = 6,
+    creator_screen_margin_rows = 4,
+    creator_panel_gap_cols = 2,
+    tab_row_height = 2,
+    title_gap_rows = 2,
+    body_gap_rows = 3,
+    footer_gap_rows = 2,
+    preview_width_ratio = 0.3,
+    preview_min_width = 28,
+    preview_max_width = 42,
+    preview_min_height = 8,
+    preview_image_inset = 2,
+    project_list_min_width = 18,
+    project_list_max_width = 28,
+    project_name_padding = 2,
+    content_min_width = 36,
+    body_min_height = 8,
+    clipboard_note_min_height = 4,
+    clipboard_note_max_height = 6,
+    clipboard_note_reserved_rows = 5,
+    clipboard_preview_gap_rows = 3,
+    clipboard_preview_min_height = 4,
+    base_width_with_image = 156,
+    base_width_without_image = 118,
+}

@@ -1,104 +1,82 @@
-local ui_win = require("clodex.ui.win")
+local LAYOUT = require("clodex.ui.prompt_creator.layout_config")
 
----@param win? snacks.win
----@return boolean
-local function prompt_win_valid(win)
-    return win ~= nil and ui_win.is_valid(win.win)
-end
-
----@param win? snacks.win
-local function close_prompt_win(win)
-    if not win then
-        return
-    end
-
-    local winid = win.win
-    if win.close then
-        pcall(function()
-            win:close()
-        end)
-    else
-        ui_win.close(winid)
-    end
-    if ui_win.is_valid(winid) then
-        ui_win.close(winid)
-    end
-    if win.close then
-        win.win = nil
-    end
-end
-
----@class Clodex.PromptCreator.LayoutClipboardPreview
+---@class Clodex.PromptCreator.ClipboardPreviewLayout
 ---@field creator Clodex.PromptCreator
 ---@field title_buf integer
 ---@field preview_buf integer
----@field title_win snacks.win?
----@field preview_win snacks.win?
-local ClipboardPreview = {}
-ClipboardPreview.__index = ClipboardPreview
+---@field title_win? snacks.win
+---@field preview_win? snacks.win
+---@field title_block? Clodex.UiBlock
+---@field preview_block? Clodex.UiBlock
+local ClipboardPreviewLayout = {}
+ClipboardPreviewLayout.__index = ClipboardPreviewLayout
 
 ---@param creator Clodex.PromptCreator
----@return Clodex.PromptCreator.LayoutClipboardPreview
-function ClipboardPreview.new(creator)
+---@return Clodex.PromptCreator.ClipboardPreviewLayout
+function ClipboardPreviewLayout.new(creator)
     return setmetatable({
         creator = creator,
-        title_buf = ui_win.create_buffer({ preset = "text", bo = { bufhidden = "hide" } }),
-        preview_buf = ui_win.create_buffer({ preset = "markdown", bo = { bufhidden = "hide" } }),
-    }, ClipboardPreview)
+        title_buf = creator:prompt_buffer("text"),
+        preview_buf = creator:prompt_buffer("text"),
+    }, ClipboardPreviewLayout)
 end
 
-function ClipboardPreview:open()
-    if not self.title_win then
-        self.title_win = ui_win.open({
-            buf = self.title_buf,
-            enter = true,
-            border = "rounded",
-            title = " Comment ",
-            title_pos = "center",
-            width = function()
-                return self.creator:content_width()
-            end,
-            height = 1,
-            row = function()
-                return self.creator:title_row()
-            end,
-            col = function()
-                return self.creator:content_col()
-            end,
-            view = "text",
-            theme = "prompt_editor",
-            bo = { modifiable = true },
-        })
-        self.creator:watch_window(self.title_win)
+function ClipboardPreviewLayout:open()
+    self.title_win = self.creator:open_block(self, "title_block", "title_win", "layout_title", self.title_buf, {
+        enter = true,
+        border = "rounded",
+        zindex = LAYOUT.prompt_content_zindex,
+        title = " Comment ",
+        title_pos = "center",
+        width = function()
+            return self.creator:content_width()
+        end,
+        height = 1,
+        row = function()
+            return self.creator:title_row()
+        end,
+        col = function()
+            return self.creator:content_col()
+        end,
+        view = "text",
+        theme = "prompt_editor",
+        bo = { modifiable = true },
+    })
+    self.preview_win = self.creator:open_block(self, "preview_block", "preview_win", "layout_preview", self.preview_buf, {
+        enter = false,
+        border = "rounded",
+        zindex = LAYOUT.prompt_content_zindex,
+        title = " Clipboard Preview ",
+        title_pos = "center",
+        width = function()
+            return self.creator:content_width()
+        end,
+        height = function()
+            return self.creator:body_height()
+        end,
+        row = function()
+            return self.creator:body_row()
+        end,
+        col = function()
+            return self.creator:content_col()
+        end,
+        view = "wrapped_text",
+        theme = "prompt_footer",
+        bo = { modifiable = false },
+    })
+    self:apply_keymaps()
+    self:update()
+end
+
+function ClipboardPreviewLayout:apply_keymaps()
+    if not vim.b[self.title_buf].clodex_prompt_keymaps_applied then
         self.creator:apply_first_slot_keymaps(self.title_buf)
         vim.keymap.set({ "n", "i" }, "<Tab>", function()
             self:focus_preview()
         end, { buffer = self.title_buf, silent = true })
+        vim.b[self.title_buf].clodex_prompt_keymaps_applied = true
     end
-    if not self.preview_win then
-        self.preview_win = ui_win.open({
-            buf = self.preview_buf,
-            enter = false,
-            border = "rounded",
-            title = " Clipboard Preview ",
-            title_pos = "center",
-            width = function()
-                return self.creator:content_width()
-            end,
-            height = function()
-                return self.creator:body_height()
-            end,
-            row = function()
-                return self.creator:body_row()
-            end,
-            col = function()
-                return self.creator:content_col()
-            end,
-            view = "markdown",
-            theme = "prompt_footer",
-            bo = { modifiable = false },
-        })
-        self.creator:watch_window(self.preview_win)
+    if not vim.b[self.preview_buf].clodex_prompt_keymaps_applied then
         self.creator:apply_common_keymaps(self.preview_buf)
         vim.keymap.set("n", "<Tab>", function()
             self.creator:focus_project_list()
@@ -106,21 +84,21 @@ function ClipboardPreview:open()
         vim.keymap.set("n", "<S-Tab>", function()
             self:focus_title()
         end, { buffer = self.preview_buf, silent = true })
+        vim.b[self.preview_buf].clodex_prompt_keymaps_applied = true
     end
-    self:update()
 end
 
-function ClipboardPreview:update()
-    if self.title_win and self.title_win:valid() then
-        self.title_win:update()
+function ClipboardPreviewLayout:update()
+    if self.title_block then
+        self.title_block:update()
     end
-    if self.preview_win and self.preview_win:valid() then
-        self.preview_win:update()
+    if self.preview_block then
+        self.preview_block:update()
     end
 end
 
 ---@param draft table
-function ClipboardPreview:set_draft(draft)
+function ClipboardPreviewLayout:set_draft(draft)
     vim.api.nvim_buf_set_lines(self.title_buf, 0, -1, false, { draft.title or "" })
     local preview_text = draft.preview_text and vim.trim(draft.preview_text) or ""
     if preview_text == "" then
@@ -132,7 +110,7 @@ function ClipboardPreview:set_draft(draft)
 end
 
 ---@return table
-function ClipboardPreview:get_draft()
+function ClipboardPreviewLayout:get_draft()
     return {
         title = vim.trim(vim.api.nvim_buf_get_lines(self.title_buf, 0, 1, false)[1] or ""),
         preview_text = vim.trim(self.creator.state.preview_text or ""),
@@ -140,35 +118,38 @@ function ClipboardPreview:get_draft()
 end
 
 ---@return string[]
-function ClipboardPreview:draft_fields()
+function ClipboardPreviewLayout:draft_fields()
     return { "title" }
 end
 
 ---@return integer[]
-function ClipboardPreview:buffers()
+function ClipboardPreviewLayout:buffers()
     return { self.title_buf, self.preview_buf }
 end
 
-function ClipboardPreview:focus_default()
-    if self.title_win and self.title_win:valid() then
-        vim.api.nvim_set_current_win(self.title_win.win)
-        vim.cmd.startinsert()
+function ClipboardPreviewLayout:focus_default()
+    if self.title_block then
+        self.title_block:focus({ insert = true })
     end
 end
 
-function ClipboardPreview:focus_preview()
-    if self.preview_win and self.preview_win:valid() then
-        vim.api.nvim_set_current_win(self.preview_win.win)
+function ClipboardPreviewLayout:focus_title()
+    self:focus_default()
+end
+
+function ClipboardPreviewLayout:focus_preview()
+    if self.preview_block then
+        self.preview_block:focus()
     end
 end
 
-function ClipboardPreview:focus_last()
+function ClipboardPreviewLayout:focus_last()
     self:focus_preview()
 end
 
 ---@param winid? integer
 ---@return string?
-function ClipboardPreview:focused_slot(winid)
+function ClipboardPreviewLayout:focused_slot(winid)
     winid = winid or vim.api.nvim_get_current_win()
     if self.title_win and self.title_win:valid() and winid == self.title_win.win then
         return "title"
@@ -181,27 +162,18 @@ end
 ---@param slot? string
 ---@param insert_mode? boolean
 ---@return boolean
-function ClipboardPreview:focus_slot(slot, insert_mode)
-    if slot == "preview" and self.preview_win and self.preview_win:valid() then
-        vim.api.nvim_set_current_win(self.preview_win.win)
+function ClipboardPreviewLayout:focus_slot(slot, insert_mode)
+    if slot == "preview" and self.preview_block and self.preview_block:focus() then
         return true
     end
-    if self.title_win and self.title_win:valid() then
-        vim.api.nvim_set_current_win(self.title_win.win)
-        if insert_mode then
-            vim.cmd.startinsert()
-        end
-        return true
-    end
-    return false
+    return self.title_block and self.title_block:focus({ insert = insert_mode == true }) or false
 end
 
-function ClipboardPreview:close()
-    for _, win in ipairs({ self.title_win, self.preview_win }) do
-        close_prompt_win(win)
-    end
+function ClipboardPreviewLayout:close()
+    self.creator:remove_block("layout_title")
+    self.creator:remove_block("layout_preview")
     self.title_win = nil
     self.preview_win = nil
 end
 
-return ClipboardPreview
+return ClipboardPreviewLayout
