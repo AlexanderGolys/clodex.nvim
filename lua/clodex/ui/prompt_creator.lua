@@ -1084,6 +1084,73 @@ function Creator:focus_creator_last_slot()
     end)
 end
 
+---@param win snacks.win?
+---@param mouse table
+---@return boolean
+function Creator:mouse_in_win(win, mouse)
+    return win ~= nil and win:valid() and mouse.winid == win.win
+end
+
+---@param win snacks.win
+---@param text_field boolean
+function Creator:focus_mouse_win(win, text_field)
+    if self:in_insert_mode() and not text_field then
+        vim.cmd.stopinsert()
+    end
+    vim.api.nvim_set_current_win(win.win)
+end
+
+---@param mouse table
+---@return boolean
+function Creator:handle_mouse(mouse)
+    if self:mouse_in_win(self.project_win, mouse) then
+        self:focus_mouse_win(self.project_win, false)
+        self:set_project_index(self.project_line_map[mouse.line] or self.project_index)
+        return true
+    end
+    if self:mouse_in_win(self.kind_win, mouse) then
+        self:focus_mouse_win(self.kind_win, false)
+        self:activate_kind_tab_at(mouse.column)
+        return true
+    end
+    if self:mouse_in_win(self.variant_win, mouse) then
+        self:focus_mouse_win(self.variant_win, false)
+        self:activate_variant_tab_at(mouse.column)
+        return true
+    end
+
+    local layout_slot = self.layout and self.layout.focused_slot and self.layout:focused_slot(mouse.winid) or nil
+    if layout_slot and self.layout and self.layout.focus_slot then
+        local win = vim.api.nvim_win_is_valid(mouse.winid) and mouse.winid or nil
+        local buf = win and vim.api.nvim_win_get_buf(win) or nil
+        local text_field = buf and vim.bo[buf].modifiable == true
+        if self:in_insert_mode() and not text_field then
+            vim.cmd.stopinsert()
+        end
+        self.layout:focus_slot(layout_slot, self:in_insert_mode() and text_field)
+        return true
+    end
+
+    local passive_windows = {
+        self.footer_win,
+        self.preview_win,
+    }
+    for _, win in ipairs(passive_windows) do
+        if self:mouse_in_win(win, mouse) then
+            self:focus_mouse_win(win, false)
+            return true
+        end
+    end
+    return false
+end
+
+---@param buf integer
+function Creator:apply_mouse_keymap(buf)
+    vim.keymap.set({ "n", "i" }, "<LeftMouse>", function()
+        self:handle_mouse(vim.fn.getmousepos())
+    end, { buffer = buf, silent = true })
+end
+
 ---@param index integer
 function Creator:set_project_index(index)
     local project = self.projects[index]
@@ -1143,6 +1210,7 @@ function Creator:render_project_background()
 end
 
 function Creator:apply_project_keymaps()
+    self:apply_mouse_keymap(self.project_buf)
     vim.keymap.set({ "n", "i" }, "<Right>", function()
         self:focus_creator_default()
         return vim.keycode("<Ignore>")
@@ -1181,12 +1249,6 @@ function Creator:apply_project_keymaps()
     end, { buffer = self.project_buf, silent = true })
     vim.keymap.set("n", "<Esc>", function()
         self:close()
-    end, { buffer = self.project_buf, silent = true })
-    vim.keymap.set("n", "<LeftMouse>", function()
-        local mouse = vim.fn.getmousepos()
-        if self.project_win and self.project_win:valid() and mouse.winid == self.project_win.win then
-            self:set_project_index(self.project_line_map[mouse.line] or self.project_index)
-        end
     end, { buffer = self.project_buf, silent = true })
 end
 
@@ -1319,20 +1381,6 @@ function Creator:activate_variant_tab_at(column)
     local index = tab_index_at_column(self.variant_tab_spans, column)
     if index and index ~= self.variant_index then
         self:switch_variant(index - self.variant_index)
-    end
-end
-
-function Creator:click_kind_tab()
-    local mouse = vim.fn.getmousepos()
-    if self.kind_win and self.kind_win:valid() and mouse.winid == self.kind_win.win then
-        self:activate_kind_tab_at(mouse.column)
-    end
-end
-
-function Creator:click_variant_tab()
-    local mouse = vim.fn.getmousepos()
-    if self.variant_win and self.variant_win:valid() and mouse.winid == self.variant_win.win then
-        self:activate_variant_tab_at(mouse.column)
     end
 end
 
@@ -1601,14 +1649,11 @@ end
 ---@param buf integer
 function Creator:apply_shell_keymaps(buf)
     self:apply_common_keymaps(buf)
-    vim.keymap.set("n", "<LeftMouse>", function()
-        self:click_kind_tab()
-        self:click_variant_tab()
-    end, { buffer = buf, silent = true })
 end
 
 ---@param buf integer
 function Creator:apply_common_keymaps(buf)
+    self:apply_mouse_keymap(buf)
     vim.keymap.set("n", "<Right>", function()
         self:switch_kind(1)
     end, { buffer = buf, silent = true })

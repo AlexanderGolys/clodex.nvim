@@ -929,6 +929,69 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.same({ creator.layout.title_buf, creator.layout.preview_buf }, creator.layout:buffers())
     end)
 
+    it("focuses and selects prompt creator panels from mouse clicks", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = { name = "Alpha", root = "/tmp/alpha" },
+            projects = {
+                { name = "Alpha", root = "/tmp/alpha" },
+                { name = "Beta", root = "/tmp/beta" },
+            },
+            initial_kind = "bug",
+            on_submit = function() end,
+        })
+
+        creator:handle_mouse({ winid = creator.project_win.win, line = 2, column = 1 })
+
+        assert.are.equal(2, creator.project_index)
+        assert.are.equal(creator.project_win.win, vim.api.nvim_get_current_win())
+
+        creator:handle_mouse({ winid = creator.kind_win.win, line = 1, column = creator.kind_tab_spans[3].start_col + 1 })
+
+        assert.are.equal("freeform", creator.state.kind)
+        assert.are.equal(creator.kind_win.win, vim.api.nvim_get_current_win())
+
+        creator:switch_kind(-1)
+        creator:handle_mouse({ winid = creator.variant_win.win, line = 1, column = creator.variant_tab_spans[2].start_col + 1 })
+
+        assert.are.equal("clipboard_error", creator.state.variant)
+        assert.are.equal(creator.variant_win.win, vim.api.nvim_get_current_win())
+    end)
+
+    it("leaves insert mode when mouse focuses a non-text prompt creator panel", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = { name = "Alpha", root = "/tmp/alpha" },
+            initial_kind = "bug",
+            on_submit = function() end,
+        })
+
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        vim.cmd.startinsert()
+
+        creator:handle_mouse({ winid = creator.kind_win.win, line = 1, column = 1 })
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.kind_win.win and not creator:in_insert_mode()
+        end)
+    end)
+
     it("preserves shared draft fields when switching kinds", function()
         creator = Creator.open({
             app = {
