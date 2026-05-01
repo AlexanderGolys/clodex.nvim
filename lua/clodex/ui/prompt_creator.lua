@@ -31,6 +31,12 @@ local DEFAULT_SUBMIT_ACTIONS = {
     { value = "chat", label = "chat", key = "<C-l>" },
 }
 
+local RESET_AFTER_SUBMIT_ACTIONS = {
+    save = true,
+    queue = true,
+    exec = true,
+}
+
 local TAB_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-tabs")
 local FOOTER_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-footer")
 
@@ -1084,6 +1090,16 @@ function Creator:focus_creator_last_slot()
     end)
 end
 
+function Creator:reset_inputs()
+    self.field_cache = {}
+    self.field_history = {}
+    self.variant_index = 1
+    self.drafts = DraftStore.new()
+    self:prime_drafts(nil)
+    self:activate_layout({ area = "layout", slot = "title", insert = false })
+    self:refresh()
+end
+
 ---@param win snacks.win?
 ---@param mouse table
 ---@return boolean
@@ -1241,7 +1257,7 @@ function Creator:apply_project_keymaps()
     end, { buffer = self.project_buf, silent = true })
     for _, action in ipairs(self.submit_actions) do
         vim.keymap.set("n", action.key, function()
-            self:submit(action.value)
+            self:submit(action.value, { reset = RESET_AFTER_SUBMIT_ACTIONS[action.value] == true })
         end, { buffer = self.project_buf, silent = true })
     end
     vim.keymap.set("n", "q", function()
@@ -1680,7 +1696,7 @@ function Creator:apply_common_keymaps(buf)
     end, { buffer = buf, silent = true })
     for _, action in ipairs(self.submit_actions) do
         vim.keymap.set({ "n", "i" }, action.key, function()
-            self:submit(action.value)
+            self:submit(action.value, { reset = RESET_AFTER_SUBMIT_ACTIONS[action.value] == true })
         end, { buffer = buf, silent = true })
     end
     vim.keymap.set({ "n", "i" }, "<C-v>", function()
@@ -1696,7 +1712,8 @@ function Creator:apply_common_keymaps(buf)
 end
 
 ---@param action string
-function Creator:submit(action)
+---@param opts? { reset?: boolean }
+function Creator:submit(action, opts)
     self:save_current_draft()
     local draft = self.drafts:get(self.state.kind, self.state.variant, self.state)
     local spec = PromptSubmit.build_spec(vim.tbl_extend("force", self.state, draft))
@@ -1707,6 +1724,10 @@ function Creator:submit(action)
 
     local result = self.on_submit(spec, action, self.project)
     if result == false then
+        return
+    end
+    if opts and opts.reset then
+        self:reset_inputs()
         return
     end
     vim.schedule(function()

@@ -1724,7 +1724,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal("Preserve footer", submitted_spec.details)
     end)
 
-    it("closes the creator after a successful queued submit keymap", function()
+    it("resets the creator after a successful queued submit keymap", function()
         local submitted_action
 
         creator = Creator.open({
@@ -1756,13 +1756,19 @@ describe("clodex.ui.prompt_creator", function()
 
         wait_for(function()
             return submitted_action == "queue"
-                and creator.footer_win == nil
-                and creator.layout.title_win == nil
+                and creator.footer_win ~= nil
+                and creator.footer_win:valid()
+                and creator.layout.title_win ~= nil
+                and creator.layout.title_win:valid()
+                and vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, 1, false)[1] == ""
         end)
+
+        assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
+        assert.is_false(creator:in_insert_mode())
     end)
 
-    it("closes the creator after a successful run-now submit keymap", function()
-        local submitted_action
+    it("resets the creator after successful plan and run-now submit keymaps", function()
+        local submitted_actions = {}
 
         creator = Creator.open({
             app = {
@@ -1781,20 +1787,33 @@ describe("clodex.ui.prompt_creator", function()
             initial_kind = "todo",
             initial_draft = {
                 title = "Run prompt",
-                details = "Close on exec",
+                details = "Reset on submit",
             },
             on_submit = function(_, action)
-                submitted_action = action
+                submitted_actions[#submitted_actions + 1] = action
                 return { id = "queued-item" }
             end,
         })
 
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-s>", "i")
+
+        wait_for(function()
+            return submitted_actions[1] == "save"
+                and creator.layout.title_win ~= nil
+                and creator.layout.title_win:valid()
+                and vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, 1, false)[1] == ""
+        end)
+
+        vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Run prompt again" })
         trigger_buffer_mapping(creator.layout.title_buf, "<C-e>", "i")
 
         wait_for(function()
-            return submitted_action == "exec"
-                and creator.footer_win == nil
-                and creator.layout.title_win == nil
+            return submitted_actions[2] == "exec"
+                and creator.footer_win ~= nil
+                and creator.footer_win:valid()
+                and creator.layout.title_win ~= nil
+                and creator.layout.title_win:valid()
+                and vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, 1, false)[1] == ""
         end)
     end)
 
