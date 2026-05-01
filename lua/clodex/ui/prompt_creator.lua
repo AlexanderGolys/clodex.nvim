@@ -1223,6 +1223,7 @@ function Creator:render_variant_tabs()
     local variants = self:variants()
     if #variants == 0 then
         self:remove_block("variant_tabs")
+        self.variant_block = nil
         self.variant_win = nil
         self.variant_buf = nil
         self.variant_tab_spans = {}

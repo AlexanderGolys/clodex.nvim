@@ -1385,6 +1385,38 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(footer_config.col + footer_config.width <= background_config.col + background_config.width)
     end)
 
+    it("destroys the variant tab panel after toggling bug tabs off more than once", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = { name = "Alpha", root = "/tmp/alpha" },
+            initial_kind = "bug",
+            on_submit = function() end,
+        })
+
+        local first_variant_win = creator.variant_win.win
+        assert.is_not_nil(creator.panel:block("variant_tabs"))
+
+        creator:switch_kind(-1)
+        assert.is_false(vim.api.nvim_win_is_valid(first_variant_win))
+        assert.is_nil(creator.panel:block("variant_tabs"))
+
+        creator:switch_kind(1)
+        local second_variant_win = creator.variant_win.win
+        assert.is_not_nil(creator.panel:block("variant_tabs"))
+
+        creator:switch_kind(-1)
+        assert.is_false(vim.api.nvim_win_is_valid(second_variant_win))
+        assert.is_nil(creator.panel:block("variant_tabs"))
+    end)
+
     it("limits clipboard image previews to the preview pane size", function()
         local attached_opts
         package.loaded["snacks"] = {
