@@ -978,7 +978,7 @@ function Workspace:open()
     self.project_win = ui_win.open({
         buf = self.project_buf,
         enter = true,
-        fixbuf = true,
+        fixbuf = false,
         row = row,
         col = col,
         width = project_width,
@@ -992,7 +992,7 @@ function Workspace:open()
     self.queue_win = ui_win.open({
         buf = self.queue_buf,
         enter = false,
-        fixbuf = true,
+        fixbuf = false,
         row = row,
         col = col + project_width + PANEL_BORDER_COLS + PANEL_GAP_COLS,
         width = queue_width,
@@ -1006,7 +1006,7 @@ function Workspace:open()
     self.footer_win = ui_win.open({
         buf = self.footer_buf,
         enter = false,
-        fixbuf = true,
+        fixbuf = false,
         row = row + height + 1,
         col = col,
         width = project_width + queue_width + PANEL_BORDER_COLS + PANEL_GAP_COLS,

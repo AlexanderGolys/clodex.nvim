@@ -24,7 +24,7 @@ describe("clodex.ui.queue_workspace fixbuf", function()
         package.loaded["clodex.ui.win"] = original_ui_win
     end)
 
-    it("keeps workspace panel buffers fixed while opening modal editors", function()
+    it("disables Snacks fixbuf for dedicated workspace floats", function()
         local captured = {}
 
         package.loaded["clodex.ui.win"] = {
@@ -64,8 +64,8 @@ describe("clodex.ui.queue_workspace fixbuf", function()
         workspace:open()
 
         assert.are.equal(3, #captured)
-        assert.is_true(captured[1].fixbuf)
-        assert.is_true(captured[2].fixbuf)
-        assert.is_true(captured[3].fixbuf)
+        assert.is_false(captured[1].fixbuf)
+        assert.is_false(captured[2].fixbuf)
+        assert.is_false(captured[3].fixbuf)
     end)
 end)
