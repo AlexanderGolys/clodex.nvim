@@ -426,6 +426,39 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_nil(lines[1]:find("Up/Down", 1, true))
     end)
 
+    it("renders control-key footer hints with lowercase key names", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
+
+        assert.is_truthy(lines[1]:find("C%-v", 1, false))
+        assert.is_truthy(lines[2]:find("C%-s", 1, false))
+        assert.is_truthy(lines[2]:find("C%-q", 1, false))
+        assert.is_truthy(lines[2]:find("C%-e", 1, false))
+        assert.is_truthy(lines[2]:find("C%-l", 1, false))
+        assert.is_nil(lines[1]:find("C%-V", 1, false))
+        assert.is_nil(lines[2]:find("C%-S", 1, false))
+        assert.is_nil(lines[2]:find("C%-Q", 1, false))
+        assert.is_nil(lines[2]:find("C%-E", 1, false))
+        assert.is_nil(lines[2]:find("C%-L", 1, false))
+    end)
+
     it("hides unavailable footer hints for projects and source tabs", function()
         creator = Creator.open({
             app = {
