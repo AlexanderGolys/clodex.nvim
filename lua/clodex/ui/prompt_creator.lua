@@ -457,6 +457,30 @@ function Creator.new(opts)
 
     self.panel = UiPanel.new({
         id = "prompt_creator",
+        background = {
+            id = "background",
+            buf = self.project_bg_buf,
+            win = {
+                enter = false,
+                border = "none",
+                backdrop = false,
+                zindex = LAYOUT.prompt_background_zindex,
+                width = function()
+                    return self:project_background_width()
+                end,
+                height = function()
+                    return self:project_background_height()
+                end,
+                row = function()
+                    return self:project_background_row()
+                end,
+                col = function()
+                    return self:project_background_col()
+                end,
+                view = "footer",
+                theme = "prompt_footer",
+            },
+        },
         on_close = function()
             if not self.is_closing then
                 self:close()
@@ -717,12 +741,9 @@ end
 function Creator:project_background_height()
     local _, top, _, bottom = self:creator_frame_bounds()
     if top and bottom then
-        return math.max(
-            (bottom - top) + (LAYOUT.prompt_background_margin * 2) + 1,
-            self:total_height() + (LAYOUT.prompt_background_margin * 5)
-        )
+        return (bottom - top) + (LAYOUT.prompt_background_margin * 2)
     end
-    return self:total_height() + (LAYOUT.prompt_background_margin * 5)
+    return self:total_height() + (LAYOUT.prompt_background_margin * 2)
 end
 
 ---@return integer
@@ -1319,26 +1340,8 @@ end
 
 function Creator:ensure_shell_windows()
     self:render_project_background()
-    self.project_bg_win = self:open_block(self, "project_bg_block", "project_bg_win", "project_background", self.project_bg_buf, {
-        enter = false,
-        border = "none",
-        backdrop = false,
-        zindex = LAYOUT.prompt_background_zindex,
-        width = function()
-            return self:project_background_width()
-        end,
-        height = function()
-            return self:project_background_height()
-        end,
-        row = function()
-            return self:project_background_row()
-        end,
-        col = function()
-            return self:project_background_col()
-        end,
-        view = "footer",
-        theme = "prompt_footer",
-    })
+    self.project_bg_win = self.panel.background and self.panel.background:open() or nil
+    self.panel:watch_window(self.project_bg_win)
     self.project_win = self:open_block(self, "project_block", "project_win", "project", self.project_buf, {
         enter = false,
         border = "rounded",
@@ -1532,8 +1535,9 @@ function Creator:refresh()
     end
     self:render_preview()
     self:render_project_background()
-    if self.project_bg_block then
-        self.project_bg_block:update()
+    if self.panel.background then
+        self.panel.background:update()
+        self.project_bg_win = self.panel.background.win
     end
     self:apply_prompt_theme()
 end
