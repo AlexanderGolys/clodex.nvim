@@ -7,6 +7,7 @@ local Block = require("clodex.ui.panel.block")
 ---@field accent? string
 ---@field mode? string
 ---@field blocks? (Clodex.UiBlock|Clodex.UiBlock.Config)[]
+---@field background? Clodex.UiBlock|Clodex.UiBlock.Config
 ---@field actions? (Clodex.UiAction|Clodex.UiAction.Config)[]
 ---@field focus_order? string[]
 ---@field on_close? fun(panel: Clodex.UiPanel)
@@ -18,6 +19,7 @@ local Block = require("clodex.ui.panel.block")
 ---@field accent? string
 ---@field mode string
 ---@field blocks table<string, Clodex.UiBlock>
+---@field background? Clodex.UiBlock
 ---@field block_order string[]
 ---@field focus_order string[]
 ---@field focused_block_id? string
@@ -50,6 +52,7 @@ function Panel.new(opts)
         accent = opts.accent,
         mode = opts.mode or "normal",
         blocks = {},
+        background = nil,
         block_order = {},
         focus_order = vim.deepcopy(opts.focus_order or {}),
         focused_block_id = nil,
@@ -60,10 +63,34 @@ function Panel.new(opts)
         on_close = opts.on_close,
     }, Panel)
 
+    if opts.background then
+        self:set_background(opts.background)
+    end
     for _, block in ipairs(opts.blocks or {}) do
         self:add_block(block)
     end
     return self
+end
+
+---@param block Clodex.UiBlock|Clodex.UiBlock.Config|nil
+---@return Clodex.UiBlock?
+function Panel:set_background(block)
+    if self.background then
+        self:unwatch_window(self.background.win)
+        self.background:destroy()
+    end
+    if not block then
+        self.background = nil
+        return nil
+    end
+
+    local normalized = normalize_block(block)
+    normalized.panel = self
+    self.background = normalized
+    if self.accent then
+        normalized:set_accent(self.accent)
+    end
+    return normalized
 end
 
 ---@param block Clodex.UiBlock|Clodex.UiBlock.Config
@@ -167,6 +194,9 @@ function Panel:without_close_watchers(fn)
 end
 
 function Panel:open()
+    if self.background then
+        self:watch_window(self.background:open())
+    end
     for _, id in ipairs(self.block_order) do
         local block = self.blocks[id]
         if block then
@@ -177,6 +207,9 @@ function Panel:open()
 end
 
 function Panel:update()
+    if self.background then
+        self.background:update()
+    end
     for _, id in ipairs(self.block_order) do
         local block = self.blocks[id]
         if block then
@@ -261,6 +294,9 @@ end
 ---@param hl_group string?
 function Panel:set_accent(hl_group)
     self.accent = hl_group
+    if self.background then
+        self.background:set_accent(hl_group)
+    end
     for _, id in ipairs(self.block_order) do
         self.blocks[id]:set_accent(hl_group)
     end
@@ -284,6 +320,9 @@ function Panel:close()
     self.is_closing = true
     self:clear_window_watchers()
     self:without_close_watchers(function()
+        if self.background then
+            self.background:close()
+        end
         for _, id in ipairs(self.block_order) do
             local block = self.blocks[id]
             if block then
@@ -306,6 +345,9 @@ function Panel:destroy()
     self.is_closing = true
     self:clear_window_watchers()
     self:without_close_watchers(function()
+        if self.background then
+            self.background:destroy()
+        end
         for _, id in ipairs(self.block_order) do
             local block = self.blocks[id]
             if block then
@@ -313,6 +355,7 @@ function Panel:destroy()
             end
         end
     end)
+    self.background = nil
     self.blocks = {}
     self.block_order = {}
     self.focus_order = {}

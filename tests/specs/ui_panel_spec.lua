@@ -132,4 +132,67 @@ describe("clodex.ui.panel", function()
         assert.is_truthy(vim.wo[panel:block("title"):winid()].winhl:find("FloatBorder:ClodexPromptBugTitle", 1, true))
         assert.is_truthy(vim.wo[panel:block("body"):winid()].winhl:find("FloatTitle:ClodexPromptBugTitle", 1, true))
     end)
+
+    it("opens a background overlay behind panel blocks", function()
+        local panel = Panel.new({
+            id = "demo",
+            background = {
+                id = "background",
+                win = { width = 14, height = 5, row = 0, col = 0, border = "none", zindex = 1 },
+            },
+            blocks = {
+                {
+                    id = "body",
+                    win = { width = 10, height = 1, row = 1, col = 1, border = "rounded", zindex = 2 },
+                },
+            },
+        })
+
+        panel:open()
+
+        assert.is_truthy(panel.background)
+        assert.is_true(vim.api.nvim_win_is_valid(panel.background:winid()))
+        assert.is_true(vim.api.nvim_win_is_valid(panel:block("body"):winid()))
+        assert.are.same(panel.background.win, opened_windows[1])
+        assert.are.same(panel:block("body").win, opened_windows[2])
+        assert.is_nil(panel:block("background"))
+    end)
+
+    it("updates and destroys the background overlay with the panel", function()
+        local panel = Panel.new({
+            id = "demo",
+            background = {
+                id = "background",
+                win = {
+                    width = function()
+                        return 14
+                    end,
+                    height = 5,
+                    row = 0,
+                    col = 0,
+                },
+            },
+            blocks = {
+                {
+                    id = "body",
+                    win = { width = 10, height = 1, row = 1, col = 1, border = "rounded" },
+                },
+            },
+        })
+
+        panel:open()
+        local background_win = panel.background:winid()
+        panel.background:set_size({
+            width = function()
+                return 20
+            end,
+        })
+
+        assert.are.equal(20, vim.api.nvim_win_get_width(background_win))
+
+        panel:destroy()
+
+        assert.is_false(vim.api.nvim_win_is_valid(background_win))
+        assert.is_nil(panel.background)
+    end)
 end)

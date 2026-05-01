@@ -204,6 +204,7 @@ end
 
 function Block:update()
     if self:is_valid() and self.win.update then
+        self.win.opts = self.win_opts
         self.win:update()
         apply_zindex(self.win, self.win_opts.zindex)
         apply_accent(self.win, self.accent)
