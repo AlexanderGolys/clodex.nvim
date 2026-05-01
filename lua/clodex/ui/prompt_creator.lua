@@ -479,6 +479,11 @@ function Creator.new(opts)
                 end,
                 view = "footer",
                 theme = "prompt_footer",
+                theme_overrides = {
+                    normal = "ClodexPromptEditorFooter",
+                    normal_nc = "ClodexPromptEditorFooter",
+                    end_of_buffer = "ClodexPromptEditorFooter",
+                },
             },
         },
         on_close = function()
@@ -1128,8 +1133,9 @@ end
 
 function Creator:render_project_background()
     local lines = {}
+    local line = string.rep(" ", self:project_background_width())
     for _ = 1, self:project_background_height() do
-        lines[#lines + 1] = ""
+        lines[#lines + 1] = line
     end
     vim.bo[self.project_bg_buf].modifiable = true
     vim.api.nvim_buf_set_lines(self.project_bg_buf, 0, -1, false, lines)
