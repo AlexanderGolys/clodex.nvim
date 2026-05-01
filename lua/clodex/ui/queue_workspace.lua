@@ -1951,7 +1951,18 @@ function Workspace:edit_queue_item()
             details = item.details,
             image_path = item.image_path,
         },
-        on_submit = function(spec)
+        on_submit = function(spec, action, selected_project)
+            local target_project = selected_project or project
+            if target_project.root ~= project.root then
+                local submitted = self.app.prompt_actions:submit_prompt(target_project, spec, action)
+                if submitted == false or submitted == nil then
+                    return false
+                end
+                self.app.queue_actions:delete_queue_item(project, item.id)
+                self:refresh()
+                return
+            end
+
             self.app.queue_actions:edit_queue_item(project, item.id, {
                 title = spec.title,
                 details = spec.details,

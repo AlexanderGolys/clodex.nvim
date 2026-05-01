@@ -600,6 +600,151 @@ describe("clodex.ui.queue_workspace", function()
         assert.are.equal(1, workspace.queue_index)
     end)
 
+    it("updates the selected prompt when editing without changing project", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local item = {
+            id = "item-1",
+            title = "Old title",
+            details = "Old details",
+            kind = "todo",
+        }
+        local edited
+        local submitted
+        local deleted
+        local refresh_count = 0
+        local workspace = {
+            app = {
+                prompt_actions = {
+                    open_creator = function(_, queued_project, opts)
+                        open_creator_calls[#open_creator_calls + 1] = {
+                            project = queued_project,
+                            opts = opts,
+                        }
+                        opts.on_submit({
+                            title = "New title",
+                            details = "New details",
+                            kind = "todo",
+                        }, "save", project)
+                    end,
+                    submit_prompt = function(_, queued_project, spec, action)
+                        submitted = { project = queued_project, spec = spec, action = action }
+                    end,
+                },
+                queue_actions = {
+                    edit_queue_item = function(_, queued_project, item_id, spec)
+                        edited = { project = queued_project, item_id = item_id, spec = spec }
+                    end,
+                    delete_queue_item = function(_, queued_project, item_id)
+                        deleted = { project = queued_project, item_id = item_id }
+                    end,
+                },
+            },
+            selected_project = function()
+                return project
+            end,
+            selected_queue_item = function()
+                return item, "planned"
+            end,
+            refresh = function()
+                refresh_count = refresh_count + 1
+            end,
+        }
+
+        Workspace.edit_queue_item(workspace)
+
+        assert.are.equal(1, #open_creator_calls)
+        assert.are.same(project, open_creator_calls[1].project)
+        assert.are.equal("todo", open_creator_calls[1].opts.category)
+        assert.is_true(open_creator_calls[1].opts.lock_kind)
+        assert.are.equal("edit", open_creator_calls[1].opts.mode)
+        assert.are.same(project, edited.project)
+        assert.are.equal("item-1", edited.item_id)
+        assert.are.equal("New title", edited.spec.title)
+        assert.are.equal("New details", edited.spec.details)
+        assert.is_nil(submitted)
+        assert.is_nil(deleted)
+        assert.are.equal(1, refresh_count)
+    end)
+
+    it("moves an edited prompt when the creator target project changes", function()
+        local project = {
+            name = "Source Project",
+            root = "/tmp/source-project",
+        }
+        local target_project = {
+            name = "Target Project",
+            root = "/tmp/target-project",
+        }
+        local item = {
+            id = "item-1",
+            title = "Old title",
+            details = "Old details",
+            kind = "bug",
+            image_path = "/tmp/image.png",
+        }
+        local edited
+        local submitted
+        local deleted
+        local refresh_count = 0
+        local workspace = {
+            app = {
+                prompt_actions = {
+                    open_creator = function(_, queued_project, opts)
+                        open_creator_calls[#open_creator_calls + 1] = {
+                            project = queued_project,
+                            opts = opts,
+                        }
+                        opts.on_submit({
+                            title = "Moved title",
+                            details = "Moved details",
+                            kind = "bug",
+                            image_path = "/tmp/new-image.png",
+                        }, "save", target_project)
+                    end,
+                    submit_prompt = function(_, queued_project, spec, action)
+                        submitted = { project = queued_project, spec = spec, action = action }
+                        return { id = "new-item" }
+                    end,
+                },
+                queue_actions = {
+                    edit_queue_item = function(_, queued_project, item_id, spec)
+                        edited = { project = queued_project, item_id = item_id, spec = spec }
+                    end,
+                    delete_queue_item = function(_, queued_project, item_id)
+                        deleted = { project = queued_project, item_id = item_id }
+                    end,
+                },
+            },
+            selected_project = function()
+                return project
+            end,
+            selected_queue_item = function()
+                return item, "planned"
+            end,
+            refresh = function()
+                refresh_count = refresh_count + 1
+            end,
+        }
+
+        Workspace.edit_queue_item(workspace)
+
+        assert.are.equal(1, #open_creator_calls)
+        assert.are.same(project, open_creator_calls[1].project)
+        assert.are.same(target_project, submitted.project)
+        assert.are.equal("Moved title", submitted.spec.title)
+        assert.are.equal("Moved details", submitted.spec.details)
+        assert.are.equal("bug", submitted.spec.kind)
+        assert.are.equal("/tmp/new-image.png", submitted.spec.image_path)
+        assert.are.equal("save", submitted.action)
+        assert.are.same(project, deleted.project)
+        assert.are.equal("item-1", deleted.item_id)
+        assert.is_nil(edited)
+        assert.are.equal(1, refresh_count)
+    end)
+
     it("moves the queue selection highlight when keyboard navigation changes the selected item", function()
         local project = {
             name = "Test Project",
