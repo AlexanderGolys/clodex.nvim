@@ -1,6 +1,8 @@
 local Commands = require("clodex.commands")
 local Backend = require("clodex.backend")
 local Extmark = require("clodex.ui.extmark")
+local UiBlock = require("clodex.ui.panel").Block
+local UiPanel = require("clodex.ui.panel").Panel
 local TextBlock = require("clodex.ui.text_block")
 local ui_win = require("clodex.ui.win")
 local fs = require("clodex.util.fs")
@@ -12,6 +14,9 @@ local fs = require("clodex.util.fs")
 ---@field app? Clodex.App
 ---@field state_buf? integer
 ---@field command_buf? integer
+---@field panel? Clodex.UiPanel
+---@field state_block? Clodex.UiBlock
+---@field command_block? Clodex.UiBlock
 ---@field state_win? integer
 ---@field command_win? integer
 ---@field state_ns integer
@@ -20,6 +25,7 @@ local fs = require("clodex.util.fs")
 ---@field command_index integer
 ---@field commands Clodex.CommandSpec[]
 ---@field focus "commands"|"state"
+---@field is_hiding boolean
 local Preview = {}
 Preview.__index = Preview
 
@@ -364,6 +370,7 @@ function Preview.new(config)
   self.command_index = 1
   self.focus = "commands"
   self.max_state_width = 0
+  self.is_hiding = false
   return self
 end
 
@@ -398,14 +405,151 @@ function Preview:ensure_buffers()
     or make_buffer("clodex-state-preview-state", "clodex_state")
 end
 
+---@return Clodex.UiAction.Config[]
+function Preview:common_actions()
+  return {
+    {
+      lhs = "q",
+      label = "q close",
+      callback = function()
+        self:hide()
+      end,
+    },
+    {
+      lhs = "<Esc>",
+      label = "Esc close",
+      callback = function()
+        self:hide()
+      end,
+    },
+    {
+      lhs = "h",
+      label = "h commands",
+      callback = function()
+        self:set_focus("commands")
+      end,
+    },
+    {
+      lhs = "<Left>",
+      label = "Left commands",
+      callback = function()
+        self:set_focus("commands")
+      end,
+    },
+    {
+      lhs = "l",
+      label = "l state",
+      callback = function()
+        self:set_focus("state")
+      end,
+    },
+    {
+      lhs = "<Right>",
+      label = "Right state",
+      callback = function()
+        self:set_focus("state")
+      end,
+    },
+  }
+end
+
+---@return Clodex.UiAction.Config[]
+function Preview:command_actions()
+  local actions = self:common_actions()
+  vim.list_extend(actions, {
+    {
+      lhs = "j",
+      label = "j next",
+      callback = function()
+        self:move_command_selection(1)
+      end,
+    },
+    {
+      lhs = "<Down>",
+      label = "Down next",
+      callback = function()
+        self:move_command_selection(1)
+      end,
+    },
+    {
+      lhs = "k",
+      label = "k previous",
+      callback = function()
+        self:move_command_selection(-1)
+      end,
+    },
+    {
+      lhs = "<Up>",
+      label = "Up previous",
+      callback = function()
+        self:move_command_selection(-1)
+      end,
+    },
+    {
+      lhs = "<CR>",
+      label = "Enter run",
+      callback = function()
+        self:execute_selected_command()
+      end,
+    },
+  })
+  return actions
+end
+
+function Preview:ensure_panel()
+  if self.panel then
+    return
+  end
+
+  self.panel = UiPanel.new({
+    id = "state_preview",
+    focus_order = { "commands", "state" },
+    on_close = function()
+      if not self.is_hiding then
+        self:hide()
+      end
+    end,
+  })
+end
+
+---@param field "command_block"|"state_block"
+---@param win_field "command_win"|"state_win"
+---@param id string
+---@param buf integer
+---@param win_opts snacks.win.Config|{}
+function Preview:open_block(field, win_field, id, buf, win_opts)
+  self:ensure_panel()
+  local block = self[field]
+  if not block then
+    block = UiBlock.new({
+      id = id,
+      buf = buf,
+      win = win_opts,
+      actions = id == "commands" and self:command_actions() or self:common_actions(),
+    })
+    self[field] = block
+    self.panel:add_block(block)
+  else
+    block.buf = buf
+    block.win_opts = vim.deepcopy(win_opts)
+  end
+
+  local win = block:open()
+  if win then
+    block:update()
+    self.panel:watch_window(win)
+  end
+  self[win_field] = block:winid()
+end
+
 --- Applies shared styling for both preview windows.
 --- Keeps numbering, wrapping, and focus cursorline behavior synchronized.
 function Preview:apply_window_style()
-  local function apply(win, active)
-    if not win_valid(win) then
+  local function apply(block, active)
+    if not block then
       return
     end
-    ui_win.configure(win, {
+    block:set_style({
       view = "panel",
       wo = {
         winblend = self.config.state_preview.winblend,
@@ -415,8 +559,8 @@ function Preview:apply_window_style()
     })
   end
 
-  apply(self.command_win, self.focus == "commands")
-  apply(self.state_win, self.focus == "state")
+  apply(self.command_block, self.focus == "commands")
+  apply(self.state_block, self.focus == "state")
 end
 
 function Preview:update_cursor()
@@ -440,56 +584,10 @@ end
 function Preview:set_focus(focus)
   self.focus = focus
   self:apply_window_style()
-  local win = focus == "commands" and self.command_win or self.state_win
-  if win_valid(win) then
-    vim.api.nvim_set_current_win(win)
+  if self.panel then
+    self.panel:focus(focus)
   end
   self:update_cursor()
-end
-
---- Binds keymaps used for closing, navigation, and command execution.
---- Keeps both panes in sync and delegates to command/project-level handlers.
-function Preview:attach_keymaps()
-  local function map(buf, lhs, rhs)
-    vim.keymap.set("n", lhs, rhs, { buffer = buf, nowait = true, silent = true })
-  end
-
-  for _, buf in ipairs({ self.command_buf, self.state_buf }) do
-    map(buf, "q", function()
-      self:hide()
-    end)
-    map(buf, "<Esc>", function()
-      self:hide()
-    end)
-    map(buf, "h", function()
-      self:set_focus("commands")
-    end)
-    map(buf, "<Left>", function()
-      self:set_focus("commands")
-    end)
-    map(buf, "l", function()
-      self:set_focus("state")
-    end)
-    map(buf, "<Right>", function()
-      self:set_focus("state")
-    end)
-  end
-
-  map(self.command_buf, "j", function()
-    self:move_command_selection(1)
-  end)
-  map(self.command_buf, "<Down>", function()
-    self:move_command_selection(1)
-  end)
-  map(self.command_buf, "k", function()
-    self:move_command_selection(-1)
-  end)
-  map(self.command_buf, "<Up>", function()
-    self:move_command_selection(-1)
-  end)
-  map(self.command_buf, "<CR>", function()
-    self:execute_selected_command()
-  end)
 end
 
 --- Re-renders or creates the two floating windows and reapplies layout.
@@ -528,27 +626,16 @@ function Preview:update_windows()
     zindex = 60,
   }
 
-  if win_valid(self.command_win) then
-    vim.api.nvim_win_set_config(self.command_win, command_config)
-  else
-    self.command_win = ui_win.open(vim.tbl_extend("force", command_config, {
-      buf = self.command_buf,
-      enter = true,
-      view = "panel",
-      theme = "default_float",
-    })).win
-  end
-
-  if win_valid(self.state_win) then
-    vim.api.nvim_win_set_config(self.state_win, state_config)
-  else
-    self.state_win = ui_win.open(vim.tbl_extend("force", state_config, {
-      buf = self.state_buf,
-      enter = false,
-      view = "panel",
-      theme = "default_float",
-    })).win
-  end
+  self:open_block("command_block", "command_win", "commands", self.command_buf, vim.tbl_extend("force", command_config, {
+    enter = true,
+    view = "panel",
+    theme = "default_float",
+  }))
+  self:open_block("state_block", "state_win", "state", self.state_buf, vim.tbl_extend("force", state_config, {
+    enter = false,
+    view = "panel",
+    theme = "default_float",
+  }))
 
   self:apply_window_style()
   self:update_cursor()
@@ -562,7 +649,6 @@ function Preview:show()
   end
 
   self:ensure_buffers()
-  self:attach_keymaps()
   self:update_windows()
   self:set_focus("commands")
 end
@@ -571,9 +657,11 @@ end
 --- Buffer reuse allows quick re-open with preserved display content.
 function Preview:hide()
   require("clodex.ui.select").close_active_input()
-  for _, win in ipairs({ self.command_win, self.state_win }) do
-    ui_win.close(win)
+  self.is_hiding = true
+  if self.panel then
+    self.panel:close()
   end
+  self.is_hiding = false
   self.command_win = nil
   self.state_win = nil
 end
