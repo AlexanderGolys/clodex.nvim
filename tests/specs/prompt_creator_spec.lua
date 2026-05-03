@@ -647,6 +647,40 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(close_found)
     end)
 
+    it("updates footer hints from prompt editor mode events", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        vim.api.nvim_exec_autocmds("InsertEnter", { buffer = creator.layout.title_buf })
+        local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
+
+        assert.is_truthy(lines[1]:find("Tab/S%-Tab", 1))
+        assert.is_truthy(lines[2]:find("C%-s: plan", 1, false))
+        assert.is_nil(lines[2]:find("⏎: queue", 1, true))
+
+        vim.api.nvim_exec_autocmds("InsertLeave", { buffer = creator.layout.title_buf })
+        lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
+
+        assert.is_truthy(lines[2]:find("s: plan", 1, true))
+        assert.is_truthy(lines[2]:find("⏎: queue", 1, true))
+        assert.is_nil(lines[2]:find("C%-s: plan", 1, false))
+    end)
+
     it("highlights the footer close shortcut without spilling into queue", function()
         creator = Creator.open({
             app = {

@@ -717,9 +717,9 @@ function Creator:attach_prompt_context(buf)
     })
     vim.api.nvim_create_autocmd({ "InsertEnter", "InsertLeave" }, {
         buffer = buf,
-        callback = function()
+        callback = function(event)
             if self.footer_buf and vim.api.nvim_buf_is_valid(self.footer_buf) then
-                self:render_footer()
+                self:render_footer(event.event == "InsertEnter")
             end
         end,
     })
@@ -1380,8 +1380,9 @@ function Creator:render_variant_tabs()
     })
 end
 
-function Creator:render_footer()
-    local insert_mode = self:in_insert_mode()
+---@param insert_mode? boolean
+function Creator:render_footer(insert_mode)
+    insert_mode = insert_mode == nil and self:in_insert_mode() or insert_mode
     local has_variants = #self:variants() > 0
     local has_multiple_projects = #self.projects > 1
     local lines = footer_lines(insert_mode, has_variants, has_multiple_projects)
