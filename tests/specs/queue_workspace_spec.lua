@@ -2070,7 +2070,7 @@ describe("clodex.ui.queue_workspace", function()
         vim.api.nvim_win_close(workspace.footer_win, true)
     end)
 
-    it("shows implemented prompts from oldest to newest", function()
+    it("shows implemented prompts from newest to oldest", function()
         local project = {
             name = "Test Project",
             root = "/tmp/test-project",
@@ -2171,7 +2171,7 @@ describe("clodex.ui.queue_workspace", function()
 
         assert.is_true(older_index > 0)
         assert.is_true(newer_index > 0)
-        assert.is_true(older_index < newer_index)
+        assert.is_true(newer_index < older_index)
 
         vim.api.nvim_win_close(workspace.project_win, true)
         vim.api.nvim_win_close(workspace.queue_win, true)

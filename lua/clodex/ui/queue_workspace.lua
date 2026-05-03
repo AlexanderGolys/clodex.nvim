@@ -198,6 +198,26 @@ local function ensure_hidden_cursor_highlight()
     })
 end
 
+---@param self Clodex.QueueWorkspace|table
+local function hide_workspace_cursor(self)
+    if type(self.hide_cursor) == "function" then
+        self:hide_cursor()
+    end
+end
+
+---@param self Clodex.QueueWorkspace|table
+local function show_workspace_cursor(self)
+    if type(self.show_cursor) == "function" then
+        self:show_cursor()
+    end
+end
+
+---@param self Clodex.QueueWorkspace|table
+---@return boolean
+local function workspace_is_open(self)
+    return type(self.is_open) == "function" and self:is_open()
+end
+
 ---@param self Clodex.QueueWorkspace
 ---@param opts Clodex.UiSelect.InputOpts
 ---@param on_confirm fun(value?: string)
@@ -208,15 +228,15 @@ local function open_workspace_input(self, opts, on_confirm)
     local previous_on_close = opts.win.on_close
     opts.win.on_close = function(win)
         self.modal_input_open = false
-        if self:is_open() then
-            self:hide_cursor()
+        if workspace_is_open(self) then
+            hide_workspace_cursor(self)
         end
         if previous_on_close then
             previous_on_close(win)
         end
     end
 
-    self:show_cursor()
+    show_workspace_cursor(self)
     self.modal_input_open = true
     return ui.input(opts, on_confirm)
 end
@@ -228,12 +248,12 @@ local function open_workspace_confirm(self, prompt, on_confirm)
     -- Confirmation pickers are modal too. Mark them as such so workspace focus
     -- restoration does not immediately pull the cursor back out of the picker.
     ui.close_active_input()
-    self:show_cursor()
+    show_workspace_cursor(self)
     self.modal_input_open = true
     return ui.confirm(prompt, function(confirmed)
         self.modal_input_open = false
-        if self:is_open() then
-            self:hide_cursor()
+        if workspace_is_open(self) then
+            hide_workspace_cursor(self)
         end
         on_confirm(confirmed)
     end)
@@ -1845,7 +1865,7 @@ function Workspace:render_queue()
                 if queue_name == "implemented" then
                     items = vim.deepcopy(items)
                     table.sort(items, function(left, right)
-                        return (left.created_at or "") < (right.created_at or "")
+                        return (left.created_at or "") > (right.created_at or "")
                     end)
                 end
 
