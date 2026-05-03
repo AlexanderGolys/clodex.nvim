@@ -317,12 +317,13 @@ end
 
 ---@param project Clodex.Project
 ---@param item_id string
----@param spec { title: string, details?: string }
+---@param spec { title: string, details?: string, image_path?: string }
+---@return Clodex.QueueItem|false
 function QueueActions:edit_queue_item(project, item_id, spec)
     local title = vim.trim(spec.title or "")
     if title == "" then
         notify.warn("Todo title is required")
-        return
+        return false
     end
 
     local normalized = self.app.prompt_actions:normalize_spec(project, {
@@ -332,16 +333,18 @@ function QueueActions:edit_queue_item(project, item_id, spec)
     local item = self.app.queue:update_item(project, item_id, {
         title = normalized.title,
         details = normalized.details or false,
+        image_path = spec.image_path and vim.trim(spec.image_path) ~= "" and spec.image_path or false,
     })
     if not item then
         notify.warn("Queue item not found")
-        return
+        return false
     end
 
     notify.notify(("Updated prompt for %s: %s"):format(project.name, item.title))
     self:refresh_queue_item_instructions(project, item_id)
     self:remember_workspace_revision(project)
     self.app:refresh_views()
+    return item
 end
 
 ---@param project Clodex.Project
@@ -534,7 +537,7 @@ function QueueActions:move_queue_item_to_project(project, item_id, target_projec
     end
 
     local moved = self.app.queue:put_item(target_project, target_queue, item, {
-        copy = true,
+        copy = opts.copy == true,
         clear_history = queue_name == "history" and target_queue ~= "history",
     })
     if not moved then

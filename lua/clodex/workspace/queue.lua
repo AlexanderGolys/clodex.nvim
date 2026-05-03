@@ -388,6 +388,7 @@ end
 ---  history_commits?: string[]|false,
 ---  history_completed_at?: string|false,
 ---  kind?: Clodex.PromptCategory,
+---  image_path?: string|false,
 ---  execution_instructions?: string|false,
 ---  completion_target?: Clodex.QueueName|false,
 ---}
@@ -405,6 +406,9 @@ function Queue:update_item(project, item_id, attrs)
                 end
                 if attrs.kind ~= nil and Prompt.categories.is_valid(attrs.kind) then
                     item.kind = attrs.kind
+                end
+                if attrs.image_path ~= nil then
+                    item.image_path = attrs.image_path ~= false and vim.trim(attrs.image_path) or nil
                 end
                 if attrs.title ~= nil or attrs.details ~= nil then
                     item.prompt = item.title .. (item.details and ("\n\n" .. item.details) or "")

@@ -204,6 +204,7 @@ describe("clodex.app.queue_actions", function()
             queue = "queued",
             kind = "todo",
         })
+        local created_at = item.created_at
         queue:advance(project, item.id)
         queue:update_implemented_item(project, item.id, {
             summary = "done",
@@ -220,6 +221,8 @@ describe("clodex.app.queue_actions", function()
 
         assert.are.equal(nil, source_queue_name)
         assert.are.equal(1, #target_queues.queued)
+        assert.are.equal(item.id, target_queues.queued[1].id)
+        assert.are.equal(created_at, target_queues.queued[1].created_at)
         assert.are.equal("share prompt", target_queues.queued[1].title)
         assert.are.equal(nil, target_queues.queued[1].history_summary)
         assert.are.equal(0, #target_queues.history)

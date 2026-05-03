@@ -688,6 +688,7 @@ describe("clodex.ui.queue_workspace", function()
         local edited
         local submitted
         local deleted
+        local moved
         local refresh_count = 0
         local workspace = {
             app = {
@@ -712,9 +713,13 @@ describe("clodex.ui.queue_workspace", function()
                 queue_actions = {
                     edit_queue_item = function(_, queued_project, item_id, spec)
                         edited = { project = queued_project, item_id = item_id, spec = spec }
+                        return true
                     end,
                     delete_queue_item = function(_, queued_project, item_id)
                         deleted = { project = queued_project, item_id = item_id }
+                    end,
+                    move_queue_item_to_project = function(_, queued_project, item_id, moved_project)
+                        moved = { project = queued_project, item_id = item_id, target_project = moved_project }
                     end,
                 },
             },
@@ -733,15 +738,16 @@ describe("clodex.ui.queue_workspace", function()
 
         assert.are.equal(1, #open_creator_calls)
         assert.are.same(project, open_creator_calls[1].project)
-        assert.are.same(target_project, submitted.project)
-        assert.are.equal("Moved title", submitted.spec.title)
-        assert.are.equal("Moved details", submitted.spec.details)
-        assert.are.equal("bug", submitted.spec.kind)
-        assert.are.equal("/tmp/new-image.png", submitted.spec.image_path)
-        assert.are.equal("save", submitted.action)
-        assert.are.same(project, deleted.project)
-        assert.are.equal("item-1", deleted.item_id)
-        assert.is_nil(edited)
+        assert.are.same(project, edited.project)
+        assert.are.equal("item-1", edited.item_id)
+        assert.are.equal("Moved title", edited.spec.title)
+        assert.are.equal("Moved details", edited.spec.details)
+        assert.are.equal("/tmp/new-image.png", edited.spec.image_path)
+        assert.are.same(project, moved.project)
+        assert.are.equal("item-1", moved.item_id)
+        assert.are.same(target_project, moved.target_project)
+        assert.is_nil(submitted)
+        assert.is_nil(deleted)
         assert.are.equal(1, refresh_count)
     end)
 

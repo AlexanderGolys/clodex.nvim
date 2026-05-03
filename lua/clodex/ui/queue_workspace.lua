@@ -1954,11 +1954,15 @@ function Workspace:edit_queue_item()
         on_submit = function(spec, action, selected_project)
             local target_project = selected_project or project
             if target_project.root ~= project.root then
-                local submitted = self.app.prompt_actions:submit_prompt(target_project, spec, action)
-                if submitted == false or submitted == nil then
+                local edited = self.app.queue_actions:edit_queue_item(project, item.id, {
+                    title = spec.title,
+                    details = spec.details,
+                    image_path = spec.image_path,
+                })
+                if edited == false then
                     return false
                 end
-                self.app.queue_actions:delete_queue_item(project, item.id)
+                self.app.queue_actions:move_queue_item_to_project(project, item.id, target_project)
                 self:refresh()
                 return
             end
@@ -1966,6 +1970,7 @@ function Workspace:edit_queue_item()
             self.app.queue_actions:edit_queue_item(project, item.id, {
                 title = spec.title,
                 details = spec.details,
+                image_path = spec.image_path,
             })
             self:refresh()
         end,
