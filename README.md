@@ -174,7 +174,7 @@ Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the se
 
 The main queue workspace panel uses the shared Clodex UI panel shell, with project, queue, and footer panes owned as one panel.
 
-The debug state panel uses the shared Clodex UI panel shell, with a command pane on the left and a state pane on the right. The state pane includes backend, focus, session, project, tab, queued workflow, prompt skill, and registered global keymap details.
+The debug state panel uses the same shared Clodex UI panel API as the prompt creator, with panel-owned command and state blocks. The state pane includes backend, focus, session, project, tab, queued workflow, prompt skill, and the global keymaps currently registered by Clodex.
 
 ## Queue workflow
 

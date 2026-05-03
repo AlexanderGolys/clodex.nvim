@@ -29,6 +29,8 @@ local did_register = false
 ---@field mode string
 ---@field lhs string
 ---@field desc string
+---@field field? Clodex.KeymapField
+---@field raw_mode? string|string[]
 
 ---@alias Clodex.KeymapField "toggle"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"go_to_readme"
 
@@ -256,7 +258,16 @@ local GLOBAL_KEYMAPS = {
     },
 } ---@type Clodex.GlobalKeymapDefinition[]
 
-local REGISTERED_KEYMAPS = {} ---@type { mode: string|string[], lhs: string }[]
+local REGISTERED_KEYMAPS = {} ---@type Clodex.KeymapSpec[]
+
+---@param mode string|string[]
+---@return string
+local function keymap_mode_label(mode)
+    if type(mode) == "table" then
+        return table.concat(mode, ",")
+    end
+    return mode
+end
 
 ---@param values Clodex.Commands.KeymapValues
 ---@param field Clodex.KeymapField
@@ -831,25 +842,27 @@ function M.list_keymaps(values)
     for _, definition in ipairs(GLOBAL_KEYMAPS) do
         local keymap = resolve_keymap(values, definition.field, definition)
         if keymap ~= nil then
-            local mode = keymap.mode
-            if type(mode) == "table" then
-                mode = table.concat(mode, ",")
-            end
             keymaps[#keymaps + 1] = {
                 context = "Global",
-                mode = mode,
+                mode = keymap_mode_label(keymap.mode),
                 lhs = keymap.lhs,
                 desc = keymap.desc,
+                field = definition.field,
             }
         end
     end
     return keymaps
 end
 
+---@return Clodex.KeymapSpec[]
+function M.list_registered_keymaps()
+    return vim.deepcopy(REGISTERED_KEYMAPS)
+end
+
 ---@param values Clodex.Commands.KeymapValues
 function M.register_keymaps(values)
     for _, keymap in ipairs(REGISTERED_KEYMAPS) do
-        pcall(vim.keymap.del, keymap.mode, keymap.lhs)
+        pcall(vim.keymap.del, keymap.raw_mode or keymap.mode, keymap.lhs)
     end
     REGISTERED_KEYMAPS = {}
 
@@ -860,8 +873,12 @@ function M.register_keymaps(values)
                 return require_clodex()[definition.action]()
             end, keymap.opts)
             REGISTERED_KEYMAPS[#REGISTERED_KEYMAPS + 1] = {
-                mode = keymap.mode,
+                context = "Global",
+                mode = keymap_mode_label(keymap.mode),
+                raw_mode = keymap.mode,
                 lhs = keymap.lhs,
+                desc = keymap.desc,
+                field = definition.field,
             }
         end
     end

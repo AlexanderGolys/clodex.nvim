@@ -1,7 +1,6 @@
 local Commands = require("clodex.commands")
 local Backend = require("clodex.backend")
 local Extmark = require("clodex.ui.extmark")
-local UiBlock = require("clodex.ui.panel").Block
 local UiPanel = require("clodex.ui.panel").Panel
 local TextBlock = require("clodex.ui.text_block")
 local ui_win = require("clodex.ui.win")
@@ -24,6 +23,7 @@ local fs = require("clodex.util.fs")
 ---@field max_state_width integer
 ---@field command_index integer
 ---@field commands Clodex.CommandSpec[]
+---@field snapshot? Clodex.App.StateSnapshot
 ---@field focus "commands"|"state"
 ---@field is_hiding boolean
 local Preview = {}
@@ -383,7 +383,10 @@ end
 --- This gate keeps callers safe before continuing higher-level state transitions.
 ---@return boolean
 function Preview:is_open()
-  return win_valid(self.command_win) and win_valid(self.state_win)
+  return self.command_block ~= nil
+    and self.command_block:is_open()
+    and self.state_block ~= nil
+    and self.state_block:is_open()
 end
 
 --- Creates or reuses state preview buffers.
@@ -498,48 +501,98 @@ end
 
 function Preview:ensure_panel()
   if self.panel then
+    self:ensure_buffers()
+    if self.command_block then
+      self.command_block.buf = self.command_buf
+    end
+    if self.state_block then
+      self.state_block.buf = self.state_buf
+    end
     return
   end
+
+  self:ensure_buffers()
 
   self.panel = UiPanel.new({
     id = "state_preview",
     focus_order = { "commands", "state" },
+    blocks = {
+      {
+        id = "commands",
+        buf = self.command_buf,
+        win = {
+          relative = "editor",
+          anchor = "NW",
+          row = function()
+            return self.config.state_preview.row
+          end,
+          col = function()
+            return self.config.state_preview.col
+          end,
+          width = function()
+            return command_width(self)
+          end,
+          height = function()
+            return panel_height(self)
+          end,
+          style = "minimal",
+          border = "rounded",
+          title = " Commands ",
+          title_pos = "center",
+          zindex = 60,
+          enter = true,
+          view = "panel",
+          theme = "default_float",
+        },
+        actions = self:command_actions(),
+        render = function()
+          self:render_commands()
+        end,
+      },
+      {
+        id = "state",
+        buf = self.state_buf,
+        win = {
+          relative = "editor",
+          anchor = "NW",
+          row = function()
+            return self.config.state_preview.row
+          end,
+          col = function()
+            return self.config.state_preview.col + command_width(self) + PANEL_GAP_COLS
+          end,
+          width = function()
+            return state_width(self)
+          end,
+          height = function()
+            return panel_height(self)
+          end,
+          style = "minimal",
+          border = "rounded",
+          title = " Clodex CLI State ",
+          title_pos = "center",
+          zindex = 60,
+          enter = false,
+          view = "panel",
+          theme = "default_float",
+        },
+        actions = self:common_actions(),
+        render = function()
+          if self.snapshot then
+            self:render_state(self.snapshot)
+          end
+        end,
+      },
+    },
     on_close = function()
       if not self.is_hiding then
         self:hide()
       end
     end,
   })
-end
 
----@param field "command_block"|"state_block"
----@param win_field "command_win"|"state_win"
----@param id string
----@param buf integer
----@param win_opts snacks.win.Config|{}
-function Preview:open_block(field, win_field, id, buf, win_opts)
-  self:ensure_panel()
-  local block = self[field]
-  if not block then
-    block = UiBlock.new({
-      id = id,
-      buf = buf,
-      win = win_opts,
-      actions = id == "commands" and self:command_actions() or self:common_actions(),
-    })
-    self[field] = block
-    self.panel:add_block(block)
-  else
-    block.buf = buf
-    block.win_opts = vim.deepcopy(win_opts)
-  end
-
-  local win = block:open()
-  if win then
-    block:update()
-    self.panel:watch_window(win)
-  end
-  self[win_field] = block:winid()
+  self.command_block = self.panel:block("commands")
+  self.state_block = self.panel:block("state")
 end
 
 --- Applies shared styling for both preview windows.
@@ -594,48 +647,16 @@ end
 --- Works on top of computed pane sizes and current state preview config.
 function Preview:update_windows()
   self:ensure_buffers()
-  local config = self.config.state_preview
-  local left_width = command_width(self)
-  local right_width = state_width(self)
-  local height = panel_height(self)
+  self:ensure_panel()
 
-  local command_config = {
-    relative = "editor",
-    anchor = "NW",
-    row = config.row,
-    col = config.col,
-    width = left_width,
-    height = height,
-    style = "minimal",
-    border = "rounded",
-    title = " Commands ",
-    title_pos = "center",
-    zindex = 60,
-  }
-  local state_config = {
-    relative = "editor",
-    anchor = "NW",
-    row = config.row,
-    col = config.col + left_width + PANEL_GAP_COLS,
-    width = right_width,
-    height = height,
-    style = "minimal",
-    border = "rounded",
-    title = " Clodex CLI State ",
-    title_pos = "center",
-    zindex = 60,
-  }
+  if self:is_open() then
+    self.panel:update()
+  else
+    self.panel:open()
+  end
 
-  self:open_block("command_block", "command_win", "commands", self.command_buf, vim.tbl_extend("force", command_config, {
-    enter = true,
-    view = "panel",
-    theme = "default_float",
-  }))
-  self:open_block("state_block", "state_win", "state", self.state_buf, vim.tbl_extend("force", state_config, {
-    enter = false,
-    view = "panel",
-    theme = "default_float",
-  }))
+  self.command_win = self.command_block and self.command_block:winid() or nil
+  self.state_win = self.state_block and self.state_block:winid() or nil
 
   self:apply_window_style()
   self:update_cursor()
@@ -649,6 +670,7 @@ function Preview:show()
   end
 
   self:ensure_buffers()
+  self:ensure_panel()
   self:update_windows()
   self:set_focus("commands")
 end
@@ -691,7 +713,7 @@ end
 ---@param self Clodex.StatePreview
 ---@param block Clodex.TextBlock
 local function append_keymaps(self, block)
-  local keymaps = Commands.list_keymaps(self.config)
+  local keymaps = Commands.list_registered_keymaps()
   if #keymaps == 0 then
     push_line(self, block, "> none", {
       Extmark.inline(0, 0, 1, "ClodexStateMarker"),
@@ -909,6 +931,7 @@ end
 --- Full render pass for both command and state windows.
 --- It ensures buffer creation and updates all panels in one call.
 function Preview:render(snapshot)
+  self.snapshot = snapshot
   self:ensure_buffers()
   self:render_commands()
   self:render_state(snapshot)

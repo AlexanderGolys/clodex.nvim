@@ -1,6 +1,22 @@
 local Config = require("clodex.config")
+local Commands = require("clodex.commands")
 local Preview = require("clodex.ui.state_preview")
 local fs = require("clodex.util.fs")
+
+local function disabled_keymaps()
+    return {
+        toggle = false,
+        queue_workspace = false,
+        state_preview = false,
+        mini_state_preview = false,
+        backend_toggle = false,
+        chat_toggle = false,
+        refresh = false,
+        new_bug_prompt = false,
+        new_improvement_prompt = false,
+        go_to_readme = false,
+    }
+end
 
 local function temp_dir()
     local dir = vim.fn.tempname()
@@ -10,6 +26,7 @@ end
 
 describe("clodex.ui.state_preview", function()
     after_each(function()
+        Commands.register_keymaps({ keymaps = disabled_keymaps() })
         for _, name in ipairs({ "clodex-state-preview-state", "clodex-state-preview-commands" }) do
             local bufnr = vim.fn.bufnr(name)
             if bufnr > 0 and vim.api.nvim_buf_is_valid(bufnr) then
@@ -24,6 +41,7 @@ describe("clodex.ui.state_preview", function()
         fs.write_file(skill_file, "---\nname: prompt-nvim-clodex\n---\nSkill body\n")
 
         local preview = Preview.new(Config.new():setup())
+        Commands.register_keymaps(preview.config)
         preview:ensure_buffers()
         preview.app = {
             queue_summary = function()

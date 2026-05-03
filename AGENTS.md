@@ -20,6 +20,7 @@
 - Treat the public queued MCP contract as loop-based: use `get_task`, `close_task`, and `create_prompt`; keep queue mutation internals out of the exposed agent workflow.
 - Treat the task returned by `get_task` as authoritative; it may differ from the queued prompt that launched the agent when another item is already active.
 - Default queued git workflow stays commit-based unless a task explicitly needs branch-and-PR behavior.
+- Keep the debug state panel on the shared UI panel API used by the prompt creator, and keep its keymap section tied to the global keymaps Clodex actually registered.
 
 ## Style Guidelines
 - Use 4-space indentation.
