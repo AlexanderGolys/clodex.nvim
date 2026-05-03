@@ -33,7 +33,6 @@ local DEFAULT_SUBMIT_ACTIONS = {
 
 local RESET_AFTER_SUBMIT_ACTIONS = {
     save = true,
-    queue = true,
     exec = true,
 }
 

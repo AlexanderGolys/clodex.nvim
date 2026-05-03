@@ -1744,7 +1744,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal("Preserve footer", submitted_spec.details)
     end)
 
-    it("resets the creator after a successful queued submit keymap", function()
+    it("closes the creator after a successful queued submit keymap", function()
         local submitted_action
 
         creator = Creator.open({
@@ -1776,15 +1776,9 @@ describe("clodex.ui.prompt_creator", function()
 
         wait_for(function()
             return submitted_action == "queue"
-                and creator.footer_win ~= nil
-                and creator.footer_win:valid()
-                and creator.layout.title_win ~= nil
-                and creator.layout.title_win:valid()
-                and vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, 1, false)[1] == ""
+                and creator.footer_win == nil
+                and creator.layout == nil
         end)
-
-        assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
-        assert.is_false(creator:in_insert_mode())
     end)
 
     it("resets the creator after successful plan and run-now submit keymaps", function()
