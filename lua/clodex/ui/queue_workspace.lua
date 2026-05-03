@@ -58,6 +58,8 @@ local notify = require("clodex.util.notify")
 ---@field focus_augroup? integer
 ---@field is_closing boolean
 ---@field modal_input_open boolean
+---@field saved_guicursor? string
+---@field cursor_hidden boolean
 local Workspace = {}
 Workspace.__index = Workspace
 
@@ -114,6 +116,8 @@ local QUEUE_INSERT_MODE_KEYS = {
     "O",
     "R",
 }
+local HIDDEN_CURSOR_HIGHLIGHT = "ClodexQueueCursorHidden"
+local HIDDEN_GUICURSOR = ("a:block-%s/%s"):format(HIDDEN_CURSOR_HIGHLIGHT, HIDDEN_CURSOR_HIGHLIGHT)
 local project_detail_lines
 
 local function win_valid(win)
@@ -167,6 +171,33 @@ local function clear_open_suppression_later(self, delay_ms)
     end, delay_ms or 250)
 end
 
+---@param group string
+---@return integer?
+local function highlight_bg(group)
+    local ok, hl = pcall(vim.api.nvim_get_hl, 0, {
+        name = group,
+        link = false,
+    })
+    if not ok then
+        return nil
+    end
+    return hl.bg
+end
+
+local function ensure_hidden_cursor_highlight()
+    local bg = highlight_bg("ClodexQueueFocusActive")
+        or highlight_bg("NormalFloat")
+        or highlight_bg("Normal")
+    if not bg then
+        return
+    end
+    vim.api.nvim_set_hl(0, HIDDEN_CURSOR_HIGHLIGHT, {
+        fg = bg,
+        bg = bg,
+        blend = 100,
+    })
+end
+
 ---@param self Clodex.QueueWorkspace
 ---@param opts Clodex.UiSelect.InputOpts
 ---@param on_confirm fun(value?: string)
@@ -177,11 +208,15 @@ local function open_workspace_input(self, opts, on_confirm)
     local previous_on_close = opts.win.on_close
     opts.win.on_close = function(win)
         self.modal_input_open = false
+        if self:is_open() then
+            self:hide_cursor()
+        end
         if previous_on_close then
             previous_on_close(win)
         end
     end
 
+    self:show_cursor()
     self.modal_input_open = true
     return ui.input(opts, on_confirm)
 end
@@ -193,9 +228,13 @@ local function open_workspace_confirm(self, prompt, on_confirm)
     -- Confirmation pickers are modal too. Mark them as such so workspace focus
     -- restoration does not immediately pull the cursor back out of the picker.
     ui.close_active_input()
+    self:show_cursor()
     self.modal_input_open = true
     return ui.confirm(prompt, function(confirmed)
         self.modal_input_open = false
+        if self:is_open() then
+            self:hide_cursor()
+        end
         on_confirm(confirmed)
     end)
 end
@@ -876,6 +915,8 @@ function Workspace.new(app, config)
     self.queue_item_rows = {}
     self.is_closing = false
     self.modal_input_open = false
+    self.saved_guicursor = nil
+    self.cursor_hidden = false
     return self
 end
 
@@ -1124,7 +1165,41 @@ function Workspace:close()
             ui_win.close(win)
         end
     end
+    self:restore_cursor()
     self.is_closing = false
+end
+
+function Workspace:hide_cursor()
+    if self.cursor_hidden then
+        return
+    end
+    if self.saved_guicursor == nil then
+        self.saved_guicursor = vim.o.guicursor
+    end
+    ensure_hidden_cursor_highlight()
+    local ok = pcall(function()
+        vim.o.guicursor = HIDDEN_GUICURSOR
+    end)
+    if ok then
+        self.cursor_hidden = true
+    end
+end
+
+function Workspace:show_cursor()
+    if not self.cursor_hidden then
+        return
+    end
+    if self.saved_guicursor ~= nil then
+        pcall(function()
+            vim.o.guicursor = self.saved_guicursor
+        end)
+    end
+    self.cursor_hidden = false
+end
+
+function Workspace:restore_cursor()
+    self:show_cursor()
+    self.saved_guicursor = nil
 end
 
 function Workspace:clear_focus_tracking()
@@ -1499,8 +1574,10 @@ end
 function Workspace:apply_focus()
     self:update_window_highlights()
     if self.modal_input_open or require("clodex.ui.select").has_active_input() then
+        self:show_cursor()
         return
     end
+    self:hide_cursor()
     local win = self.focus == "projects" and self.project_win or self.queue_win
     if not win_valid(win) then
         win = win_valid(self.project_win) and self.project_win or self.queue_win

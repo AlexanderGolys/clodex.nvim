@@ -1,9 +1,11 @@
 describe("clodex.ui.queue_workspace cursor highlights", function()
     local Workspace
     local original_select
+    local original_guicursor
 
     before_each(function()
         package.loaded["clodex.ui.queue_workspace"] = nil
+        original_guicursor = vim.o.guicursor
         original_select = package.loaded["clodex.ui.select"]
         package.loaded["snacks.input"] = {
             input = function() end,
@@ -29,6 +31,42 @@ describe("clodex.ui.queue_workspace cursor highlights", function()
         package.loaded["snacks.input"] = nil
         package.loaded["snacks.picker.select"] = nil
         package.loaded["clodex.ui.select"] = original_select
+        vim.o.guicursor = original_guicursor
+    end)
+
+    it("hides and restores the global cursor around main panel focus", function()
+        local workspace = Workspace.new({}, {
+            queue_workspace = {
+                preview_max_lines = 3,
+                fold_preview = true,
+            },
+        })
+        vim.o.guicursor = "n-v-c:block,i-ci-ve:ver25"
+
+        workspace:hide_cursor()
+
+        assert.is_truthy(vim.o.guicursor:find("ClodexQueueCursorHidden", 1, true))
+
+        workspace:restore_cursor()
+
+        assert.are.equal("n-v-c:block,i-ci-ve:ver25", vim.o.guicursor)
+    end)
+
+    it("restores the cursor while workspace modal input has focus", function()
+        local workspace = Workspace.new({}, {
+            queue_workspace = {
+                preview_max_lines = 3,
+                fold_preview = true,
+            },
+        })
+        vim.o.guicursor = "n-v-c:block,i-ci-ve:ver25"
+
+        workspace:hide_cursor()
+        workspace.modal_input_open = true
+        workspace:apply_focus()
+
+        assert.are.equal("n-v-c:block,i-ci-ve:ver25", vim.o.guicursor)
+        assert.is_false(workspace.cursor_hidden)
     end)
 
     it("maps focused and unfocused picker cursors to muted cursor highlights", function()
