@@ -167,6 +167,8 @@ Legacy queue items and command aliases using `todo`, `freeform`, `adjustment`, `
 
 Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the selected range.
 
+The main queue workspace panel uses the shared Clodex UI panel shell, with project, queue, and footer panes owned as one panel.
+
 The debug state panel uses the shared Clodex UI panel shell, with a command pane on the left and a state pane on the right. The state pane includes backend, focus, session, project, tab, queued workflow, prompt skill, and registered global keymap details.
 
 ## Queue workflow

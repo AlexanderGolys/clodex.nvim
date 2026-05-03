@@ -2,6 +2,8 @@ local Extmark = require("clodex.ui.extmark")
 local Prompt = require("clodex.prompt")
 local PromptContext = require("clodex.prompt.context")
 local TextBlock = require("clodex.ui.text_block")
+local UiBlock = require("clodex.ui.panel").Block
+local UiPanel = require("clodex.ui.panel").Panel
 local ui = require("clodex.ui.select")
 local ui_win = require("clodex.ui.win")
 local notify = require("clodex.util.notify")
@@ -35,6 +37,10 @@ local notify = require("clodex.util.notify")
 ---@field project_buf? integer
 ---@field queue_buf? integer
 ---@field footer_buf? integer
+---@field panel? Clodex.UiPanel
+---@field project_block? Clodex.UiBlock
+---@field queue_block? Clodex.UiBlock
+---@field footer_block? Clodex.UiBlock
 ---@field project_win? integer
 ---@field queue_win? integer
 ---@field footer_win? integer
@@ -50,6 +56,7 @@ local notify = require("clodex.util.notify")
 ---@field queue_item_rows integer[]
 ---@field suppress_open_until? integer
 ---@field focus_augroup? integer
+---@field is_closing boolean
 ---@field modal_input_open boolean
 local Workspace = {}
 Workspace.__index = Workspace
@@ -867,6 +874,7 @@ function Workspace.new(app, config)
     self.project_item_rows = {}
     self.queue_rows = {}
     self.queue_item_rows = {}
+    self.is_closing = false
     self.modal_input_open = false
     return self
 end
@@ -936,6 +944,51 @@ function Workspace:ensure_buffers()
     self.footer_buf = buf_valid(self.footer_buf) and self.footer_buf or make_buffer("clodex-queue-footer")
 end
 
+function Workspace:ensure_panel()
+    if self.panel then
+        return
+    end
+
+    self.panel = UiPanel.new({
+        id = "queue_workspace",
+        focus_order = { "projects", "queue", "footer" },
+        on_close = function()
+            if not self.is_closing then
+                self:close()
+            end
+        end,
+    })
+end
+
+---@param block_field "project_block"|"queue_block"|"footer_block"
+---@param win_field "project_win"|"queue_win"|"footer_win"
+---@param id string
+---@param buf integer
+---@param win_opts snacks.win.Config|{}
+function Workspace:open_block(block_field, win_field, id, buf, win_opts)
+    self:ensure_panel()
+    local block = self[block_field]
+    if not block then
+        block = UiBlock.new({
+            id = id,
+            buf = buf,
+            win = win_opts,
+        })
+        self[block_field] = block
+        self.panel:add_block(block)
+    else
+        block.buf = buf
+        block.win_opts = vim.deepcopy(win_opts)
+    end
+
+    local win = block:open()
+    if win then
+        block:update()
+        self.panel:watch_window(win)
+    end
+    self[win_field] = block:winid()
+end
+
 ---@return integer, integer, integer, integer, integer, integer
 function Workspace:layout()
     local ui_state = vim.api.nvim_list_uis()[1]
@@ -975,7 +1028,7 @@ function Workspace:open()
     self:ensure_buffers()
 
     local row, col, project_width, queue_width, height, footer_height = self:layout()
-    self.project_win = ui_win.open({
+    self:open_block("project_block", "project_win", "projects", self.project_buf, {
         buf = self.project_buf,
         enter = true,
         fixbuf = false,
@@ -988,8 +1041,8 @@ function Workspace:open()
         title = " Projects ",
         zindex = MAIN_ZINDEX,
         view = "panel",
-    }).win
-    self.queue_win = ui_win.open({
+    })
+    self:open_block("queue_block", "queue_win", "queue", self.queue_buf, {
         buf = self.queue_buf,
         enter = false,
         fixbuf = false,
@@ -1002,8 +1055,8 @@ function Workspace:open()
         title = " Queue ",
         zindex = MAIN_ZINDEX,
         view = "panel",
-    }).win
-    self.footer_win = ui_win.open({
+    })
+    self:open_block("footer_block", "footer_win", "footer", self.footer_buf, {
         buf = self.footer_buf,
         enter = false,
         fixbuf = false,
@@ -1016,7 +1069,7 @@ function Workspace:open()
         title = footer_actions(self.focus, self.project_search, self.queue_search).title,
         zindex = FOOTER_ZINDEX,
         view = "footer",
-    }).win
+    })
 
     self:configure_windows()
     self:attach_keymaps()
@@ -1044,6 +1097,11 @@ end
 --- Closes or deactivates ui queue workspace behavior for the current context.
 --- This is used by command flows when a view or session should stop being active.
 function Workspace:close()
+    if self.is_closing then
+        return
+    end
+
+    self.is_closing = true
     require("clodex.ui.select").close_active_input()
     self:clear_focus_tracking()
     self:reset_filters()
@@ -1059,9 +1117,14 @@ function Workspace:close()
     self.queue_win = nil
     self.footer_win = nil
 
-    for _, win in ipairs(wins) do
-        ui_win.close(win)
+    if self.panel then
+        self.panel:close()
+    else
+        for _, win in ipairs(wins) do
+            ui_win.close(win)
+        end
     end
+    self.is_closing = false
 end
 
 function Workspace:clear_focus_tracking()
@@ -1409,6 +1472,10 @@ function Workspace:set_focus(focus)
         self:render_projects()
         self:render_queue()
         self:render_footer()
+        if self.footer_block then
+            self.footer_block.win_opts.title = footer_actions(self.focus, self.project_search, self.queue_search).title
+            self.footer_block.win_opts.title_pos = "center"
+        end
         if win_valid(self.footer_win) then
             update_win_config(self.footer_win, {
                 title = footer_actions(self.focus, self.project_search, self.queue_search).title,
