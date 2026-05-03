@@ -109,6 +109,18 @@ local function update_winhl(winid, mappings)
     vim.api.nvim_set_option_value("winhl", table.concat(parts, ","), { win = winid })
 end
 
+---@param winid integer
+---@param hl_group string
+local function hide_window_cursor(winid, hl_group)
+    update_winhl(winid, {
+        Cursor = hl_group,
+        lCursor = hl_group,
+        CursorIM = hl_group,
+        TermCursor = hl_group,
+        TermCursorNC = hl_group,
+    })
+end
+
 ---@param buf integer
 ---@return string?
 local function prompt_context_base_at_cursor(buf)
@@ -1441,6 +1453,7 @@ function Creator:ensure_shell_windows()
     end
     if self.project_win and self.project_win:valid() then
         vim.wo[self.project_win.win].cursorline = true
+        hide_window_cursor(self.project_win.win, "ClodexPromptEditorNormal")
     end
     self.kind_win = self:open_block(self, "kind_block", "kind_win", "kind_tabs", self.kind_buf, {
         enter = false,

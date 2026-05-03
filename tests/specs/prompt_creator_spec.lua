@@ -1249,6 +1249,32 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
     end)
 
+    it("hides the cursor in the target project list window", function()
+        local alpha = { name = "Alpha", root = "/tmp/alpha" }
+        local beta = { name = "Beta", root = "/tmp/beta" }
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = alpha,
+            projects = { alpha, beta },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        local winhl = vim.wo[creator.project_win.win].winhl
+
+        assert.is_truthy(winhl:find("Cursor:ClodexPromptEditorNormal", 1, true))
+        assert.is_truthy(winhl:find("lCursor:ClodexPromptEditorNormal", 1, true))
+    end)
+
     it("extends title and project-list navigation to switch focus and target project", function()
         local submitted_project
         local alpha = { name = "Alpha", root = "/tmp/alpha" }
