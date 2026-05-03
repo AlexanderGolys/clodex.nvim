@@ -427,6 +427,7 @@ describe("clodex.ui.prompt_creator", function()
 
         assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementTitle"))
         assert.is_true(vim.tbl_contains(texts, "C-←/→"))
+        assert.is_true(vim.tbl_contains(texts, "⏎"))
         assert.is_true(vim.tbl_contains(texts, "q"))
         assert.is_false(vim.tbl_contains(texts, "q: close"))
     end)
@@ -459,11 +460,12 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_truthy(lines[1]:find("←/→", 1, true))
         assert.is_truthy(lines[1]:find("↑/↓", 1, true))
         assert.is_truthy(lines[2]:find("C-←/→", 1, true))
+        assert.is_truthy(lines[2]:find("⏎: queue", 1, true))
         assert.is_nil(lines[1]:find("Left/Right", 1, true))
         assert.is_nil(lines[1]:find("Up/Down", 1, true))
     end)
 
-    it("renders control-key footer hints with lowercase key names", function()
+    it("renders normal action footer hints with insert-mode control-key alternatives", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -485,15 +487,30 @@ describe("clodex.ui.prompt_creator", function()
         local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
 
         assert.is_truthy(lines[1]:find("C%-v", 1, false))
-        assert.is_truthy(lines[2]:find("C%-s", 1, false))
-        assert.is_truthy(lines[2]:find("C%-q", 1, false))
-        assert.is_truthy(lines[2]:find("C%-i", 1, false))
-        assert.is_truthy(lines[2]:find("C%-l", 1, false))
+        assert.is_truthy(lines[2]:find("s: plan", 1, true))
+        assert.is_truthy(lines[2]:find("⏎: queue", 1, true))
+        assert.is_truthy(lines[2]:find("i: implement", 1, true))
+        assert.is_truthy(lines[2]:find("c: chat", 1, true))
         assert.is_nil(lines[1]:find("C%-V", 1, false))
+        assert.is_nil(lines[2]:find("C%-s: plan", 1, false))
+        assert.is_nil(lines[2]:find("C%-q: queue", 1, false))
+        assert.is_nil(lines[2]:find("C%-i: implement", 1, false))
+        assert.is_nil(lines[2]:find("C%-c: chat", 1, false))
+
+        creator.in_insert_mode = function()
+            return true
+        end
+        creator:render_footer()
+        lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
+
+        assert.is_truthy(lines[2]:find("C%-s: plan", 1, false))
+        assert.is_truthy(lines[2]:find("C%-q: queue", 1, false))
+        assert.is_truthy(lines[2]:find("C%-i: implement", 1, false))
+        assert.is_truthy(lines[2]:find("C%-c: chat", 1, false))
         assert.is_nil(lines[2]:find("C%-S", 1, false))
         assert.is_nil(lines[2]:find("C%-Q", 1, false))
         assert.is_nil(lines[2]:find("C%-I", 1, false))
-        assert.is_nil(lines[2]:find("C%-L", 1, false))
+        assert.is_nil(lines[2]:find("C%-C", 1, false))
     end)
 
     it("hides unavailable footer hints for projects and source tabs", function()
@@ -1812,7 +1829,7 @@ describe("clodex.ui.prompt_creator", function()
             end,
         })
 
-        trigger_buffer_mapping(creator.layout.title_buf, "<C-q>", "i")
+        trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "n")
 
         wait_for(function()
             return submitted_action == "queue"
@@ -1821,7 +1838,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
     end)
 
-    it("resets the creator after successful plan and run-now submit keymaps", function()
+    it("resets the creator after successful normal-mode plan and implement submit keymaps", function()
         local submitted_actions = {}
 
         creator = Creator.open({
@@ -1849,7 +1866,7 @@ describe("clodex.ui.prompt_creator", function()
             end,
         })
 
-        trigger_buffer_mapping(creator.layout.title_buf, "<C-s>", "i")
+        trigger_buffer_mapping(creator.layout.title_buf, "s", "n")
 
         wait_for(function()
             return submitted_actions[1] == "save"
@@ -1859,7 +1876,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Run prompt again" })
-        trigger_buffer_mapping(creator.layout.title_buf, "<C-i>", "i")
+        trigger_buffer_mapping(creator.layout.title_buf, "i", "n")
 
         wait_for(function()
             return submitted_actions[2] == "exec"
@@ -1868,6 +1885,52 @@ describe("clodex.ui.prompt_creator", function()
                 and creator.layout.title_win ~= nil
                 and creator.layout.title_win:valid()
                 and vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, 1, false)[1] == ""
+        end)
+    end)
+
+    it("uses control-key submit actions in insert mode", function()
+        local submitted_actions = {}
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Insert actions",
+                details = "Submit from insert mode",
+            },
+            on_submit = function(_, action)
+                submitted_actions[#submitted_actions + 1] = action
+                return { id = "queued-item" }
+            end,
+        })
+
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-s>", "i")
+
+        wait_for(function()
+            return submitted_actions[1] == "save"
+                and creator.layout.title_win ~= nil
+                and creator.layout.title_win:valid()
+        end)
+
+        vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Insert actions again" })
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-i>", "i")
+
+        wait_for(function()
+            return submitted_actions[2] == "exec"
+                and creator.layout.title_win ~= nil
+                and creator.layout.title_win:valid()
         end)
     end)
 

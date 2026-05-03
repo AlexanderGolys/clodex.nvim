@@ -25,10 +25,10 @@ local ui_win = require("clodex.ui.win")
 ---@field on_submit fun(spec: Clodex.AppPromptActions.AddTodoSpec, action?: string, project?: Clodex.Project)
 
 local DEFAULT_SUBMIT_ACTIONS = {
-    { value = "save", label = "plan", key = "<C-s>" },
-    { value = "queue", label = "queue", key = "<C-q>" },
-    { value = "exec", label = "run now", key = "<C-i>" },
-    { value = "chat", label = "chat", key = "<C-l>" },
+    { value = "save", label = "plan", key = "s", insert_key = "<C-s>" },
+    { value = "queue", label = "queue", key = "<CR>", insert_key = "<C-q>" },
+    { value = "exec", label = "implement", key = "i", insert_key = "<C-i>" },
+    { value = "chat", label = "chat", key = "c", insert_key = "<C-c>" },
 }
 
 local RESET_AFTER_SUBMIT_ACTIONS = {
@@ -239,7 +239,7 @@ local function footer_lines(insert_mode, has_variants, has_multiple_projects)
     if insert_mode then
         return {
             "Tab/S-Tab: move focus   C-v: image",
-            "C-←/→: kind   C-s: plan   C-q: queue   C-i: run now   C-l: chat   q: close",
+            "C-←/→: kind   C-s: plan   C-q: queue   C-i: implement   C-c: chat   q: close",
         }
     end
 
@@ -254,7 +254,7 @@ local function footer_lines(insert_mode, has_variants, has_multiple_projects)
 
     return {
         footer_line(row_one),
-        "C-←/→: kind (insert)   C-s: plan   C-q: queue   C-i: run now   C-l: chat   q: close",
+        "C-←/→: kind (insert)   s: plan   ⏎: queue   i: implement   c: chat   q: close",
     }
 end
 
@@ -271,7 +271,7 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
             { row = 1, text = "C-s" },
             { row = 1, text = "C-q" },
             { row = 1, text = "C-i" },
-            { row = 1, text = "C-l" },
+            { row = 1, text = "C-c" },
             { row = 1, text = "q", match_text = "q: close" },
         }
     end
@@ -281,10 +281,10 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
         { row = 0, text = "h/l" },
         { row = 0, text = "C-v" },
         { row = 1, text = "C-←/→" },
-        { row = 1, text = "C-s" },
-        { row = 1, text = "C-q" },
-        { row = 1, text = "C-i" },
-        { row = 1, text = "C-l" },
+        { row = 1, text = "s", match_text = "s: plan" },
+        { row = 1, text = "⏎" },
+        { row = 1, text = "i", match_text = "i: implement" },
+        { row = 1, text = "c", match_text = "c: chat" },
         { row = 1, text = "q", match_text = "q: close" },
     }
     if has_multiple_projects then
@@ -295,6 +295,34 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
         labels[#labels + 1] = { row = 0, text = "[/]" }
     end
     return labels
+end
+
+---@param action Clodex.UiSelect.MultilineAction
+---@return string?
+local function normal_action_key(action)
+    return action.key
+end
+
+---@param action Clodex.UiSelect.MultilineAction
+---@return string?
+local function insert_action_key(action)
+    return action.insert_key or action.key
+end
+
+---@param buf integer
+---@param action Clodex.UiSelect.MultilineAction
+local function apply_action_keymaps(self, buf, action)
+    local submit = function()
+        self:submit(action.value, { reset = RESET_AFTER_SUBMIT_ACTIONS[action.value] == true })
+    end
+    local normal_key = normal_action_key(action)
+    if normal_key and normal_key ~= "" then
+        vim.keymap.set("n", normal_key, submit, { buffer = buf, silent = true })
+    end
+    local insert_key = insert_action_key(action)
+    if insert_key and insert_key ~= "" then
+        vim.keymap.set("i", insert_key, submit, { buffer = buf, silent = true })
+    end
 end
 
 ---@param spans { start_col: integer, end_col: integer, index: integer }[]
@@ -1269,9 +1297,7 @@ function Creator:apply_project_keymaps()
         self:move_project(-1)
     end, { buffer = self.project_buf, silent = true })
     for _, action in ipairs(self.submit_actions) do
-        vim.keymap.set("n", action.key, function()
-            self:submit(action.value, { reset = RESET_AFTER_SUBMIT_ACTIONS[action.value] == true })
-        end, { buffer = self.project_buf, silent = true })
+        apply_action_keymaps(self, self.project_buf, action)
     end
     vim.keymap.set("n", "q", function()
         self:close()
@@ -1709,9 +1735,7 @@ function Creator:apply_common_keymaps(buf)
         self:switch_variant(-1)
     end, { buffer = buf, silent = true })
     for _, action in ipairs(self.submit_actions) do
-        vim.keymap.set({ "n", "i" }, action.key, function()
-            self:submit(action.value, { reset = RESET_AFTER_SUBMIT_ACTIONS[action.value] == true })
-        end, { buffer = buf, silent = true })
+        apply_action_keymaps(self, buf, action)
     end
     vim.keymap.set({ "n", "i" }, "<C-v>", function()
         self:replace_clipboard_image(false)
