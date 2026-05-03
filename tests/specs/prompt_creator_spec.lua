@@ -909,10 +909,18 @@ describe("clodex.ui.prompt_creator", function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
         end)
 
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        vim.cmd.startinsert()
+        trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "i")
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+        end)
+
         vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 2, 0 })
         local up_key = trigger_buffer_mapping(creator.layout.body_buf, "<Up>", "i")
 
-        assert.are.equal(vim.keycode("<Up>"), up_key)
+        assert.are.equal("<Up>", up_key)
         assert.are.equal(creator.layout.body_win.win, vim.api.nvim_get_current_win())
 
         vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 1, 0 })
