@@ -1862,6 +1862,8 @@ describe("clodex.ui.prompt_creator", function()
 
         creator:submit("queue")
 
+        assert.is_nil(creator.footer_win)
+
         wait_for(function()
             return submitted_action == "queue"
                 and creator.footer_win == nil

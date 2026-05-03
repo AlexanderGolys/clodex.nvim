@@ -1730,11 +1730,7 @@ function Creator:submit(action, opts)
         self:reset_inputs()
         return
     end
-    vim.schedule(function()
-        if not self.is_closing then
-            self:close()
-        end
-    end)
+    self:close()
 end
 
 ---@param clear_layout? boolean
