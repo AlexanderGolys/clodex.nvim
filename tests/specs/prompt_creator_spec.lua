@@ -473,12 +473,12 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_truthy(lines[1]:find("C%-v", 1, false))
         assert.is_truthy(lines[2]:find("C%-s", 1, false))
         assert.is_truthy(lines[2]:find("C%-q", 1, false))
-        assert.is_truthy(lines[2]:find("C%-e", 1, false))
+        assert.is_truthy(lines[2]:find("C%-i", 1, false))
         assert.is_truthy(lines[2]:find("C%-l", 1, false))
         assert.is_nil(lines[1]:find("C%-V", 1, false))
         assert.is_nil(lines[2]:find("C%-S", 1, false))
         assert.is_nil(lines[2]:find("C%-Q", 1, false))
-        assert.is_nil(lines[2]:find("C%-E", 1, false))
+        assert.is_nil(lines[2]:find("C%-I", 1, false))
         assert.is_nil(lines[2]:find("C%-L", 1, false))
     end)
 
@@ -1825,7 +1825,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Run prompt again" })
-        trigger_buffer_mapping(creator.layout.title_buf, "<C-e>", "i")
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-i>", "i")
 
         wait_for(function()
             return submitted_actions[2] == "exec"

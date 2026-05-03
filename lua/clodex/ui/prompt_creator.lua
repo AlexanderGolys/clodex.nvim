@@ -27,7 +27,7 @@ local ui_win = require("clodex.ui.win")
 local DEFAULT_SUBMIT_ACTIONS = {
     { value = "save", label = "plan", key = "<C-s>" },
     { value = "queue", label = "queue", key = "<C-q>" },
-    { value = "exec", label = "run now", key = "<C-e>" },
+    { value = "exec", label = "run now", key = "<C-i>" },
     { value = "chat", label = "chat", key = "<C-l>" },
 }
 
@@ -228,7 +228,7 @@ local function footer_lines(insert_mode, has_variants, has_multiple_projects)
     if insert_mode then
         return {
             "Tab/S-Tab: move focus   C-v: image",
-            "C-←/→: kind   C-s: plan   C-q: queue   C-e: run now   C-l: chat   q: close",
+            "C-←/→: kind   C-s: plan   C-q: queue   C-i: run now   C-l: chat   q: close",
         }
     end
 
@@ -243,7 +243,7 @@ local function footer_lines(insert_mode, has_variants, has_multiple_projects)
 
     return {
         footer_line(row_one),
-        "C-←/→: kind (insert)   C-s: plan   C-q: queue   C-e: run now   C-l: chat   q: close",
+        "C-←/→: kind (insert)   C-s: plan   C-q: queue   C-i: run now   C-l: chat   q: close",
     }
 end
 
@@ -259,7 +259,7 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
             { row = 1, text = "C-←/→" },
             { row = 1, text = "C-s" },
             { row = 1, text = "C-q" },
-            { row = 1, text = "C-e" },
+            { row = 1, text = "C-i" },
             { row = 1, text = "C-l" },
             { row = 1, text = "q: close" },
         }
@@ -271,7 +271,7 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
         { row = 0, text = "C-v" },
         { row = 1, text = "C-s" },
         { row = 1, text = "C-q" },
-        { row = 1, text = "C-e" },
+        { row = 1, text = "C-i" },
         { row = 1, text = "C-l" },
         { row = 1, text = "q: close" },
     }

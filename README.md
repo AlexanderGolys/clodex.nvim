@@ -190,7 +190,7 @@ Typical patterns:
 - MCP-driven delegation loop: `get_task` -> implement -> `close_task` -> MCP either returns the next task or reports that no queued work remains
 - planning follow-up: finish an `ask`/discussion item, then use `create_prompt` to queue the next concrete task
 
-The prompt creator keeps footer actions visible, docks the target-project picker on the left, preserves compatible drafts across kind switches, and can preview attached clipboard images in a separate pane. `C-S`, `C-Q`, `C-E`, and `C-L` plan, queue, run immediately, or send straight to the live chat. Immediate direct execution currently works only with the Codex backend.
+The prompt creator keeps footer actions visible, docks the target-project picker on the left, preserves compatible drafts across kind switches, and can preview attached clipboard images in a separate pane. `C-S`, `C-Q`, `C-I`, and `C-L` plan, queue, run immediately, or send straight to the live chat. Immediate direct execution currently works only with the Codex backend.
 
 In the queue workspace project panel, press `I` to set, change, or remove a custom project icon through `snacks.picker.icons()`.
 
