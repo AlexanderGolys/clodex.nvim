@@ -174,7 +174,7 @@ local function picker_snacks(snacks_opts, with_preview)
     preview = with_preview and "preview" or false,
     layout = {
       preset = "select",
-      hidden = with_preview and {} or { "input", "preview" },
+      hidden = with_preview and {} or { "preview" },
     },
   }, vim.deepcopy(snacks_opts or {}))
 end
@@ -420,38 +420,43 @@ function M.pick_text(items, opts, on_choice)
 end
 
 ---@param projects Clodex.Project[]
----@param opts? { prompt?: string, include_none?: boolean, active_root?: string, on_delete?: fun(project: Clodex.Project), on_rename?: fun(project: Clodex.Project), snacks?: table }
+---@param opts? { prompt?: string, include_none?: boolean, active_root?: string, show_root?: boolean, with_preview?: boolean, on_delete?: fun(project: Clodex.Project), on_rename?: fun(project: Clodex.Project), snacks?: table }
 ---@param on_choice fun(project?: Clodex.Project)
 function M.pick_project(projects, opts, on_choice)
   opts = opts or {}
   local items = {} ---@type { project?: Clodex.Project, label: string, spacer?: string, preview?: { text: string, ft?: string, loc?: boolean }, preview_title?: string }[]
   local name_width = 0
-  local snacks_opts = picker_snacks(opts.snacks, true)
+  local show_root = opts.show_root ~= false
+  local with_preview = opts.with_preview ~= false
+  local snacks_opts = picker_snacks(opts.snacks, with_preview)
   local action_hints = {} ---@type string[]
+  local initial_index ---@type integer?
 
-  for _, project in ipairs(projects) do
-    name_width = math.max(name_width, vim.fn.strdisplaywidth(project.name))
+  if show_root then
+    for _, project in ipairs(projects) do
+      name_width = math.max(name_width, vim.fn.strdisplaywidth(project.name))
+    end
   end
 
   if opts.include_none then
     items[#items + 1] = {
       label = "No active project",
-      preview = {
+      preview = with_preview and {
         text = "# Clodex Project\n\n- Active project override is disabled for this tab.",
         ft = "markdown",
         loc = false,
-      },
-      preview_title = "No active project",
+      } or nil,
+      preview_title = with_preview and "No active project" or nil,
     }
   end
 
   for _, project in ipairs(projects) do
-    local spacer = (" "):rep(math.max(name_width - vim.fn.strdisplaywidth(project.name), 0) + 2)
+    local spacer = show_root and (" "):rep(math.max(name_width - vim.fn.strdisplaywidth(project.name), 0) + 2) or nil
     items[#items + 1] = {
       project = project,
-      label = project.name .. spacer .. project.root,
+      label = show_root and project.name .. spacer .. project.root or project.name,
       spacer = spacer,
-      preview = {
+      preview = with_preview and {
         text = table.concat({
           "# Clodex Project",
           "",
@@ -462,9 +467,12 @@ function M.pick_project(projects, opts, on_choice)
         }, "\n"),
         ft = "markdown",
         loc = false,
-      },
-      preview_title = project.name,
+      } or nil,
+      preview_title = with_preview and project.name or nil,
     }
+    if opts.active_root == project.root then
+      initial_index = #items
+    end
   end
 
   if #items == 0 then
@@ -510,16 +518,28 @@ function M.pick_project(projects, opts, on_choice)
     snacks_opts.help = snacks_opts.help or true
   end
 
+  if initial_index then
+    local previous_on_show = snacks_opts.on_show
+    snacks_opts.on_show = function(picker)
+      if previous_on_show then
+        previous_on_show(picker)
+      end
+      if picker and picker.list then
+        picker.list:view(initial_index)
+      end
+    end
+  end
+
   return M.pick_mapped(items, {
     prompt = opts.prompt or "Select Clodex project",
     snacks = snacks_opts,
-    with_preview = true,
+    with_preview = with_preview,
     map_item = function(item)
       local project = item.project
       return {
         value = project,
         text = item.label,
-        chunks = project and {
+        chunks = project and show_root and {
           { project.name, "ClodexPickerProject" },
           { item.spacer or "  " },
           { project.root, "ClodexPickerRoot" },

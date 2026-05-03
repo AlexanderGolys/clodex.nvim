@@ -8,6 +8,7 @@ Project-aware Codex and OpenCode workflows for Neovim.
 
 - Reuses long-lived `codex` and `opencode` terminal sessions instead of disposable shells.
 - Tracks an active project per tab while sharing the same session for the same project root.
+- Prompts new tabs with the same project ordering used by the queue workspace and preselects the source tab's active project.
 - Builds prompts from editor context such as the current file, selection, line, and diagnostics.
 - Opens a queue workspace for planning, queuing, dispatching, and reviewing project work.
 - Shows hidden sessions that are waiting for input in a floating blocked-input window.

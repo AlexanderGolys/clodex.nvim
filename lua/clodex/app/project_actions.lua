@@ -259,16 +259,17 @@ function ProjectActions:prompt_set_active_project(project, state)
 end
 
 ---@param state Clodex.TabState
-function ProjectActions:prompt_new_tab_active_project(state)
+---@param source_active_root? string
+function ProjectActions:prompt_new_tab_active_project(state, source_active_root)
     if state:has_prompted_project() then
         return
     end
 
     state:mark_prompted_project()
-    local active_root = state.active_project_root
+    local active_root = source_active_root or state.active_project_root
     state:clear_active_project()
 
-    local projects = self.app.registry:list()
+    local projects = self.app:projects_for_queue_workspace(active_root)
     if #projects == 0 then
         self.app:refresh_views()
         return
@@ -278,6 +279,8 @@ function ProjectActions:prompt_new_tab_active_project(state)
         prompt = "Active project for new tab",
         include_none = true,
         active_root = active_root,
+        show_root = false,
+        with_preview = false,
     }, function(project)
         if project then
             state:set_active_project(project.root)

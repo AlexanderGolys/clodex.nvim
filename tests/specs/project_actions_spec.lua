@@ -7,6 +7,7 @@ describe("clodex.app.project_actions", function()
     local original_edit
     local original_snacks
     local picked_opts
+    local picked_projects
     local picked_text_items
     local warned_messages
     local error_messages
@@ -20,12 +21,14 @@ describe("clodex.app.project_actions", function()
         original_snacks = package.loaded["snacks"]
         original_edit = vim.cmd.edit
         picked_opts = nil
+        picked_projects = nil
         picked_text_items = nil
         icon_picker_opts = nil
         warned_messages = {}
         error_messages = {}
         package.loaded["clodex.ui.select"] = {
-            pick_project = function(_projects, opts, on_choice)
+            pick_project = function(projects, opts, on_choice)
+                picked_projects = projects
                 picked_opts = opts
                 on_choice({
                     name = "Beta",
@@ -102,6 +105,13 @@ describe("clodex.app.project_actions", function()
                     }
                 end,
             },
+            projects_for_queue_workspace = function(_, active_root)
+                assert.are.same("/tmp/alpha", active_root)
+                return {
+                    { name = "Beta", root = "/tmp/beta" },
+                    { name = "Alpha", root = "/tmp/alpha" },
+                }
+            end,
             project_details_store = {
                 touch_activity = function(_, project)
                     touched_project = project
@@ -117,6 +127,12 @@ describe("clodex.app.project_actions", function()
         assert.are.same("Active project for new tab", picked_opts.prompt)
         assert.is_true(picked_opts.include_none)
         assert.are.same("/tmp/alpha", picked_opts.active_root)
+        assert.is_false(picked_opts.show_root)
+        assert.is_false(picked_opts.with_preview)
+        assert.are.same({
+            { name = "Beta", root = "/tmp/beta" },
+            { name = "Alpha", root = "/tmp/alpha" },
+        }, picked_projects)
         assert.is_true(state.prompted)
         assert.are.same("/tmp/beta", state.active_project_root)
         assert.are.same("/tmp/beta", touched_project.root)

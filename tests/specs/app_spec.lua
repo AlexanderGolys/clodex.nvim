@@ -88,6 +88,10 @@ describe("clodex.app", function()
         local projects = app:projects_for_queue_workspace()
 
         assert.are.same({ gamma, delta, beta, alpha, epsilon }, projects)
+
+        local projects_with_override = app:projects_for_queue_workspace(beta.root)
+
+        assert.are.same({ beta, delta, alpha, gamma, epsilon }, projects_with_override)
     end)
 
     it("captures the selected backend in state snapshots", function()

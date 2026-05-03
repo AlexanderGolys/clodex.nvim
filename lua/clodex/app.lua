@@ -66,6 +66,7 @@ end
 ---@field blocked_input_timer? Clodex.UvTimer
 ---@field blocked_input_window? snacks.win
 ---@field blocked_input_session_key? string
+---@field new_tab_source_active_project_root? string
 ---@field current_tab fun(self: Clodex.App): Clodex.TabState
 ---@field resolve_target fun(self: Clodex.App, state: Clodex.TabState): Clodex.TerminalTarget
 ---@field resolve_target_from_path fun(self: Clodex.App, state: Clodex.TabState, path: string, mutate: boolean): Clodex.TerminalTarget
@@ -429,6 +430,13 @@ function App:setup_autocmds()
         end,
     })
 
+    vim.api.nvim_create_autocmd("TabLeave", {
+        group = self.group,
+        callback = function()
+            self.new_tab_source_active_project_root = self:current_tab().active_project_root
+        end,
+    })
+
     vim.api.nvim_create_autocmd("TabNewEntered", {
         group = self.group,
         --- Prompts new tabs for an active project choice instead of inheriting the old tab silently.
@@ -745,7 +753,9 @@ function App:maybe_prompt_active_project(buffer)
 end
 
 function App:prompt_new_tab_active_project()
-    self.project_actions:prompt_new_tab_active_project(self:current_tab())
+    local source_active_root = self.new_tab_source_active_project_root
+    self.new_tab_source_active_project_root = nil
+    self.project_actions:prompt_new_tab_active_project(self:current_tab(), source_active_root)
 end
 
 ---@return Clodex.TabState
@@ -1011,10 +1021,11 @@ function App:is_project_working(project)
     return self.terminals:is_project_session_working(project.root)
 end
 
+---@param active_root? string
 ---@return Clodex.Project[]
-function App:projects_for_queue_workspace()
+function App:projects_for_queue_workspace(active_root)
     local projects = self.registry:list()
-    local active_root = self:current_tab().active_project_root
+    active_root = active_root or self:current_tab().active_project_root
     local summaries = {} ---@type table<string, Clodex.ProjectQueueSummary>
     local project_updates = {} ---@type table<string, integer>
     for _, project in ipairs(projects) do
