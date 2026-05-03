@@ -174,7 +174,7 @@ Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the se
 - `implemented`: dispatched and finished, waiting for review unless completion goes straight to history
 - `history`: verified or directly completed work with summary and commit metadata
 
-Queued execution uses project-local skills under `.clodex/skills/` together with the checked-in `prompt-nvim-clodex` workflow in `.codex/skills/prompt-nvim-clodex/SKILL.md`. When the MCP helper is available, queued work runs through the local `get_task` / `close_task` loop, runs compaction before starting each newly returned task, and can also create follow-up prompts through `create_prompt`. If MCP is unavailable, the workflow falls back to editing the same `.clodex/*.json` files directly.
+Queued execution uses project-local skills under `.clodex/skills/` together with the checked-in `prompt-nvim-clodex` workflow in `.codex/skills/prompt-nvim-clodex/SKILL.md`. When the MCP helper is available, queued work runs through the local `get_task` / `close_task` loop and can create follow-up prompts through `create_prompt`. If MCP is unavailable, the workflow falls back to editing the same `.clodex/*.json` files directly.
 
 ### MCP tools
 
