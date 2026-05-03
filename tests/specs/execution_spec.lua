@@ -87,7 +87,9 @@ describe("clodex.workspace.execution", function()
             prompt = "Plan the feature",
         })
 
-        assert.matches("current queued item id is `todo%-1`", todo_prompt)
+        assert.not_matches("current queued item id", todo_prompt)
+        assert.matches("returned task id and `work_prompt` are authoritative", todo_prompt)
+        assert.matches("may differ from the item that launched this prompt", todo_prompt)
         assert.matches("calling `get_task`", todo_prompt)
         assert.matches("call `close_task` with `success`, `comment`, and `commit_id`", todo_prompt)
         assert.not_matches("run compaction", todo_prompt)

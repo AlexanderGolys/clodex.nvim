@@ -18,6 +18,7 @@
 - Keep queue and workspace summaries focused on durable repository facts plus queue contents; do not reintroduce inferred live task tracking.
 - Keep queued workflow behavior centered on project-local queue files and the local MCP helper.
 - Treat the public queued MCP contract as loop-based: use `get_task`, `close_task`, and `create_prompt`; keep queue mutation internals out of the exposed agent workflow.
+- Treat the task returned by `get_task` as authoritative; it may differ from the queued prompt that launched the agent when another item is already active.
 - Default queued git workflow stays commit-based unless a task explicitly needs branch-and-PR behavior.
 
 ## Style Guidelines

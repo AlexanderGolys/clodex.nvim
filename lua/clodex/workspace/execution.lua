@@ -84,7 +84,7 @@ local function completion_instruction_lines(item, _config)
     local plan_only = Prompt.categories.get(item.kind).id == "idea"
     local lines = {
         "Use the clodex MCP task loop for queued work in this repository.",
-        ("Start by calling `get_task` for this repository root to claim or resume the active queued task. The current queued item id is `%s`."):format(item.id),
+        "Start by calling `get_task` for this repository root to claim or resume the active queued task. The returned task id and `work_prompt` are authoritative; if another item is already active, they may differ from the item that launched this prompt.",
         plan_only
                 and "Implement the returned `work_prompt` by generating follow-up prompts only. Do not change code or create a git commit for this kind; then call `close_task` with `success`, `comment`, and `commit_id = \"\"`."
             or "Implement the returned `work_prompt`, create the required git commit for a successful result, then call `close_task` with `success`, `comment`, and `commit_id`.",
