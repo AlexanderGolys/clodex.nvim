@@ -1,5 +1,4 @@
 local Prompt = require("clodex.prompt")
-local Backend = require("clodex.backend")
 local PromptCreator = require("clodex.ui.prompt_creator")
 local notify = require("clodex.util.notify")
 local ui = require("clodex.ui.select")
@@ -35,15 +34,13 @@ local SUBMIT_ACTIONS = {
 }
 
 ---@param action string?
----@param app Clodex.App
 ---@return Clodex.AppQueueActions.AddTodoOpts?
-local function queue_submit_opts(app, action)
+local function queue_submit_opts(action)
     if action == "exec" then
-        local backend = app and app.config and app.config.get and app.config:get().backend or nil
         return {
             queue = "queued",
             implement = true,
-            run_mode = Backend.supports_direct_exec(backend) and "exec" or "interactive",
+            run_mode = "interactive",
         }
     end
     if action == "queue" then
@@ -120,7 +117,7 @@ function PromptActions:submit_prompt(project, spec, action)
     if action == "chat" then
         return self:send_direct_to_chat(project, Prompt.render(spec.title, spec.details))
     end
-    return self.app.queue_actions:add_project_todo(project, spec, queue_submit_opts(self.app, action))
+    return self.app.queue_actions:add_project_todo(project, spec, queue_submit_opts(action))
 end
 
 ---@param opts? Clodex.AppPromptActions.ResolveOpts

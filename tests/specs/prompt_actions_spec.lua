@@ -164,7 +164,7 @@ describe("clodex.app.prompt_actions", function()
         assert.are.equal(1, refreshed)
     end)
 
-    it("falls back to interactive execution for run now on unsupported backends", function()
+    it("queues and implements run now through interactive execution", function()
         local queued_project
         local queued_spec
         local queued_opts
@@ -244,7 +244,7 @@ describe("clodex.app.prompt_actions", function()
         assert.are.equal(0, pick_text_calls)
     end)
 
-    it("keeps direct execution for run now on codex", function()
+    it("uses interactive execution for run now on codex", function()
         local queued_opts
         local actions = PromptActions.new({
             config = {
@@ -274,7 +274,7 @@ describe("clodex.app.prompt_actions", function()
         assert.are.same({
             queue = "queued",
             implement = true,
-            run_mode = "exec",
+            run_mode = "interactive",
         }, queued_opts)
     end)
 
@@ -322,7 +322,7 @@ describe("clodex.app.prompt_actions", function()
         assert.are.same({
             queue = "queued",
             implement = true,
-            run_mode = "exec",
+            run_mode = "interactive",
         }, queued_opts)
         assert.are.same({ id = "queued-item" }, result)
     end)
