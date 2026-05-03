@@ -81,13 +81,13 @@ function ComposerLayout:apply_keymaps()
             vim.schedule(function()
                 self:focus_body()
             end)
-            return vim.keycode("<Ignore>")
+            return ""
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("i", "<CR>", function()
             vim.schedule(function()
                 self:focus_body()
             end)
-            return vim.keycode("<Ignore>")
+            return ""
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.b[self.title_buf].clodex_prompt_keymaps_applied = true
     end
@@ -105,7 +105,7 @@ function ComposerLayout:apply_keymaps()
                 vim.schedule(function()
                     self:focus_title()
                 end)
-                return vim.keycode("<Ignore>")
+                return ""
             end
             return "<Up>"
         end, { buffer = self.body_buf, silent = true, expr = true })

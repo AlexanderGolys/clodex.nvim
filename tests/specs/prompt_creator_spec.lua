@@ -934,7 +934,9 @@ describe("clodex.ui.prompt_creator", function()
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
         vim.cmd.startinsert()
-        trigger_buffer_mapping(creator.layout.title_buf, "<Down>", "i")
+        local down_key = trigger_buffer_mapping(creator.layout.title_buf, "<Down>", "i")
+
+        assert.are.equal("", down_key)
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
@@ -942,7 +944,9 @@ describe("clodex.ui.prompt_creator", function()
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
         vim.cmd.startinsert()
-        trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "i")
+        local enter_key = trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "i")
+
+        assert.are.equal("", enter_key)
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
@@ -955,7 +959,9 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(creator.layout.body_win.win, vim.api.nvim_get_current_win())
 
         vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 1, 0 })
-        trigger_buffer_mapping(creator.layout.body_buf, "<Up>", "i")
+        local consumed_up_key = trigger_buffer_mapping(creator.layout.body_buf, "<Up>", "i")
+
+        assert.are.equal("", consumed_up_key)
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.title_win.win
