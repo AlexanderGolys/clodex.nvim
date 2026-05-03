@@ -10,6 +10,16 @@ local function extmark_groups(buf)
     return groups
 end
 
+local function extmark_texts(buf)
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    local texts = {}
+    for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, -1, 0, -1, { details = true })) do
+        local line = lines[mark[2] + 1] or ""
+        texts[#texts + 1] = line:sub(mark[3] + 1, mark[4].end_col)
+    end
+    return texts
+end
+
 local function trigger_buffer_mapping(buf, lhs, mode)
     local map = vim.fn.maparg(lhs, mode or "n", false, true)
     assert.is_table(map)
@@ -413,8 +423,12 @@ describe("clodex.ui.prompt_creator", function()
         })
 
         local groups = extmark_groups(creator.footer_buf)
+        local texts = extmark_texts(creator.footer_buf)
 
         assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementTitle"))
+        assert.is_true(vim.tbl_contains(texts, "C-←/→"))
+        assert.is_true(vim.tbl_contains(texts, "q"))
+        assert.is_false(vim.tbl_contains(texts, "q: close"))
     end)
 
     it("renders arrow icons in footer hints", function()
@@ -607,7 +621,7 @@ describe("clodex.ui.prompt_creator", function()
         for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(creator.footer_buf, -1, 0, -1, { details = true })) do
             if mark[2] == 1 then
                 local text = lines[2]:sub(mark[3] + 1, mark[4].end_col)
-                if text == "q: close" then
+                if text == "q" then
                     close_found = true
                     break
                 end
@@ -645,9 +659,9 @@ describe("clodex.ui.prompt_creator", function()
             local end_col = mark[4].end_col
             if row == 1 then
                 local text = line:sub(start_col + 1, end_col)
-                if text == "q: close" then
+                if text == "q" then
                     close_found = true
-                elseif text == "q" or text == "queue" then
+                elseif text == "q: close" or text == "queue" then
                     queue_found = true
                 end
             end

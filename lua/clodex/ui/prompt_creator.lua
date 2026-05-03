@@ -249,7 +249,7 @@ end
 ---@param insert_mode boolean
 ---@param has_variants boolean
 ---@param has_multiple_projects boolean
----@return { row: integer, text: string }[]
+---@return { row: integer, text: string, match_text?: string }[]
 local function footer_key_labels(insert_mode, has_variants, has_multiple_projects)
     if insert_mode then
         return {
@@ -260,7 +260,7 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
             { row = 1, text = "C-q" },
             { row = 1, text = "C-i" },
             { row = 1, text = "C-l" },
-            { row = 1, text = "q: close" },
+            { row = 1, text = "q", match_text = "q: close" },
         }
     end
 
@@ -268,11 +268,12 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
         { row = 0, text = "←/→" },
         { row = 0, text = "h/l" },
         { row = 0, text = "C-v" },
+        { row = 1, text = "C-←/→" },
         { row = 1, text = "C-s" },
         { row = 1, text = "C-q" },
         { row = 1, text = "C-i" },
         { row = 1, text = "C-l" },
-        { row = 1, text = "q: close" },
+        { row = 1, text = "q", match_text = "q: close" },
     }
     if has_multiple_projects then
         labels[#labels + 1] = { row = 0, text = "↑/↓" }
@@ -1349,7 +1350,7 @@ function Creator:render_footer()
     local marks = {} ---@type Clodex.Extmark[]
     local key_hl = Prompt.title_group(self.state.kind)
     for _, key in ipairs(footer_key_labels(insert_mode, has_variants, has_multiple_projects)) do
-        local start_col = lines[key.row + 1]:find(key.text, 1, true)
+        local start_col = lines[key.row + 1]:find(key.match_text or key.text, 1, true)
         if start_col then
             marks[#marks + 1] = Extmark.inline(key.row, start_col - 1, start_col - 1 + #key.text, key_hl)
         end
