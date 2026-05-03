@@ -489,7 +489,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_truthy(lines[1]:find("C%-v", 1, false))
         assert.is_truthy(lines[2]:find("s: plan", 1, true))
         assert.is_truthy(lines[2]:find("⏎: queue", 1, true))
-        assert.is_truthy(lines[2]:find("i: implement", 1, true))
+        assert.is_truthy(lines[2]:find(">: implement", 1, true))
         assert.is_truthy(lines[2]:find("c: chat", 1, true))
         assert.is_nil(lines[1]:find("C%-V", 1, false))
         assert.is_nil(lines[2]:find("C%-s: plan", 1, false))
@@ -505,7 +505,7 @@ describe("clodex.ui.prompt_creator", function()
 
         assert.is_truthy(lines[2]:find("C%-s: plan", 1, false))
         assert.is_truthy(lines[2]:find("C%-q: queue", 1, false))
-        assert.is_truthy(lines[2]:find("C%-i: implement", 1, false))
+        assert.is_truthy(lines[2]:find("C%->: implement", 1, false))
         assert.is_truthy(lines[2]:find("C%-c: chat", 1, false))
         assert.is_nil(lines[2]:find("C%-S", 1, false))
         assert.is_nil(lines[2]:find("C%-Q", 1, false))
@@ -808,7 +808,7 @@ describe("clodex.ui.prompt_creator", function()
         local has_h_switch = false
         local has_l_switch = false
         local has_old_left_switch = false
-        local has_old_right_switch = false
+        local has_implement_action = false
         local has_insert_left_switch = false
         local has_insert_right_switch = false
 
@@ -822,7 +822,7 @@ describe("clodex.ui.prompt_creator", function()
             elseif map.lhs == "l" then
                 has_l_switch = true
             elseif map.lhs == ">" then
-                has_old_right_switch = true
+                has_implement_action = true
             elseif map.lhs == "<" then
                 has_old_left_switch = true
             end
@@ -841,8 +841,8 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(has_l_switch)
         assert.is_true(has_insert_left_switch)
         assert.is_true(has_insert_right_switch)
+        assert.is_true(has_implement_action)
         assert.is_false(has_old_left_switch)
-        assert.is_false(has_old_right_switch)
 
         vim.api.nvim_set_current_win(creator.footer_win.win)
         creator:switch_kind(1)
@@ -1882,7 +1882,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Run prompt again" })
-        trigger_buffer_mapping(creator.layout.title_buf, "i", "n")
+        trigger_buffer_mapping(creator.layout.title_buf, ">", "n")
 
         wait_for(function()
             return submitted_actions[2] == "exec"
@@ -1931,7 +1931,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Insert actions again" })
-        trigger_buffer_mapping(creator.layout.title_buf, "<C-i>", "i")
+        trigger_buffer_mapping(creator.layout.title_buf, "<C->>", "i")
 
         wait_for(function()
             return submitted_actions[2] == "exec"

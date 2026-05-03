@@ -27,7 +27,7 @@ local ui_win = require("clodex.ui.win")
 local DEFAULT_SUBMIT_ACTIONS = {
     { value = "save", label = "plan", key = "s", insert_key = "<C-s>" },
     { value = "queue", label = "queue", key = "<CR>", insert_key = "<C-q>" },
-    { value = "exec", label = "implement", key = "i", insert_key = "<C-i>" },
+    { value = "exec", label = "implement", key = ">", insert_key = "<C->>" },
     { value = "chat", label = "chat", key = "c", insert_key = "<C-c>" },
 }
 
@@ -239,7 +239,7 @@ local function footer_lines(insert_mode, has_variants, has_multiple_projects)
     if insert_mode then
         return {
             "Tab/S-Tab: move focus   C-v: image",
-            "C-←/→: kind   C-s: plan   C-q: queue   C-i: implement   C-c: chat   q: close",
+            "C-←/→: kind   C-s: plan   C-q: queue   C->: implement   C-c: chat   q: close",
         }
     end
 
@@ -254,7 +254,7 @@ local function footer_lines(insert_mode, has_variants, has_multiple_projects)
 
     return {
         footer_line(row_one),
-        "C-←/→: kind (insert)   s: plan   ⏎: queue   i: implement   c: chat   q: close",
+        "C-←/→: kind (insert)   s: plan   ⏎: queue   >: implement   c: chat   q: close",
     }
 end
 
@@ -270,7 +270,7 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
             { row = 1, text = "C-←/→" },
             { row = 1, text = "C-s" },
             { row = 1, text = "C-q" },
-            { row = 1, text = "C-i" },
+            { row = 1, text = "C->" },
             { row = 1, text = "C-c" },
             { row = 1, text = "q", match_text = "q: close" },
         }
@@ -283,7 +283,7 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
         { row = 1, text = "C-←/→" },
         { row = 1, text = "s", match_text = "s: plan" },
         { row = 1, text = "⏎" },
-        { row = 1, text = "i", match_text = "i: implement" },
+        { row = 1, text = ">", match_text = ">: implement" },
         { row = 1, text = "c", match_text = "c: chat" },
         { row = 1, text = "q", match_text = "q: close" },
     }
