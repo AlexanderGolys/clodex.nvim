@@ -251,6 +251,16 @@ local M = {
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = 0.04 },
       blend = 0,
     },
+    ClodexQueueCursorActive = {
+      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
+      blend = 0,
+    },
+    ClodexQueueCursorInactive = {
+      fg = { from = { "NormalFloat", "Normal" }, attr = "bg" },
+      bg = { from = { "NormalFloat", "Normal" }, attr = "bg" },
+      blend = 0,
+    },
     ClodexQueueActiveBorder = {
       fg = { from = { "Identifier", "FloatBorder" } },
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },

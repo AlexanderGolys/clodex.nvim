@@ -164,5 +164,20 @@ describe("clodex.config", function()
             assert.are.equal(0x1A1B26, active.bg)
             assert.are.equal(0x1A1B26, inactive.bg)
         end)
+
+        it("hides queue panel cursor highlights against their panel backgrounds", function()
+            vim.api.nvim_set_hl(0, "Normal", { fg = "#dddddd", bg = "#20242c" })
+            vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#30343c" })
+
+            Config.apply_highlights({
+                highlights = require("clodex.config.highlights"),
+            })
+
+            local active = vim.api.nvim_get_hl(0, { name = "ClodexQueueCursorActive", link = false })
+            local inactive = vim.api.nvim_get_hl(0, { name = "ClodexQueueCursorInactive", link = false })
+
+            assert.are.equal(active.bg, active.fg)
+            assert.are.equal(inactive.bg, inactive.fg)
+        end)
     end)
 end)
