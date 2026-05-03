@@ -602,6 +602,18 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_truthy(lines[2]:find("C-←/→", 1, true))
         assert.is_nil(lines[1]:find("←/→", 1, true))
         assert.is_nil(lines[1]:find("↑/↓", 1, true))
+
+        local close_found = false
+        for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(creator.footer_buf, -1, 0, -1, { details = true })) do
+            if mark[2] == 1 then
+                local text = lines[2]:sub(mark[3] + 1, mark[4].end_col)
+                if text == "q: close" then
+                    close_found = true
+                    break
+                end
+            end
+        end
+        assert.is_true(close_found)
     end)
 
     it("highlights the footer close shortcut without spilling into queue", function()

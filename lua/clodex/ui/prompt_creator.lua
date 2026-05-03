@@ -261,6 +261,7 @@ local function footer_key_labels(insert_mode, has_variants, has_multiple_project
             { row = 1, text = "C-q" },
             { row = 1, text = "C-e" },
             { row = 1, text = "C-l" },
+            { row = 1, text = "q: close" },
         }
     end
 
