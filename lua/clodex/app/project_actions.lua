@@ -74,6 +74,21 @@ local function open_project_file(self, project, path, default_lines)
     self.app:refresh_views()
 end
 
+---@param project Clodex.Project
+local function open_project_readme_for_new_tab(project)
+    local readme = fs.find_readme(project.root)
+    if not readme then
+        return
+    end
+
+    local current = vim.api.nvim_buf_get_name(0)
+    if current ~= "" and not fs.is_virtual_path(current) and fs.is_relative_to(current, project.root) then
+        return
+    end
+
+    edit_if_safe(readme)
+end
+
 ---@class Clodex.AppProjectActions.ProjectPicker
 ---@field registry Clodex.ProjectRegistry
 local ProjectPicker = {}
@@ -285,6 +300,7 @@ function ProjectActions:prompt_new_tab_active_project(state, source_active_root)
         if project then
             state:set_active_project(project.root)
             self.app.project_details_store:touch_activity(project)
+            open_project_readme_for_new_tab(project)
             if state:has_visible_window() then
                 self:show_target(state, {
                     kind = "project",

@@ -30,10 +30,7 @@ describe("clodex.app.project_actions", function()
             pick_project = function(projects, opts, on_choice)
                 picked_projects = projects
                 picked_opts = opts
-                on_choice({
-                    name = "Beta",
-                    root = "/tmp/beta",
-                })
+                on_choice(projects[1])
             end,
             pick_text = function(items, _opts, on_choice)
                 picked_text_items = items
@@ -137,6 +134,95 @@ describe("clodex.app.project_actions", function()
         assert.are.same("/tmp/beta", state.active_project_root)
         assert.are.same("/tmp/beta", touched_project.root)
         assert.are.equal(1, refresh_count)
+    end)
+
+    it("opens the selected project README after choosing a new tab project", function()
+        local root = vim.fn.tempname()
+        local readme = root .. "/README.md"
+        local opened_path
+        vim.fn.mkdir(root, "p")
+        vim.fn.writefile({ "# Beta" }, readme)
+        vim.cmd.enew()
+        vim.cmd.edit = function(path)
+            opened_path = path
+        end
+
+        local state = {
+            prompted = false,
+            has_prompted_project = function(self)
+                return self.prompted
+            end,
+            mark_prompted_project = function(self)
+                self.prompted = true
+            end,
+            clear_active_project = function() end,
+            set_active_project = function() end,
+            has_visible_window = function()
+                return false
+            end,
+        }
+        local actions = ProjectActions.new({
+            projects_for_queue_workspace = function()
+                return {
+                    { name = "Beta", root = root },
+                }
+            end,
+            project_details_store = {
+                touch_activity = function() end,
+            },
+            refresh_views = function() end,
+        })
+
+        actions:prompt_new_tab_active_project(state)
+
+        assert.are.equal(readme, opened_path)
+        vim.fn.delete(root, "rf")
+    end)
+
+    it("does not jump to README when the new tab already shows a selected project file", function()
+        local root = vim.fn.tempname()
+        local readme = root .. "/README.md"
+        local project_file = root .. "/lua/init.lua"
+        local edit_calls = 0
+        vim.fn.mkdir(root .. "/lua", "p")
+        vim.fn.writefile({ "# Beta" }, readme)
+        vim.fn.writefile({ "return {}" }, project_file)
+        vim.cmd.edit(project_file)
+        vim.cmd.edit = function()
+            edit_calls = edit_calls + 1
+        end
+
+        local state = {
+            prompted = false,
+            has_prompted_project = function(self)
+                return self.prompted
+            end,
+            mark_prompted_project = function(self)
+                self.prompted = true
+            end,
+            clear_active_project = function() end,
+            set_active_project = function() end,
+            has_visible_window = function()
+                return false
+            end,
+        }
+        local actions = ProjectActions.new({
+            projects_for_queue_workspace = function()
+                return {
+                    { name = "Beta", root = root },
+                }
+            end,
+            project_details_store = {
+                touch_activity = function() end,
+            },
+            refresh_views = function() end,
+        })
+
+        actions:prompt_new_tab_active_project(state)
+
+        assert.are.equal(0, edit_calls)
+        vim.cmd.enew()
+        vim.fn.delete(root, "rf")
     end)
 
 
