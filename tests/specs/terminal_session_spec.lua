@@ -169,6 +169,88 @@ describe("clodex.terminal.session", function()
         vim.fn.jobwait = original_jobwait
     end)
 
+    it("submits dispatched prompts immediately for Codex terminals", function()
+        local sent = {}
+        local original_chansend = vim.fn.chansend
+        local original_defer_fn = vim.defer_fn
+        vim.fn.chansend = function(job_id, text)
+            sent[#sent + 1] = {
+                job_id = job_id,
+                text = text,
+            }
+            return #text
+        end
+        vim.defer_fn = function(fn)
+            fn()
+        end
+
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "codex" },
+        })
+        session.job_id = 123
+        session.ensure_started = function()
+            return true
+        end
+
+        assert.is_true(session:dispatch_prompt("Fix parser\nAdd tests"))
+        assert.are.same({
+            {
+                job_id = 123,
+                text = "Fix parser\rAdd tests\r",
+            },
+        }, sent)
+
+        vim.fn.chansend = original_chansend
+        vim.defer_fn = original_defer_fn
+    end)
+
+    it("keeps OpenCode prompt dispatch on the deferred submit path", function()
+        local sent = {}
+        local original_chansend = vim.fn.chansend
+        local original_defer_fn = vim.defer_fn
+        vim.fn.chansend = function(job_id, text)
+            sent[#sent + 1] = {
+                job_id = job_id,
+                text = text,
+            }
+            return #text
+        end
+        vim.defer_fn = function(fn)
+            fn()
+        end
+
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "opencode" },
+        })
+        session.job_id = 123
+        session.ensure_started = function()
+            return true
+        end
+
+        assert.is_true(session:dispatch_prompt("Fix parser\nAdd tests"))
+        assert.are.same({
+            {
+                job_id = 123,
+                text = "Fix parser\nAdd tests",
+            },
+            {
+                job_id = 123,
+                text = "\r",
+            },
+        }, sent)
+
+        vim.fn.chansend = original_chansend
+        vim.defer_fn = original_defer_fn
+    end)
+
 
     it("can start sessions with the native Neovim terminal provider", function()
         local root = vim.fn.tempname()

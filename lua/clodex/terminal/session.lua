@@ -575,11 +575,12 @@ function Session:dispatch_prompt(text)
         return false
     end
 
+    local opencode = is_opencode_backend(self)
     local normalized
-    if is_opencode_backend(self) then
+    if opencode then
         normalized = text:gsub("\r\n", "\n")
     else
-        normalized = text:gsub("\r\n", "\n"):gsub("\n", "\r")
+        normalized = text:gsub("\r\n", "\n"):gsub("\n", "\r") .. "\r"
     end
     local ok = pcall(vim.fn.chansend, self.job_id, normalized)
     if not ok then
@@ -589,11 +590,13 @@ function Session:dispatch_prompt(text)
 
     self.awaiting_response = true
 
-    vim.defer_fn(function()
-        if self.job_id then
-            pcall(vim.fn.chansend, self.job_id, "\r")
-        end
-    end, 40)
+    if opencode then
+        vim.defer_fn(function()
+            if self.job_id then
+                pcall(vim.fn.chansend, self.job_id, "\r")
+            end
+        end, 40)
+    end
     return true
 end
 
