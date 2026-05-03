@@ -5,6 +5,7 @@
 ---| "toggle_state_preview"
 ---| "toggle_mini_state_preview"
 ---| "toggle_backend"
+---| "refresh"
 ---| "add_project"
 ---| "rename_project"
 ---| "remove_project"
@@ -41,6 +42,7 @@ local PUBLIC_ACTIONS = {
     "toggle_state_preview",
     "toggle_mini_state_preview",
     "toggle_backend",
+    "refresh",
     "add_project",
     "rename_project",
     "remove_project",

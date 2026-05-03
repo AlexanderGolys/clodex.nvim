@@ -125,6 +125,11 @@ require("clodex").setup({
         state_preview = { lhs = "<leader>ps" },
         mini_state_preview = { lhs = "<leader>pS" },
         backend_toggle = { lhs = "<leader>pb" },
+        chat_toggle = { lhs = "<leader>pc" },
+        refresh = { lhs = "<leader>pR" },
+        new_bug_prompt = { lhs = "<leader>pB" },
+        new_improvement_prompt = { lhs = "<leader>pI" },
+        go_to_readme = { lhs = "<leader>pM" },
     },
 })
 ```

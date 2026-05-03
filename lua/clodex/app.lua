@@ -937,6 +937,10 @@ function App:refresh_views()
     self:sync_blocked_input_window()
 end
 
+function App:refresh()
+    self:refresh_views()
+end
+
 function App:close_blocked_input_window()
     local window = self.blocked_input_window
     self.blocked_input_window = nil

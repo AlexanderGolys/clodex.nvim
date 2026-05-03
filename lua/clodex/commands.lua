@@ -30,7 +30,7 @@ local did_register = false
 ---@field lhs string
 ---@field desc string
 
----@alias Clodex.KeymapField "toggle"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"
+---@alias Clodex.KeymapField "toggle"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"go_to_readme"
 
 ---@class Clodex.GlobalKeymapDefinition
 ---@field field Clodex.KeymapField
@@ -223,6 +223,36 @@ local GLOBAL_KEYMAPS = {
         mode = "n",
         action = "toggle_backend",
         desc = "Toggle Clodex backend",
+    },
+    {
+        field = "chat_toggle",
+        mode = "n",
+        action = "toggle",
+        desc = "Toggle Codex chat terminal",
+    },
+    {
+        field = "refresh",
+        mode = "n",
+        action = "refresh",
+        desc = "Refresh Clodex views",
+    },
+    {
+        field = "new_bug_prompt",
+        mode = "n",
+        action = "add_bug_todo",
+        desc = "Create a new bug prompt",
+    },
+    {
+        field = "new_improvement_prompt",
+        mode = "n",
+        action = "add_todo",
+        desc = "Create a new improvement prompt",
+    },
+    {
+        field = "go_to_readme",
+        mode = "n",
+        action = "open_project_readme_file",
+        desc = "Open the current project README",
     },
 } ---@type Clodex.GlobalKeymapDefinition[]
 
