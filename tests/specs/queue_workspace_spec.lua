@@ -2230,6 +2230,52 @@ describe("clodex.ui.queue_workspace", function()
         assert.is_false(workspace.modal_input_open)
     end)
 
+    it("allows history items to be marked as not working", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local item = {
+            id = "item-1",
+            title = "Reviewed feature",
+        }
+        local rewind_call
+        local workspace = {
+            app = {
+                queue_actions = {
+                    rewind_queue_item = function(_, queued_project, item_id, opts)
+                        rewind_call = {
+                            project = queued_project,
+                            item_id = item_id,
+                            opts = opts,
+                        }
+                    end,
+                },
+            },
+            selected_project = function()
+                return project
+            end,
+            selected_queue_item = function()
+                return item, "history"
+            end,
+            refresh = function() end,
+            queue_index = 3,
+            modal_input_open = false,
+        }
+
+        Workspace.mark_queue_item_not_working(workspace)
+        input_callbacks[1].on_confirm("Still broken")
+
+        assert.are.same(project, rewind_call.project)
+        assert.are.equal("item-1", rewind_call.item_id)
+        assert.are.same({
+            queue = "history",
+            mark_not_working = true,
+            note = "Still broken",
+        }, rewind_call.opts)
+        assert.are.equal(1, workspace.queue_index)
+    end)
+
     it("updates the project filter while the input is being typed", function()
         local refresh_count = 0
         local workspace = {

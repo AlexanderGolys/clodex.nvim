@@ -438,6 +438,9 @@ function QueueActions:rewind_queue_item(project, item_id, opts)
         queue_name, _, item = self.app.queue:find_item(project, item_id)
     end
     local previous_queue = queue_name and PREVIOUS_QUEUE[queue_name] or nil
+    if opts.mark_not_working and (queue_name == "implemented" or queue_name == "history") then
+        previous_queue = "queued"
+    end
     if not previous_queue or not item then
         notify.warn("Item cannot be moved back")
         return

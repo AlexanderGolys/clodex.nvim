@@ -179,6 +179,38 @@ describe("clodex.app.queue_actions", function()
         assert.are.equal(1, refresh_count)
     end)
 
+    it("moves a history item back to queued when marked as not working", function()
+        local item = queue:add_todo(project, {
+            title = "fix prompt flow",
+            details = "return to queued",
+            queue = "queued",
+            kind = "todo",
+        })
+        queue:advance(project, item.id)
+        queue:update_implemented_item(project, item.id, {
+            summary = "implemented",
+            commit = "abcdef1234567890",
+            completed_at = "2026-01-01T00:00:00Z",
+        })
+        queue:advance(project, item.id)
+
+        actions:rewind_queue_item(project, item.id, {
+            queue = "history",
+            mark_not_working = true,
+            note = "Still fails after review.",
+        })
+
+        local queue_name, _, moved = queue:find_item(project, item.id)
+        assert.are.equal("queued", queue_name)
+        assert.are.equal("notworking", moved.kind)
+        assert.is_true(moved.details:find("Still fails after review%.") ~= nil)
+        assert.is_true(moved.details:find("abcdef12") ~= nil)
+        assert.are.equal(nil, moved.history_summary)
+        assert.are.same({}, moved.history_commits)
+        assert.are.equal(nil, moved.history_completed_at)
+        assert.are.equal(1, refresh_count)
+    end)
+
     it("adds an optional user note when moving an implemented item back to queued", function()
         local item = queue:add_todo(project, {
             title = "fix prompt flow",

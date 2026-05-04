@@ -2316,8 +2316,8 @@ function Workspace:mark_queue_item_not_working()
         return
     end
 
-    if queue_name ~= "implemented" then
-        notify.warn("Only implemented items can be marked as not working")
+    if queue_name ~= "implemented" and queue_name ~= "history" then
+        notify.warn("Only implemented or history items can be marked as not working")
         return
     end
 
