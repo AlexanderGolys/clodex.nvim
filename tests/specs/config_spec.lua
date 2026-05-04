@@ -154,6 +154,8 @@ describe("clodex.config", function()
         it("keeps prompt titles plain and inverts active kind tabs", function()
             vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222", bg = "#331111" })
             vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#101010" })
+            vim.api.nvim_set_hl(0, "Function", { fg = "#22aa44" })
+            vim.api.nvim_set_hl(0, "Comment", { fg = "#777777" })
 
             Config.apply_highlights({
                 highlights = require("clodex.config.highlights"),
@@ -170,6 +172,16 @@ describe("clodex.config", function()
             assert.are.equal(0x101010, active.fg)
             assert.are.equal(kind.fg, active.bg)
             assert.is_true(active.bold)
+
+            for _, pair in ipairs({
+                { inactive = "ClodexPromptFeatureKindName", active = "ClodexPromptFeatureTitleActive" },
+                { inactive = "ClodexPromptCleanupKindName", active = "ClodexPromptCleanupTitleActive" },
+            }) do
+                local inactive_hl = vim.api.nvim_get_hl(0, { name = pair.inactive, link = false })
+                local active_hl = vim.api.nvim_get_hl(0, { name = pair.active, link = false })
+                assert.are.equal(inactive_hl.fg, active_hl.bg)
+                assert.are.equal(0x101010, active_hl.fg)
+            end
         end)
 
         it("maps commit ids to the diagnostic error color", function()
