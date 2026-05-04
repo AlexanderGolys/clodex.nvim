@@ -768,13 +768,43 @@ function Creator:in_insert_mode()
     return vim.api.nvim_get_mode().mode:sub(1, 1) == "i"
 end
 
----@return { area: string, slot?: string, insert: boolean }?
+---@param layout table
+---@param slot? string
+---@return boolean
+local function layout_has_slot(layout, slot)
+    if not slot or not layout then
+        return false
+    end
+    local win = layout[slot .. "_win"]
+    return win and win.valid and win:valid() or false
+end
+
+---@param winid integer
+---@param cursor integer[]
+local function restore_cursor(winid, cursor)
+    if not cursor or not vim.api.nvim_win_is_valid(winid) then
+        return
+    end
+    local buf = vim.api.nvim_win_get_buf(winid)
+    local line_count = math.max(vim.api.nvim_buf_line_count(buf), 1)
+    local row = math.min(math.max(cursor[1] or 1, 1), line_count)
+    local line = vim.api.nvim_buf_get_lines(buf, row - 1, row, false)[1] or ""
+    local col = math.min(math.max(cursor[2] or 0, 0), #line)
+    pcall(vim.api.nvim_win_set_cursor, winid, { row, col })
+end
+
+---@return { area: string, slot?: string, insert: boolean, cursor?: integer[] }?
 function Creator:capture_focus_context()
     local current_win = vim.api.nvim_get_current_win()
     if self.layout and self.layout.focused_slot then
         local slot = self.layout:focused_slot(current_win)
         if slot then
-            return { area = "layout", slot = slot, insert = self:in_insert_mode() }
+            return {
+                area = "layout",
+                slot = slot,
+                insert = self:in_insert_mode(),
+                cursor = vim.api.nvim_win_get_cursor(current_win),
+            }
         end
     end
 
@@ -792,14 +822,18 @@ function Creator:capture_focus_context()
     end
 end
 
----@param context { area: string, slot?: string, insert: boolean }?
+---@param context { area: string, slot?: string, insert: boolean, cursor?: integer[] }?
 ---@return boolean
 function Creator:restore_focus_context(context)
     if not context then
         return false
     end
     if context.area == "layout" and self.layout and self.layout.focus_slot then
-        return self.layout:focus_slot(context.slot, context.insert)
+        if not layout_has_slot(self.layout, context.slot) or not self.layout:focus_slot(context.slot, context.insert) then
+            return false
+        end
+        restore_cursor(vim.api.nvim_get_current_win(), context.cursor)
+        return true
     end
 
     local win = ({

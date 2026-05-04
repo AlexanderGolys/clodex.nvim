@@ -839,6 +839,42 @@ describe("clodex.ui.prompt_creator", function()
         end)
     end)
 
+    it("preserves insert cursor position when switching to a tab with the same input field", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Route prompt",
+                details = "Keep cursor",
+            },
+            on_submit = function() end,
+        })
+
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        vim.api.nvim_win_set_cursor(creator.layout.title_win.win, { 1, 5 })
+        vim.cmd.startinsert()
+
+        creator:switch_kind(1)
+
+        wait_for(function()
+            return creator.state.kind == "bug" and vim.api.nvim_get_current_win() == creator.layout.title_win.win
+        end)
+
+        assert.are.same({ 1, 5 }, vim.api.nvim_win_get_cursor(creator.layout.title_win.win))
+    end)
+
     it("places the footer below the body area", function()
         creator = Creator.open({
             app = {
