@@ -95,7 +95,7 @@ function ComposerLayout:apply_keymaps()
     if not vim.b[self.body_buf].clodex_prompt_keymaps_applied then
         self.creator:apply_common_keymaps(self.body_buf)
         vim.keymap.set({ "n", "i" }, "<Tab>", function()
-            self.creator:focus_project_list()
+            self:focus_title()
         end, { buffer = self.body_buf, silent = true })
         vim.keymap.set({ "n", "i" }, "<S-Tab>", function()
             self:focus_title()

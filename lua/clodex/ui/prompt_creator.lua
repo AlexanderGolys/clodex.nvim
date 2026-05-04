@@ -825,17 +825,7 @@ end
 
 -- Focus projects
 function Creator:focus_project_list()
-    if not self.project_win or not self.project_win:valid() then
-        return
-    end
-    if self:in_insert_mode() then
-        vim.cmd.stopinsert()
-    end
-    vim.schedule(function()
-        if self.project_win and self.project_win:valid() then
-            vim.api.nvim_set_current_win(self.project_win.win)
-        end
-    end)
+    self:focus_creator_default()
 end
 
 -- Focus creator
@@ -893,8 +883,7 @@ end
 ---@return boolean
 function Creator:handle_mouse(mouse)
     if self:mouse_in_win(self.project_win, mouse) then
-        self:focus_mouse_win(self.project_win, false)
-        self:set_project_index(self.project_line_map[mouse.line] or self.project_index)
+        self:focus_creator_default()
         return true
     end
     if self:mouse_in_win(self.kind_win, mouse) then
@@ -1036,6 +1025,12 @@ function Creator:apply_project_keymaps()
     vim.keymap.set("n", "k", function()
         self:move_project(-1)
     end, { buffer = self.project_buf, silent = true })
+    vim.keymap.set({ "n", "i" }, "<C-Down>", function()
+        self:move_project(1)
+    end, { buffer = self.project_buf, silent = true })
+    vim.keymap.set({ "n", "i" }, "<C-Up>", function()
+        self:move_project(-1)
+    end, { buffer = self.project_buf, silent = true })
     for _, action in ipairs(self.submit_actions) do
         Helpers.apply_action_keymaps(self, self.project_buf, action, RESET_AFTER_SUBMIT_ACTIONS)
     end
@@ -1050,16 +1045,8 @@ end
 ---@param buf integer
 function Creator:apply_first_slot_keymaps(buf)
     self:apply_common_keymaps(buf)
-    vim.keymap.set("n", "<Left>", function()
-        self:focus_project_list()
-        return vim.keycode("<Ignore>")
-    end, { buffer = buf, silent = true, expr = true })
-    vim.keymap.set("n", "h", function()
-        self:focus_project_list()
-        return vim.keycode("<Ignore>")
-    end, { buffer = buf, silent = true, expr = true })
     vim.keymap.set({ "n", "i" }, "<S-Tab>", function()
-        self:focus_project_list()
+        self:focus_creator_last_slot()
         return vim.keycode("<Ignore>")
     end, { buffer = buf, silent = true, expr = true })
 end
@@ -1484,6 +1471,12 @@ function Creator:apply_common_keymaps(buf)
     end, { buffer = buf, silent = true })
     vim.keymap.set("i", "<C-Left>", function()
         self:switch_kind(-1)
+    end, { buffer = buf, silent = true })
+    vim.keymap.set({ "n", "i" }, "<C-Down>", function()
+        self:move_project(1)
+    end, { buffer = buf, silent = true })
+    vim.keymap.set({ "n", "i" }, "<C-Up>", function()
+        self:move_project(-1)
     end, { buffer = buf, silent = true })
     vim.keymap.set("n", "]", function()
         self:switch_variant(1)

@@ -944,8 +944,10 @@ describe("clodex.ui.prompt_creator", function()
 
         creator:handle_mouse({ winid = creator.project_win.win, line = 2, column = 1 })
 
-        assert.are.equal(2, creator.project_index)
-        assert.are.equal(creator.project_win.win, vim.api.nvim_get_current_win())
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.title_win.win
+        end)
+        assert.are.equal(1, creator.project_index)
 
         creator:handle_mouse({
             winid = creator.kind_win.win,
@@ -1227,7 +1229,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_nil(title_winhl:find("Cursor:", 1, true))
     end)
 
-    it("extends title and project-list navigation to switch focus and target project", function()
+    it("changes target projects with control arrows without focusing the project list", function()
         local submitted_project
         local alpha = { name = "Alpha", root = "/tmp/alpha" }
         local beta = { name = "Beta", root = "/tmp/beta" }
@@ -1262,23 +1264,24 @@ describe("clodex.ui.prompt_creator", function()
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
         vim.cmd.stopinsert()
-        trigger_buffer_mapping(creator.layout.title_buf, "<Left>")
-
-        wait_for(function()
-            return vim.api.nvim_get_current_win() == creator.project_win.win
-        end)
-
-        trigger_buffer_mapping(creator.project_buf, "<Down>")
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-Down>")
 
         wait_for(function()
             return creator.project.root == beta.root and creator.state.context.project_root == beta.root
         end)
 
-        trigger_buffer_mapping(creator.project_buf, "<Right>")
+        assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
+
+        vim.api.nvim_set_current_win(creator.layout.body_win.win)
+        trigger_buffer_mapping(creator.layout.body_buf, "<C-Up>", "i")
 
         wait_for(function()
-            return vim.api.nvim_get_current_win() == creator.layout.title_win.win
+            return creator.project.root == alpha.root and creator.state.context.project_root == alpha.root
         end)
+
+        assert.are.equal(creator.layout.body_win.win, vim.api.nvim_get_current_win())
+
+        trigger_buffer_mapping(creator.layout.body_buf, "<C-Down>", "i")
 
         creator:submit("queue")
 
@@ -1289,7 +1292,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(beta.root, submitted_project.root)
     end)
 
-    it("includes the project list in the tab cycle", function()
+    it("keeps the project list out of the normal-mode tab cycle", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -1317,17 +1320,11 @@ describe("clodex.ui.prompt_creator", function()
         trigger_buffer_mapping(creator.layout.body_buf, "<Tab>")
 
         wait_for(function()
-            return vim.api.nvim_get_current_win() == creator.project_win.win
-        end)
-
-        trigger_buffer_mapping(creator.project_buf, "<Tab>")
-
-        wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.title_win.win
         end)
     end)
 
-    it("includes the project list in the insert-mode tab cycle", function()
+    it("keeps the project list out of the insert-mode tab cycle", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -1353,12 +1350,6 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         trigger_buffer_mapping(creator.layout.body_buf, "<Tab>", "i")
-
-        wait_for(function()
-            return vim.api.nvim_get_current_win() == creator.project_win.win
-        end)
-
-        trigger_buffer_mapping(creator.project_buf, "<Tab>", "i")
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.title_win.win

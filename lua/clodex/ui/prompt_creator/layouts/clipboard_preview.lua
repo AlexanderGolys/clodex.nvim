@@ -88,7 +88,7 @@ function ClipboardPreviewLayout:apply_keymaps()
     if not vim.b[self.preview_buf].clodex_prompt_keymaps_applied then
         self.creator:apply_common_keymaps(self.preview_buf)
         vim.keymap.set("n", "<Tab>", function()
-            self.creator:focus_project_list()
+            self:focus_title()
         end, { buffer = self.preview_buf, silent = true })
         vim.keymap.set("n", "<S-Tab>", function()
             self:focus_title()
