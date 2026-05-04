@@ -149,6 +149,78 @@ describe("clodex.ui.queue_workspace", function()
         }, shown_target)
     end)
 
+    it("opens a missing project session before dispatching from the workspace", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local item = {
+            id = "item-1",
+            title = "Implement prompt",
+        }
+        local order = {}
+        local current_state = {
+            tabpage = 1,
+        }
+
+        local workspace = {
+            app = {
+                is_project_session_open = function()
+                    return false
+                end,
+                queue_actions = {
+                    implement_queue_item = function(_, queued_project, item_id)
+                        order[#order + 1] = "dispatch"
+                        assert.are.same(project, queued_project)
+                        assert.are.equal(item.id, item_id)
+                        return true, "started"
+                    end,
+                },
+                project_actions = {
+                    activate_project = function(_, root)
+                        order[#order + 1] = "activate"
+                        assert.are.equal(project.root, root)
+                    end,
+                    show_target = function(_, state, target)
+                        order[#order + 1] = "show"
+                        assert.are.same(current_state, state)
+                        assert.are.same({
+                            kind = "project",
+                            project = project,
+                        }, target)
+                        return {}
+                    end,
+                },
+                current_tab = function()
+                    return current_state
+                end,
+                refresh_views = function()
+                    order[#order + 1] = "refresh"
+                end,
+            },
+            selected_project = function()
+                return project
+            end,
+            selected_queue_item = function()
+                return item, "queued"
+            end,
+            close = function()
+                order[#order + 1] = "close"
+            end,
+            refresh = function()
+                order[#order + 1] = "workspace refresh"
+            end,
+        }
+
+        Workspace.implement_queue_item(workspace)
+
+        vim.wait(100, function()
+            return vim.tbl_contains(order, "dispatch")
+        end)
+
+        assert.are.same({ "close", "activate", "show", "dispatch", "refresh" }, order)
+    end)
+
     it("opens the selected project in a new tab", function()
         local project = {
             name = "Test Project",

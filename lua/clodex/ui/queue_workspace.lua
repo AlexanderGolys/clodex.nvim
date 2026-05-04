@@ -2266,6 +2266,30 @@ function Workspace:implement_queue_item()
         return
     end
 
+    if type(self.app.is_project_session_open) == "function" and not self.app:is_project_session_open(project) then
+        self:close()
+        vim.schedule(function()
+            local state = self.app:current_tab()
+            self.app.project_actions:activate_project(project.root)
+            local session = self.app.project_actions:show_target(state, {
+                kind = "project",
+                project = project,
+            })
+            if not session then
+                self.app:refresh_views()
+                return
+            end
+
+            local ok, action = self.app.queue_actions:implement_queue_item(project, item.id)
+            if not ok or action ~= "started" then
+                self.app:refresh_views()
+                return
+            end
+            self.app:refresh_views()
+        end)
+        return
+    end
+
     local ok, action = self.app.queue_actions:implement_queue_item(project, item.id)
     if not ok then
         self:refresh()
