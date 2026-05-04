@@ -151,13 +151,6 @@ local PROJECT_ACTION = enum("action", vim.tbl_map(function(action)
     }
 end, PROJECT_ACTIONS))
 
-local TODO_ACTION = enum("action", {
-    { value = "add", desc = "Add a todo prompt" },
-    { value = "bug", aliases = { "error" }, desc = "Add a bug-investigation prompt" },
-    { value = "implement", desc = "Implement the next queued item" },
-    { value = "all", aliases = { "implement-all", "implement_all" }, desc = "Implement all queued items" },
-})
-
 ---@return Clodex.CommandEnum
 local function prompt_kind_enum()
     local choices = {} ---@type { value: string, aliases?: string[], desc: string }[]
@@ -386,33 +379,6 @@ local function check_extra_args(command_name, args, expected)
     return false
 end
 
----@param command_name string
----@param value string?
----@return Clodex.Project?
-local function resolve_project_value(command_name, value)
-    if not value or value == "" then
-        return nil
-    end
-    local project = app_instance().registry:find_by_name_or_root(value)
-    if project then
-        return project
-    end
-    notify.error(("%s: project '%s' not found"):format(command_name, value))
-end
-
----@param command_name string
----@param fargs string[]
----@param start_index integer
----@return { project?: Clodex.Project }?
-local function parse_target(command_name, fargs, start_index)
-    local project_value = table.concat(vim.list_slice(fargs, start_index), " ")
-    local project = resolve_project_value(command_name, project_value)
-    if project_value ~= "" and not project then
-        return nil
-    end
-    return project and { project = project } or {}
-end
-
 ---@param command vim.api.keyset.create_user_command.command_args
 ---@return Clodex.PromptContext.Capture?
 local function visual_selection_context(command)
@@ -442,27 +408,6 @@ local function enum_completion(enum_spec, arg_index)
     end
 end
 
----@return string[]
-local function project_completions()
-    local ok, app = pcall(app_instance)
-    if not ok or not app or not app.registry or type(app.registry.list) ~= "function" then
-        return {}
-    end
-
-    local seen = {} ---@type table<string, boolean>
-    local completions = {} ---@type string[]
-    for _, project in ipairs(app.registry:list()) do
-        for _, value in ipairs({ project.name, project.root }) do
-            if type(value) == "string" and value ~= "" and not seen[value] then
-                seen[value] = true
-                completions[#completions + 1] = value
-            end
-        end
-    end
-    table.sort(completions)
-    return completions
-end
-
 ---@param cmd_line string
 ---@param cursor_pos integer
 ---@return string[]
@@ -470,22 +415,6 @@ local function completion_fargs(cmd_line, cursor_pos)
     local parts = vim.split(cmd_line:sub(1, cursor_pos), "%s+", { trimempty = true })
     table.remove(parts, 1)
     return parts
-end
-
----@return fun(arg_lead: string, cmd_line: string, cursor_pos: integer): string[]
-local function todo_completion()
-    return function(_, cmd_line, cursor_pos)
-        local index = completion_arg_index(cmd_line, cursor_pos)
-        local fargs = completion_fargs(cmd_line, cursor_pos)
-        local action = fargs[1] and TODO_ACTION.aliases[fargs[1]] or nil
-        if index <= 1 then
-            return TODO_ACTION.completions
-        end
-        if index == 2 and (action == "implement" or action == "all") then
-            return project_completions()
-        end
-        return {}
-    end
 end
 
 ---@return fun(arg_lead: string, cmd_line: string, cursor_pos: integer): string[]
@@ -539,10 +468,6 @@ local function top_level_palette_specs()
         { name = "ClodexDebug panel", desc = "Toggle the debug state panel", invoke = "ClodexDebug panel", keep_open = true },
         { name = "ClodexDebug mini", desc = "Toggle the compact debug panel", invoke = "ClodexDebug mini" },
         { name = "ClodexDebug reload", desc = "Reload clodex modules", invoke = "ClodexDebug reload" },
-        { name = "ClodexTodo", desc = "Add a todo prompt", invoke = "ClodexTodo" },
-        { name = "ClodexTodo bug", desc = "Add a bug-investigation prompt", invoke = "ClodexTodo bug" },
-        { name = "ClodexTodo implement", desc = "Implement the next queued item", invoke = "ClodexTodo implement" },
-        { name = "ClodexTodo all", desc = "Implement all queued items", invoke = "ClodexTodo all" },
     } ---@type Clodex.CommandSpec[]
 
     for _, action in ipairs(PROJECT_ACTIONS) do
@@ -681,48 +606,6 @@ local function registered_command_specs()
                 local method = PROJECT_ACTION_HANDLERS[action]
                 if method then
                     clodex[method]()
-                end
-            end,
-        },
-        {
-            name = "ClodexTodo",
-            desc = "Add or implement todo queue items",
-            nargs = "*",
-            complete = todo_completion(),
-            handler = function(command)
-                local clodex = require_clodex()
-                local token = command.fargs[1]
-                local action = "add"
-                local start_index = 1
-                if token and TODO_ACTION.aliases[token] ~= nil then
-                    action = resolve_enum(token, TODO_ACTION, "ClodexTodo") or action
-                    start_index = 2
-                end
-                if not action then
-                    return
-                end
-                if action == "add" then
-                    if not check_extra_args("ClodexTodo", vim.list_slice(command.fargs, start_index), "at most one action argument") then
-                        return
-                    end
-                    clodex.add_todo()
-                elseif action == "bug" then
-                    if not check_extra_args("ClodexTodo", vim.list_slice(command.fargs, start_index), "at most one action argument") then
-                        return
-                    end
-                    clodex.add_bug_todo()
-                elseif action == "implement" then
-                    local target = parse_target("ClodexTodo", command.fargs, start_index)
-                    if not target then
-                        return
-                    end
-                    clodex.implement_next_queued_item(target)
-                elseif action == "all" then
-                    local target = parse_target("ClodexTodo", command.fargs, start_index)
-                    if not target then
-                        return
-                    end
-                    clodex.implement_all_queued_items(target)
                 end
             end,
         },

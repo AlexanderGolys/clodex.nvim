@@ -115,30 +115,9 @@ describe("clodex.commands", function()
         assert.is_not_nil(created.Clodex)
         assert.is_not_nil(created.ClodexDebug)
         assert.is_not_nil(created.ClodexProject)
-        assert.is_not_nil(created.ClodexTodo)
+        assert.is_nil(created["Clodex" .. "Todo"])
         assert.is_not_nil(created.ClodexPrompt)
         assert.is_true(created.ClodexPrompt.opts.range)
-    end)
-
-    it("offers enum and project completion for todo commands", function()
-        Commands.register()
-
-        assert.are.same(
-            {
-                "add",
-                "all",
-                "bug",
-                "error",
-                "implement",
-                "implement-all",
-                "implement_all",
-            },
-            created.ClodexTodo.opts.complete("", "ClodexTodo ", 11)
-        )
-        assert.are.same(
-            { "/tmp/alpha", "/tmp/demo", "alpha", "demo" },
-            created.ClodexTodo.opts.complete("", "ClodexTodo implement ", 21)
-        )
     end)
 
     it("offers enum and project completion for prompt commands", function()
@@ -251,20 +230,6 @@ describe("clodex.commands", function()
 
         assert.is_false(called)
         assert.matches("unexpected arguments 'demo'", notify_calls[#notify_calls].message)
-    end)
-
-    it("uses the explicit project when provided to todo commands", function()
-        Commands.register()
-
-        local called
-        fake_clodex.implement_next_queued_item = function(opts)
-            called = opts
-        end
-
-        created.ClodexTodo.handler({ args = "implement demo", fargs = { "implement", "demo" } })
-
-        assert.is_not_nil(called)
-        assert.are.equal("demo", called.project.name)
     end)
 
     it("reports invalid enum arguments instead of dispatching", function()

@@ -167,7 +167,6 @@ Legacy queue items and command aliases using `todo`, `freeform`, `adjustment`, `
 - `:ClodexProject note-add`
 - `:ClodexProject bookmarks`
 - `:ClodexProject bookmark-add`
-- `:ClodexTodo [bug|implement|all] [project]`
 - `:ClodexPrompt [kind]`
 
 Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the selected range.
