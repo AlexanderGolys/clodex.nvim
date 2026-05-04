@@ -78,6 +78,13 @@ local QUEUE_LABELS = {
     implemented = "Implemented",
     history = "History",
 }
+local PROMPT_KIND_PREFIX_WIDTH = (function()
+    local width = 0
+    for _, kind in ipairs(Prompt.categories.list()) do
+        width = math.max(width, vim.fn.strdisplaywidth(kind.label or ""))
+    end
+    return width + 2
+end)()
 local PROJECT_SEARCH_FIELDS = {
     "name",
     "root",
@@ -542,6 +549,16 @@ local function prompt_title_active_group(kind)
     return Prompt.title_group(kind) .. "Active"
 end
 
+---@param kind Clodex.PromptCategoryDef
+---@return string
+local function prompt_kind_prefix(kind)
+    local label = kind.label or ""
+    local padding = math.max(PROMPT_KIND_PREFIX_WIDTH - vim.fn.strdisplaywidth(label), 0)
+    local left = math.floor(padding / 2)
+    local right = padding - left
+    return string.rep(" ", left) .. label .. string.rep(" ", right)
+end
+
 ---@param item Clodex.QueueItem
 ---@param opts? { max_lines?: integer, fold?: boolean }
 ---@return string[]
@@ -627,9 +644,9 @@ end
 local function queue_item_title_line(item, title, suffix, opts)
     opts = opts or {}
     local kind = Prompt.categories.get(item.kind)
-    local prefix = kind.label
-    local text = ("  %s %s%s"):format(prefix, title, suffix)
-    local title_start = 2 + #prefix + 1
+    local prefix = prompt_kind_prefix(kind)
+    local text = ("  %s%s%s"):format(prefix, title, suffix)
+    local title_start = 2 + #prefix
     local title_end = title_start + #title
     local kind_hl = opts.selected and Prompt.title_group(kind.id) or prompt_title_active_group(kind.id)
     local marks = {
