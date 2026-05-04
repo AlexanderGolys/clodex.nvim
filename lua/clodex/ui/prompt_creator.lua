@@ -564,6 +564,16 @@ function Creator:content_col()
 end
 
 ---@return integer
+function Creator:content_frame_col()
+    return self:content_col() - LAYOUT.min_window_offset
+end
+
+---@return integer
+function Creator:content_frame_width()
+    return self:content_width() + (LAYOUT.min_window_offset * 2)
+end
+
+---@return integer
 function Creator:top_row()
     local _, height = self:editor_size()
     return math.max(math.floor((height - self:total_height()) / 2), LAYOUT.min_window_offset)
@@ -693,7 +703,7 @@ end
 
 ---@return integer
 function Creator:project_height()
-    return math.max(self:total_height() - (LAYOUT.project_picker_margin_rows * 2), LAYOUT.min_window_offset)
+    return math.max(self:total_height() + LAYOUT.footer_gap_rows, LAYOUT.min_window_offset)
 end
 
 ---@return integer
@@ -1115,7 +1125,7 @@ function Creator:render_kind_tabs()
             active_hl_group = Prompt.title_group(kind.id) .. "Active",
         }
     end
-    self.kind_tab_spans = self:render_tab_line(self.kind_buf, labels, self.kind_index, self:content_width())
+    self.kind_tab_spans = self:render_tab_line(self.kind_buf, labels, self.kind_index, self:content_frame_width())
 end
 
 -- Render variants
@@ -1143,20 +1153,20 @@ function Creator:render_variant_tabs()
             active_hl_group = "ClodexPromptSourceTabActive",
         }
     end
-    self.variant_tab_spans = self:render_tab_line(self.variant_buf, labels, self.variant_index, self:content_width())
+    self.variant_tab_spans = self:render_tab_line(self.variant_buf, labels, self.variant_index, self:content_frame_width())
     self.variant_win = self:open_block(self, "variant_block", "variant_win", "variant_tabs", self.variant_buf, {
         enter = false,
         border = "none",
         zindex = LAYOUT.prompt_content_zindex,
         width = function()
-            return self:content_width()
+            return self:content_frame_width()
         end,
         height = 1,
         row = function()
             return self:variant_row()
         end,
         col = function()
-            return self:content_col()
+            return self:content_frame_col()
         end,
         view = "footer",
         theme = "prompt_footer",
@@ -1300,14 +1310,14 @@ function Creator:ensure_shell_windows()
         border = "none",
         zindex = LAYOUT.prompt_content_zindex,
         width = function()
-            return self:content_width()
+            return self:content_frame_width()
         end,
         height = 2,
         row = function()
             return self:kind_row()
         end,
         col = function()
-            return self:content_col()
+            return self:content_frame_col()
         end,
         view = "footer",
         theme = "prompt_footer",
