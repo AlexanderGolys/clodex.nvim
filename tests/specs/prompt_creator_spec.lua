@@ -426,6 +426,34 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(body_bottom + 1, footer_row)
     end)
 
+    it("opens above the queue workspace panel layer", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        local background_cfg = vim.api.nvim_win_get_config(creator.project_bg_win.win)
+        local title_cfg = vim.api.nvim_win_get_config(creator.layout.title_win.win)
+        local footer_cfg = vim.api.nvim_win_get_config(creator.footer_win.win)
+
+        assert.is_true((background_cfg.zindex or 0) > 56)
+        assert.is_true((title_cfg.zindex or 0) > (background_cfg.zindex or 0))
+        assert.are.equal(title_cfg.zindex, footer_cfg.zindex)
+    end)
+
     it("places the title row directly below the visible tab rows", function()
         creator = Creator.open({
             app = {
@@ -1448,9 +1476,9 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(top - 1, background_config.row)
         assert.are.equal((right - left) + 2, background_config.width)
         assert.are.equal((bottom - top) + 2, background_config.height)
-        assert.are.equal(1, background_config.zindex)
-        assert.are.equal(20, picker_config.zindex)
-        assert.are.equal(20, footer_config.zindex)
+        assert.are.equal(70, background_config.zindex)
+        assert.are.equal(71, picker_config.zindex)
+        assert.are.equal(71, footer_config.zindex)
         assert.is_true(background_config.row < title_config.row)
         assert.is_true(background_config.col < picker_config.col)
         assert.is_true(background_config.col < title_config.col)
