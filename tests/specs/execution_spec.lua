@@ -120,14 +120,14 @@ describe("clodex.workspace.execution", function()
         file:close()
 
         assert.are.equal(
-            fs.join(project.root, ".clodex/skills/prompt-nvim-clodex/SKILL.md"),
+            fs.join(project.root, ".codex/skills/prompt-nvim-clodex/SKILL.md"),
             skill_file
         )
         assert.matches("Manual History", content)
         assert.matches("%$prompt%-nvim%-clodex", content)
 
         local debug_file = assert(io.open(
-            fs.join(project.root, ".clodex/skills/clodex-debug/SKILL.md"),
+            fs.join(project.root, ".codex/skills/clodex-debug/SKILL.md"),
             "rb"
         ))
         local debug_content = debug_file:read("*a")

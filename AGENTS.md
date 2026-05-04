@@ -5,11 +5,11 @@
 - Bootstrap stays in `plugin/clodex.lua`.
 - Core module groups are `app/`, `execution/`, `project/`, `prompt/`, `session/`, `tab/`, `terminal/`, `ui/`, `util/`, and `workspace/`.
 - The bundled MCP helper lives in `rust/clodex-mcp/`.
-- Checked-in workflow skill content lives in `.codex/skills/` and is synced into project-local `.clodex/skills/` at runtime, including the main prompt workflow and debug/repair workflow.
+- Checked-in workflow skill content lives in `.codex/skills/` and is synced into each registered project's local `.codex/skills/` directory at runtime, including the main prompt workflow and debug/repair workflow.
 - Bundled skills are synced for every registered project during setup and before a project session is created.
-- Durable per-project user files may include root `README.md` and `TODO.md` plus `.clodex/` skills, notes, bookmarks, and project context files. Queue JSON is MCP-managed local data under `storage.workspaces_dir`.
+- Durable per-project user files may include root `README.md` and `TODO.md` plus `.codex/` skills and `.clodex/` notes, bookmarks, and project context files. Queue JSON is MCP-managed local data under `storage.workspaces_dir`.
 - Tests live in `tests/specs/` and use `tests/minimal_init.lua`.
-- Keep project-local agent context under each repository's `.clodex/` directory, but keep queue state under the configured local workspace directory so agents do not directly edit queue JSON.
+- Keep project-local skills under each repository's `.codex/skills/` directory and other project context under `.clodex/`, but keep queue state under the configured local workspace directory so agents do not directly edit queue JSON.
 
 ## Product Rules
 - Treat `snacks.nvim` as required infrastructure.

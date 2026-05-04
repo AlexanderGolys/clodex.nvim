@@ -31,8 +31,8 @@ Start with the least invasive checks and only apply a fix when the matching caus
    - If the destination runtime files already exist, stop and ask before merging or overwriting.
 
 5. Check that bundled skills are installed locally.
-   - Verify that `<project_root>/.clodex/skills/prompt-nvim-clodex/SKILL.md` exists.
-   - Verify that `<project_root>/.clodex/skills/clodex-debug/SKILL.md` exists.
+   - Verify that `<project_root>/.codex/skills/prompt-nvim-clodex/SKILL.md` exists.
+   - Verify that `<project_root>/.codex/skills/clodex-debug/SKILL.md` exists.
    - If either is missing or stale in a clodex.nvim repository, run the plugin's normal skill sync path by restarting setup or creating the project session, or copy the checked-in `.codex/skills/<name>/SKILL.md` file into the project-local skills directory.
 
 6. Check MCP runtime configuration when agents cannot see the expected tools.

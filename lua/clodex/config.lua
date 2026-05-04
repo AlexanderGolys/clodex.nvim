@@ -197,7 +197,7 @@ local function defaults()
         prompt_execution = {
             receipts_dir = fs.join(".clodex", "prompt-executions"),
             poll_ms = 5000,
-            skills_dir = fs.join(".clodex", "skills"),
+            skills_dir = fs.join(".codex", "skills"),
             skill_name = "prompt-nvim-clodex",
             git_workflow = "commit",
         },
