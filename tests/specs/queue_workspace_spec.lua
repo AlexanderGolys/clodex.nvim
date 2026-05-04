@@ -1278,6 +1278,7 @@ describe("clodex.ui.queue_workspace", function()
                                 details = "Adjust token handling",
                                 prompt = "Fix parser\n\nAdjust token handling",
                                 kind = "todo",
+                                history_summary = "Implemented parser fix",
                                 history_commits = { "abc1234" },
                             },
                         },
@@ -1308,9 +1309,9 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "  Improvement Fix parser  [󰜘 abc1234]",
+            "  Improvement Implemented parser fix  [󰜘 abc1234]",
+            "    Fix parser",
             "    Adjust token handling",
-            "    󰜘 abc1234",
             "",
         }, lines)
 
@@ -1375,7 +1376,6 @@ describe("clodex.ui.queue_workspace", function()
             "Implemented (1)",
             "  Improvement Fix parser  [󰜘 abc1234]",
             "    Adjust token handling",
-            "    󰜘 abc1234",
             "",
         }, lines)
 

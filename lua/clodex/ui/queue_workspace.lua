@@ -93,7 +93,6 @@ local PROJECT_RUNNING_ICON = "󰚩 "
 local PROJECT_STOPPED_ICON = "󱙺 "
 local GITHUB_ICON = ""
 local COMMIT_ICON = "󰜘 "
-local COMMIT_HIGHLIGHT = "SnacksPickerGitCommit"
 local ELLIPSIS = "..."
 local PANEL_BORDER_COLS = 2
 local PANEL_GAP_COLS = 0
@@ -583,10 +582,8 @@ local function prompt_preview_lines(item, opts)
 end
 
 ---@param item Clodex.QueueItem
----@param project_root? string
----@return { text: string, marks: Clodex.Extmark[] }[]
-local function item_metadata_preview_lines(item, project_root)
-    local preview = {} ---@type { text: string, marks: Clodex.Extmark[] }[]
+---@return string[]
+local function item_history_commits(item)
     local commits = {} ---@type string[]
     for _, commit_id in ipairs(type(item.history_commits) == "table" and item.history_commits or {}) do
         if type(commit_id) == "string" then
@@ -596,41 +593,39 @@ local function item_metadata_preview_lines(item, project_root)
             end
         end
     end
-    if #commits > 0 then
-        local commit_parts = {}
-        for _, commit_id in ipairs(commits) do
-            local short = commit_id:sub(1, 8)
-            commit_parts[#commit_parts + 1] = ("%s%s"):format(COMMIT_ICON, short)
-        end
-        local text = "    " .. table.concat(commit_parts, " ")
-        local marks = {
-            Extmark.inline(0, 0, 4, "ClodexQueueItemMuted"),
-        }
-        local pos = 4
-        for _, commit_id in ipairs(commits) do
-            local short = commit_id:sub(1, 8)
-            local icon_len = #COMMIT_ICON
-            marks[#marks + 1] = Extmark.inline(0, pos, pos + icon_len, COMMIT_HIGHLIGHT)
-            pos = pos + icon_len
-            marks[#marks + 1] = Extmark.inline(0, pos, pos + #short, COMMIT_HIGHLIGHT)
-            pos = pos + #short
-            if _ < #commits then
-                marks[#marks + 1] = Extmark.inline(0, pos, pos + 1, COMMIT_HIGHLIGHT)
-                pos = pos + 1
-            end
-        end
-        preview[#preview + 1] = { text = text, marks = marks }
-    end
-    return preview
+    return commits
 end
 
 ---@param item Clodex.QueueItem
+---@return string?
+local function item_history_comment(item)
+    if type(item.history_summary) ~= "string" then
+        return nil
+    end
+    local comment = vim.trim(item.history_summary)
+    return comment ~= "" and comment or nil
+end
+
+---@param item Clodex.QueueItem
+---@return string
+local function history_commit_suffix(item)
+    local parts = {}
+    for _, commit_id in ipairs(item_history_commits(item)) do
+        parts[#parts + 1] = ("%s%s"):format(COMMIT_ICON, commit_id:sub(1, 8))
+    end
+    if #parts == 0 then
+        return ""
+    end
+    return "  [" .. table.concat(parts, " ") .. "]"
+end
+
+---@param item Clodex.QueueItem
+---@param title string
 ---@param suffix string
 ---@return string, Clodex.Extmark[]
-local function queue_item_title_line(item, suffix)
+local function queue_item_title_line(item, title, suffix)
     local kind = Prompt.categories.get(item.kind)
     local prefix = kind.label
-    local title = item.title or ""
     local text = ("  %s %s%s"):format(prefix, title, suffix)
     local title_start = 2 + #prefix + 1
     local title_end = title_start + #title
@@ -729,26 +724,6 @@ end
 local function footer_text(text)
     local normalized = text:gsub("Left/Right", "←/→"):gsub("Up/Down", "↑/↓")
     return normalized
-end
-
----@param item Clodex.QueueItem
----@param project_root? string
----@return string
-local function history_suffix(item, project_root)
-    local parts = {} ---@type string[]
-    if type(item.history_summary) == "string" and item.history_summary ~= "" then
-        parts[#parts + 1] = item.history_summary
-    end
-    local commits = type(item.history_commits) == "table" and item.history_commits or {}
-    for _, commit_id in ipairs(commits) do
-        if type(commit_id) == "string" then
-            local short = vim.trim(commit_id):sub(1, 8)
-            if short ~= "" then
-                parts[#parts + 1] = COMMIT_ICON .. short
-            end
-        end
-    end
-    return #parts > 0 and ("  [" .. table.concat(parts, " | ") .. "]") or ""
 end
 
 ---@param timestamp? integer
@@ -1892,10 +1867,10 @@ function Workspace:render_queue()
 
                 for _, item in ipairs(items) do
                     rendered_items = true
-                    local suffix = (queue_name == "implemented" or queue_name == "history")
-                        and history_suffix(item, project and project.root)
-                        or ""
-                    local item_text, item_extmarks = queue_item_title_line(item, suffix)
+                    local historical = queue_name == "implemented" or queue_name == "history"
+                    local comment = historical and item_history_comment(item) or nil
+                    local suffix = historical and history_commit_suffix(item) or ""
+                    local item_text, item_extmarks = queue_item_title_line(item, comment or item.title or "", suffix)
                     self.queue_rows[#self.queue_rows + 1] = {
                         kind = "item",
                         text = item_text,
@@ -1904,6 +1879,19 @@ function Workspace:render_queue()
                     }
                     self.queue_item_rows[#self.queue_item_rows + 1] = #self.queue_rows
                     block:append_line(item_text, item_extmarks)
+
+                    if comment then
+                        local original = "    " .. (item.title or "")
+                        self.queue_rows[#self.queue_rows + 1] = {
+                            kind = "preview",
+                            text = original,
+                            queue = queue_name,
+                            item = item,
+                        }
+                        block:append_line(original, {
+                            Extmark.inline(0, 0, #original, "ClodexQueueItemMuted"),
+                        })
+                    end
 
                     for _, preview in
                     ipairs(prompt_preview_lines(item, {
@@ -1920,15 +1908,6 @@ function Workspace:render_queue()
                         block:append_line(preview, {
                             Extmark.inline(0, 0, #preview, Prompt.preview_group_for(prompt_item_kind(item))),
                         })
-                    end
-                    for _, preview in ipairs(item_metadata_preview_lines(item, project and project.root)) do
-                        self.queue_rows[#self.queue_rows + 1] = {
-                            kind = "preview",
-                            text = preview.text,
-                            queue = queue_name,
-                            item = item,
-                        }
-                        block:append_line(preview.text, preview.marks)
                     end
                 end
 
