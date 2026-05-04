@@ -945,10 +945,34 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         local title_insert_maps = vim.api.nvim_buf_get_keymap(creator.layout.title_buf, "i")
+        local title_down
         for _, map in ipairs(title_insert_maps) do
             assert.are_not.equal("<Tab>", map.lhs)
-            assert.are_not.equal("<Down>", map.lhs)
+            if map.lhs == "<Down>" then
+                title_down = map.callback
+            end
         end
+        assert.is_function(title_down)
+
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        title_down()
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+        end)
+
+        local body_up
+        for _, map in ipairs(vim.api.nvim_buf_get_keymap(creator.layout.body_buf, "i")) do
+            if map.lhs == "<Up>" then
+                body_up = map.callback
+            end
+        end
+        assert.is_function(body_up)
+        body_up()
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.title_win.win
+        end)
 
         trigger_buffer_mapping(creator.layout.title_buf, "<S-Tab>", "i")
 
