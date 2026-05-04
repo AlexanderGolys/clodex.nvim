@@ -66,4 +66,56 @@ describe("clodex.terminal.manager", function()
         assert.are.equal("project:/tmp/demo", state.session_key)
         assert.are.equal(0, archived)
     end)
+
+    it("adopts an already visible session buffer instead of opening another terminal window", function()
+        local manager = Manager.new({
+            backend = "codex",
+            terminal = {
+                provider = "term",
+                win = {},
+            },
+        })
+
+        manager.open_window = function()
+            error("visible session buffer should be reused")
+        end
+
+        local original_win = vim.api.nvim_get_current_win()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.cmd("split")
+        local terminal_win = vim.api.nvim_get_current_win()
+        vim.api.nvim_win_set_buf(terminal_win, buf)
+        vim.api.nvim_set_current_win(original_win)
+
+        local state = {
+            tabpage = vim.api.nvim_get_current_tabpage(),
+            window = nil,
+            session_key = nil,
+            has_visible_window = function()
+                return false
+            end,
+            hide_window = function() end,
+            clear_window = function(self)
+                self.window = nil
+                self.session_key = nil
+            end,
+            set_window = function(self, window, session_key)
+                self.window = window
+                self.session_key = session_key
+            end,
+        }
+        local session = {
+            key = "project:/tmp/demo",
+            buf = buf,
+            archive_history_chunk = function() end,
+        }
+
+        manager:show_in_tab(state, session)
+
+        assert.are.equal(terminal_win, state.window.win)
+        assert.are.equal("project:/tmp/demo", state.session_key)
+        assert.are.equal(terminal_win, vim.api.nvim_get_current_win())
+
+        vim.api.nvim_win_close(terminal_win, true)
+    end)
 end)

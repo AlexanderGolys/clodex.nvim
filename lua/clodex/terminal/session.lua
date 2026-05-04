@@ -395,10 +395,20 @@ end
 --- This gate keeps callers safe before continuing higher-level state transitions.
 ---@return boolean
 function Session:is_running()
-    if not self.job_id then
-        return false
+    if self.job_id and vim.fn.jobwait({ self.job_id }, 0)[1] == -1 then
+        return true
     end
-    return vim.fn.jobwait({ self.job_id }, 0)[1] == -1
+
+    if self:buf_valid() then
+        local job_id = terminal_job_id(self.buf)
+        if job_id and vim.fn.jobwait({ job_id }, 0)[1] == -1 then
+            self.job_id = job_id
+            return true
+        end
+    end
+
+    self.job_id = nil
+    return false
 end
 
 ---@return boolean

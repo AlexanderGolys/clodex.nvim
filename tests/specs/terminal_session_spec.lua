@@ -115,6 +115,33 @@ describe("clodex.terminal.session", function()
         vim.fn.jobwait = original_jobwait
     end)
 
+    it("recovers a running terminal job from the session buffer", function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_var(buf, "terminal_job_id", 321)
+
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "codex" },
+        })
+        session.buf = buf
+
+        local waited_job_id
+        local original_jobwait = vim.fn.jobwait
+        vim.fn.jobwait = function(job_ids)
+            waited_job_id = job_ids[1]
+            return { -1 }
+        end
+
+        assert.is_true(session:is_running())
+        assert.are.equal(321, session.job_id)
+        assert.are.equal(321, waited_job_id)
+
+        vim.fn.jobwait = original_jobwait
+    end)
+
     it("shows the active prompt title in the winbar only while working", function()
         local buf = vim.api.nvim_create_buf(false, true)
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {

@@ -448,6 +448,56 @@ local function split_parent_window(tabpage, preferred)
     return fallback
 end
 
+---@param win integer
+---@return snacks.win
+local function adopt_window(win)
+    return {
+        win = win,
+        win_valid = function(self)
+            return type(self.win) == "number" and vim.api.nvim_win_is_valid(self.win)
+        end,
+        hide = function(self)
+            if self:win_valid() then
+                pcall(vim.api.nvim_win_close, self.win, true)
+            end
+        end,
+        on = function(self, event, callback)
+            vim.api.nvim_create_autocmd(event, {
+                pattern = tostring(self.win),
+                callback = callback,
+            })
+        end,
+    }
+end
+
+---@param tabpage number
+---@param session Clodex.TerminalSession
+---@return integer?
+local function visible_session_window(tabpage, session)
+    if not session.buf or not vim.api.nvim_buf_is_valid(session.buf) then
+        return nil
+    end
+
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
+        if is_tab_local_normal_window(win, tabpage) and vim.api.nvim_win_get_buf(win) == session.buf then
+            return win
+        end
+    end
+end
+
+---@param state Clodex.TabState
+---@param session Clodex.TerminalSession
+---@param window snacks.win
+local function track_window(state, session, window)
+    window:on("WinClosed", function()
+        if state.window == window then
+            session:archive_history_chunk()
+            state:clear_window()
+        end
+    end, { win = true })
+    state:set_window(window, session.key)
+end
+
 ---@param state Clodex.TabState
 ---@param session Clodex.TerminalSession
 function Manager:show_in_tab(state, session)
@@ -466,18 +516,21 @@ function Manager:show_in_tab(state, session)
         state:hide_window()
     end
 
+    local existing_win = visible_session_window(tabpage, session)
+    if existing_win then
+        call_in_tabpage(tabpage, function()
+            vim.api.nvim_set_current_win(existing_win)
+        end)
+        track_window(state, session, adopt_window(existing_win))
+        return
+    end
+
     parent_win = split_parent_window(tabpage, parent_win)
     local window
     call_in_tabpage(tabpage, function()
         window = self:open_window(session, parent_win)
     end)
-    window:on("WinClosed", function()
-        if state.window == window then
-            session:archive_history_chunk()
-            state:clear_window()
-        end
-    end, { win = true })
-    state:set_window(window, session.key)
+    track_window(state, session, window)
 end
 
 ---@param state Clodex.TabState
