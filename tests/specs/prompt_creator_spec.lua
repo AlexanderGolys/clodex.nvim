@@ -863,10 +863,28 @@ describe("clodex.ui.prompt_creator", function()
                 and vim.api.nvim_get_mode().mode == "n"
         end)
 
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-Left>")
+
+        wait_for(function()
+            return creator.state.kind == "bug"
+                and vim.api.nvim_get_current_win() == creator.layout.title_win.win
+                and vim.api.nvim_get_mode().mode == "n"
+        end)
+
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-Right>")
+
+        wait_for(function()
+            return creator.state.kind == "freeform"
+                and vim.api.nvim_get_current_win() == creator.layout.title_win.win
+                and vim.api.nvim_get_mode().mode == "n"
+        end)
+
         local footer_maps = vim.api.nvim_buf_get_keymap(creator.footer_buf, "n")
         local footer_insert_maps = vim.api.nvim_buf_get_keymap(creator.footer_buf, "i")
         local has_right_switch = false
         local has_left_switch = false
+        local has_control_right_switch = false
+        local has_control_left_switch = false
         local has_h_switch = false
         local has_l_switch = false
         local has_old_left_switch = false
@@ -879,6 +897,10 @@ describe("clodex.ui.prompt_creator", function()
                 has_right_switch = true
             elseif map.lhs == "<Left>" then
                 has_left_switch = true
+            elseif map.lhs == "<C-Right>" then
+                has_control_right_switch = true
+            elseif map.lhs == "<C-Left>" then
+                has_control_left_switch = true
             elseif map.lhs == "h" then
                 has_h_switch = true
             elseif map.lhs == "l" then
@@ -899,6 +921,8 @@ describe("clodex.ui.prompt_creator", function()
 
         assert.is_true(has_right_switch)
         assert.is_true(has_left_switch)
+        assert.is_true(has_control_right_switch)
+        assert.is_true(has_control_left_switch)
         assert.is_true(has_h_switch)
         assert.is_true(has_l_switch)
         assert.is_true(has_insert_left_switch)
