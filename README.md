@@ -11,7 +11,7 @@ Project-aware Codex and OpenCode workflows for Neovim.
 - Prompts new tabs with the same project ordering used by the queue workspace, preselects the source tab's active project, and opens the selected project's README when the new tab is otherwise empty.
 - Builds prompts from editor context such as the current file, selection, line, and diagnostics.
 - Opens a queue workspace for planning, queuing, dispatching, and reviewing project work.
-- Shows hidden sessions that are waiting for input in a floating blocked-input window.
+- Warns and shows a floating blocked-input window when hidden sessions are waiting for input or permission.
 - Ships a local Rust MCP helper in `rust/clodex-mcp/` for queue-aware task loops.
 
 ## Requirements

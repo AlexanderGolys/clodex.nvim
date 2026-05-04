@@ -238,6 +238,9 @@ describe("clodex.app", function()
             win = vim.api.nvim_get_current_win(),
             on = function() end,
         }
+        local notify = require("clodex.util.notify")
+        local original_warn = notify.warn
+        local warnings = {}
         local waiting_session = {
             key = "/tmp/alpha",
             kind = "project",
@@ -281,12 +284,79 @@ describe("clodex.app", function()
             },
         }, App)
 
-        app:sync_blocked_input_window()
+        notify.warn = function(message)
+            warnings[#warnings + 1] = message
+        end
+        local ok, err = pcall(function()
+            app:sync_blocked_input_window()
+        end)
+        notify.warn = original_warn
+        assert.is_true(ok, err)
 
         assert.are.same(waiting_session, opened_session.session)
         assert.are.equal(current_tabpage, opened_session.tabpage)
         assert.are.equal(waiting_session.key, app.blocked_input_session_key)
         assert.are.same(popup, app.blocked_input_window)
+        assert.are.same({ "Clodex session is waiting for user input: Clodex: Alpha" }, warnings)
+    end)
+
+    it("notifies when a hidden session waits for permission", function()
+        local notify = require("clodex.util.notify")
+        local original_warn = notify.warn
+        local warning
+        local waiting_session = {
+            key = "/tmp/beta",
+            kind = "project",
+            title = "Clodex: Beta",
+            project_root = "/tmp/beta",
+            is_running = function()
+                return true
+            end,
+            waiting_state = function()
+                return "permission"
+            end,
+        }
+        local app = setmetatable({
+            config = {
+                get = function()
+                    return {
+                        terminal = {
+                            blocked_input = {
+                                enabled = true,
+                            },
+                        },
+                    }
+                end,
+            },
+            current_tab = function()
+                return {
+                    tabpage = vim.api.nvim_get_current_tabpage(),
+                    active_project_root = "/tmp/beta",
+                    session_key = nil,
+                }
+            end,
+            terminals = {
+                sessions = function()
+                    return { waiting_session }
+                end,
+                open_blocked_input_window = function()
+                    return {
+                        win = vim.api.nvim_get_current_win(),
+                    }
+                end,
+            },
+        }, App)
+
+        notify.warn = function(message)
+            warning = message
+        end
+        local ok, err = pcall(function()
+            app:sync_blocked_input_window()
+        end)
+        notify.warn = original_warn
+        assert.is_true(ok, err)
+
+        assert.are.equal("Clodex session is waiting for permission: Clodex: Beta", warning)
     end)
 
     it("does not surface a waiting session already visible in the current tab", function()

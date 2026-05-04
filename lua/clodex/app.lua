@@ -343,6 +343,12 @@ local function blocked_input_session(app, current_state)
     return candidates[1]
 end
 
+---@param waiting_state "question"|"permission"
+---@return string
+local function blocked_input_reason(waiting_state)
+    return waiting_state == "permission" and "permission" or "user input"
+end
+
 ---@return Clodex.App
 --- Returns the singleton application object, creating it lazily on first access.
 --- This guarantees shared state across modules and prevents duplicate terminal managers.
@@ -990,6 +996,13 @@ function App:sync_blocked_input_window()
 
     self.blocked_input_window = popup
     self.blocked_input_session_key = session.key
+    local waiting_state = session:waiting_state()
+    if waiting_state then
+        notify.warn(("Clodex session is waiting for %s: %s"):format(
+            blocked_input_reason(waiting_state),
+            session.title
+        ))
+    end
     if popup.on then
         popup:on("WinClosed", function()
             if self.blocked_input_window == popup then
