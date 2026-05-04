@@ -347,6 +347,7 @@ describe("clodex.ui.queue_workspace", function()
             move_selection = function() end,
             open_selected_project = function() end,
             set_current_project = function() end,
+            rename_selected_project = function() end,
             activate_selected_project = function() end,
             deactivate_selected_project = function() end,
             add_todo = function() end,
@@ -583,6 +584,60 @@ describe("clodex.ui.queue_workspace", function()
 
         assert.are.equal("", workspace.project_search)
         assert.are.equal("", workspace.queue_search)
+    end)
+
+    it("renames the selected project from the workspace without touching project files", function()
+        local renamed_project
+        local refreshed = 0
+        local alpha = {
+            name = "Alpha",
+            root = "/tmp/alpha",
+        }
+        local beta = {
+            name = "Beta",
+            root = "/tmp/beta",
+        }
+        local workspace = {
+            app = {
+                project_actions = {
+                    rename_project_to = function(_, project, name)
+                        renamed_project = {
+                            name = name,
+                            root = project.root,
+                        }
+                        return renamed_project
+                    end,
+                },
+            },
+            projects = { alpha, beta },
+            project_index = 1,
+            queue_index = 4,
+            modal_input_open = false,
+            selected_project = function()
+                return alpha
+            end,
+            filtered_projects = function()
+                return { beta, renamed_project }
+            end,
+            refresh = function()
+                refreshed = refreshed + 1
+            end,
+        }
+
+        setmetatable(workspace, { __index = Workspace })
+
+        workspace:rename_selected_project()
+
+        assert.are.equal(1, #input_callbacks)
+        assert.are.equal("Rename Alpha", input_callbacks[1].opts.prompt)
+        assert.are.equal("Alpha", input_callbacks[1].opts.default)
+
+        input_callbacks[1].on_confirm("Renamed")
+
+        assert.are.same({ name = "Renamed", root = "/tmp/alpha" }, renamed_project)
+        assert.are.equal(2, workspace.project_index)
+        assert.are.equal(1, workspace.queue_index)
+        assert.are.equal(1, refreshed)
     end)
 
     it("offers a chat action when creating todos from the workspace", function()

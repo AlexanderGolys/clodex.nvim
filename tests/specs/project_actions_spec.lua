@@ -465,4 +465,36 @@ describe("clodex.app.project_actions", function()
         assert.are.equal(1, refreshed)
     end)
 
+    it("renames projects through the registry without changing project files", function()
+        local registry_spec
+        local terminal_project
+        local refreshed = 0
+        local actions = ProjectActions.new({
+            registry = {
+                add = function(_, spec)
+                    registry_spec = spec
+                    return {
+                        name = spec.name,
+                        root = spec.root,
+                    }
+                end,
+            },
+            terminals = {
+                update_project_identity = function(_, project)
+                    terminal_project = project
+                end,
+            },
+            refresh_views = function()
+                refreshed = refreshed + 1
+            end,
+        })
+
+        local updated = actions:rename_project_to({ name = "Demo", root = "/tmp/demo" }, " Renamed Demo ")
+
+        assert.are.same({ name = "Renamed Demo", root = "/tmp/demo" }, registry_spec)
+        assert.are.same({ name = "Renamed Demo", root = "/tmp/demo" }, terminal_project)
+        assert.are.same({ name = "Renamed Demo", root = "/tmp/demo" }, updated)
+        assert.are.equal(1, refreshed)
+    end)
+
 end)

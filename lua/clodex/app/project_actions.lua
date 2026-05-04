@@ -743,23 +743,31 @@ function ProjectActions:project_picker()
 end
 
 ---@param project Clodex.Project
+---@param name? string
+---@return Clodex.Project?
+function ProjectActions:rename_project_to(project, name)
+    name = name and vim.trim(name) or ""
+    if name == "" or name == project.name then
+        return nil
+    end
+
+    local updated = self.app.registry:add({
+        name = name,
+        root = project.root,
+    })
+    self.app.terminals:update_project_identity(updated)
+    notify.notify(("Renamed project to %s"):format(updated.name))
+    self.app:refresh_views()
+    return updated
+end
+
+---@param project Clodex.Project
 function ProjectActions:prompt_project_rename(project)
     ui.input({
         prompt = ("Rename %s"):format(project.name),
         default = project.name,
     }, function(name)
-        name = name and vim.trim(name) or ""
-        if name == "" or name == project.name then
-            return
-        end
-
-        local updated = self.app.registry:add({
-            name = name,
-            root = project.root,
-        })
-        self.app.terminals:update_project_identity(updated)
-        notify.notify(("Renamed project to %s"):format(updated.name))
-        self.app:refresh_views()
+        self:rename_project_to(project, name)
     end)
 end
 

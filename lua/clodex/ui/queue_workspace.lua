@@ -691,7 +691,7 @@ local function footer_actions(focus, project_search, queue_search)
         return {
             title = " Project Actions ",
             lines = {
-                "s: set current project   I: set icon   t: open in new tab   A: start session   X: stop session   a: add prompt/project   D: delete project",
+                "s: set current project   r: rename   I: set icon   t: open in new tab   A: start session   X: stop session   a: add prompt/project   D: delete project",
                 "/: filter by project text" .. project_clear_filter,
             },
         }
@@ -1393,6 +1393,9 @@ function Workspace:attach_keymaps()
     map(self.project_buf, "I", function()
         self:pick_selected_project_icon()
     end)
+    map(self.project_buf, "r", function()
+        self:rename_selected_project()
+    end)
     map(self.project_buf, "t", function()
         self:open_selected_project_in_new_tab()
     end)
@@ -2048,6 +2051,34 @@ function Workspace:pick_selected_project_icon()
         return
     end
     self.app.project_actions:pick_project_icon(project, function()
+        self:refresh()
+    end)
+end
+
+function Workspace:rename_selected_project()
+    local project = self:selected_project()
+    if not project then
+        notify.warn("No project selected")
+        return
+    end
+
+    open_workspace_input(self, {
+        prompt = ("Rename %s"):format(project.name),
+        default = project.name,
+    }, function(name)
+        local updated = self.app.project_actions:rename_project_to(project, name)
+        if not updated then
+            return
+        end
+
+        self.projects = self:filtered_projects()
+        for index, candidate in ipairs(self.projects) do
+            if candidate.root == updated.root then
+                self.project_index = index
+                break
+            end
+        end
+        self.queue_index = 1
         self:refresh()
     end)
 end
