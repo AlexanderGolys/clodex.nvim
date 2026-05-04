@@ -279,4 +279,63 @@ describe("clodex.terminal.manager", function()
         package.loaded["clodex.terminal.manager"] = nil
         package.loaded["clodex.terminal.session"] = original_session
     end)
+
+    it("adopts a marked Clodex terminal buffer when looking up by buffer", function()
+        local original_session = package.loaded["clodex.terminal.session"]
+        package.loaded["clodex.terminal.manager"] = nil
+        package.loaded["clodex.terminal.session"] = {
+            new = function(spec)
+                spec = vim.deepcopy(spec)
+                spec.buf_valid = function(self)
+                    return self.buf ~= nil and vim.api.nvim_buf_is_valid(self.buf)
+                end
+                spec.is_running = function()
+                    return false
+                end
+                spec.update_buffer_state = function(self)
+                    vim.b[self.buf].clodex = {
+                        key = self.key,
+                        kind = self.kind,
+                        cwd = self.cwd,
+                        project_root = self.project_root,
+                    }
+                end
+                return spec
+            end,
+        }
+
+        local project_root = vim.fn.tempname()
+        vim.fn.mkdir(project_root, "p")
+        local manager_with_session = require("clodex.terminal.manager").new({
+            backend = "codex",
+            codex_cmd = { "codex" },
+            terminal = {
+                provider = "term",
+                win = {},
+            },
+            mcp = {
+                enabled = false,
+            },
+        })
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.bo[buf].filetype = "clodex_terminal"
+        vim.b[buf].clodex = {
+            key = project_root,
+            kind = "project",
+            cwd = project_root,
+            project_root = project_root,
+        }
+
+        local session = manager_with_session:session_by_buf(buf)
+
+        assert.is_not_nil(session)
+        assert.are.equal(buf, session.buf)
+        assert.are.equal(project_root, session.project_root)
+        assert.are.same(session, manager_with_session:project_session(project_root))
+
+        vim.api.nvim_buf_delete(buf, { force = true })
+        vim.fn.delete(project_root, "rf")
+        package.loaded["clodex.terminal.manager"] = nil
+        package.loaded["clodex.terminal.session"] = original_session
+    end)
 end)

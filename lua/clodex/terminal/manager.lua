@@ -181,6 +181,20 @@ function Manager:sessions()
     return sessions
 end
 
+---@param buf number
+---@return Clodex.TerminalSession?
+function Manager:tracked_session_by_buf(buf)
+    if self.free_session and self.free_session.buf == buf then
+        return self.free_session
+    end
+
+    for _, session in pairs(self.project_sessions) do
+        if session.buf == buf then
+            return session
+        end
+    end
+end
+
 ---@param target Clodex.TerminalTarget
 ---@return Clodex.TerminalSession.Spec
 function Manager:session_spec(target)
@@ -301,9 +315,10 @@ function Manager:adopt_buffer(buf, projects_by_root)
     if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].filetype ~= "clodex_terminal" then
         return nil
     end
-    if self:session_by_buf(buf) then
+    if self:tracked_session_by_buf(buf) then
         return nil
     end
+    projects_by_root = projects_by_root or {}
 
     local metadata = vim.b[buf].clodex
     if type(metadata) ~= "table" then
@@ -381,15 +396,7 @@ end
 ---@param buf number
 ---@return Clodex.TerminalSession?
 function Manager:session_by_buf(buf)
-    if self.free_session and self.free_session.buf == buf then
-        return self.free_session
-    end
-
-    for _, session in pairs(self.project_sessions) do
-        if session.buf == buf then
-            return session
-        end
-    end
+    return self:tracked_session_by_buf(buf) or self:adopt_buffer(buf, {})
 end
 
 ---@param buf number
