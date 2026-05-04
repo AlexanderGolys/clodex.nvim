@@ -184,6 +184,24 @@ describe("clodex.config", function()
             end
         end)
 
+        it("keeps the active improvement tab visible without constructor highlights", function()
+            vim.api.nvim_set_hl(0, "@constructor", {})
+            vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#101010" })
+            vim.api.nvim_set_hl(0, "Function", { fg = "#22aa44" })
+
+            Config.apply_highlights({
+                highlights = require("clodex.config.highlights"),
+            })
+
+            local inactive = vim.api.nvim_get_hl(0, { name = "ClodexPromptImprovementKindName", link = false })
+            local active = vim.api.nvim_get_hl(0, { name = "ClodexPromptImprovementTitleActive", link = false })
+
+            assert.are.equal(0x22aa44, inactive.fg)
+            assert.are.equal(inactive.fg, active.bg)
+            assert.are.equal(0x101010, active.fg)
+            assert.is_true(active.bold)
+        end)
+
         it("maps commit ids to the diagnostic error color", function()
             vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222" })
 

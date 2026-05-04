@@ -64,11 +64,11 @@ ClodexPickerRoot = {
     },
 -- &&&ClodexPromptImprovementTitle&&&Lorem Ipsum&&&
 ClodexPromptImprovementTitle = {
-      fg = { from = "@constructor" },
+      fg = { from = { "@constructor", "Function", "Identifier" } },
     },
 -- &&&ClodexPromptImprovementKindName&&&Lorem Ipsum&&&
 ClodexPromptImprovementKindName = {
-      fg = { from = "@constructor" },
+      fg = { from = { "@constructor", "Function", "Identifier" } },
       bold = true,
     },
 -- &&&ClodexPromptTodoTitle&&&Lorem Ipsum&&&
@@ -195,7 +195,7 @@ ClodexPromptExplainKindName = {
 -- &&&ClodexPromptImprovementTitleActive&&&Lorem Ipsum&&&
 ClodexPromptImprovementTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "@constructor", attr = "fg" },
+      bg = { from = { "@constructor", "Function", "Identifier" }, attr = "fg" },
       bold = true,
     },
 -- &&&ClodexPromptTodoTitleActive&&&Lorem Ipsum&&&
