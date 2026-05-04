@@ -9,7 +9,6 @@ local ui = require("clodex.ui.select")
 ---@field project_root? string
 ---@field project_name? string
 ---@field project_value? string
----@field project_required? boolean
 
 ---@class Clodex.AppPromptActions.PickPromptOpts: Clodex.AppPromptActions.ResolveOpts
 ---@field category? Clodex.PromptCategory
@@ -139,9 +138,6 @@ function PromptActions:resolve_project(opts)
     end
     if project then
         return project
-    end
-    if opts.project_required then
-        return nil
     end
     local state = self.app.current_tab and self.app:current_tab() or nil
     local target = state and self.app.resolve_target and self.app:resolve_target(state) or nil

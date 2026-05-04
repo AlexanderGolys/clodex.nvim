@@ -1083,28 +1083,6 @@ function App:add_prompt(opts)
     end)
 end
 
-function App:add_prompt_for_project(opts)
-    opts = vim.tbl_extend("force", { project_required = true }, opts or {})
-    self.prompt_actions:pick_target(opts, function(project, category)
-        self.prompt_actions:prompt_for_category_kind(project, category, opts)
-    end)
-end
-
-function App:add_prompt_for_current_file_project(opts)
-    opts = opts or {}
-    local path = fs.current_path(opts.buf)
-    local project = self.registry:find_for_path(path)
-    if not project then
-        notify.error(("Current file is not inside a registered project: %s"):format(path))
-        return
-    end
-
-    self:add_prompt_for_project(vim.tbl_extend("force", opts, {
-        project = project,
-        project_required = true,
-    }))
-end
-
 for name, spec in pairs(FORWARDED_METHODS) do
     App[name] = forward(spec.field, spec.method)
 end

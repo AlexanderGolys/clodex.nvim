@@ -44,8 +44,6 @@ describe("clodex.commands", function()
             implement_next_queued_item = function() end,
             implement_all_queued_items = function() end,
             add_prompt = function() end,
-            add_prompt_for_project = function() end,
-            add_prompt_for_current_file_project = function() end,
         }
 
         package.loaded["clodex"] = fake_clodex
@@ -119,7 +117,6 @@ describe("clodex.commands", function()
         assert.is_not_nil(created.ClodexProject)
         assert.is_not_nil(created.ClodexTodo)
         assert.is_not_nil(created.ClodexPrompt)
-        assert.is_not_nil(created.ClodexPromptFile)
         assert.is_true(created.ClodexPrompt.opts.range)
     end)
 
@@ -128,24 +125,18 @@ describe("clodex.commands", function()
 
         assert.are.same(
             {
-                "/tmp/alpha",
-                "/tmp/demo",
                 "add",
                 "all",
-                "alpha",
                 "bug",
-                "demo",
                 "error",
-                "for",
                 "implement",
                 "implement-all",
                 "implement_all",
-                "pick",
             },
             created.ClodexTodo.opts.complete("", "ClodexTodo ", 11)
         )
         assert.are.same(
-            { "/tmp/alpha", "/tmp/demo", "alpha", "demo", "for", "pick" },
+            { "/tmp/alpha", "/tmp/demo", "alpha", "demo" },
             created.ClodexTodo.opts.complete("", "ClodexTodo implement ", 21)
         )
     end)
@@ -161,11 +152,8 @@ describe("clodex.commands", function()
         assert.is_true(vim.tbl_contains(created.ClodexPrompt.opts.complete("", "ClodexPrompt ", 13), "vision"))
         assert.is_true(vim.tbl_contains(created.ClodexPrompt.opts.complete("", "ClodexPrompt ", 13), "clean-up"))
         assert.is_true(vim.tbl_contains(created.ClodexPrompt.opts.complete("", "ClodexPrompt ", 13), "missing-docs"))
-        assert.is_true(vim.tbl_contains(created.ClodexPrompt.opts.complete("", "ClodexPrompt ", 13), "demo"))
-        assert.are.same(
-            { "/tmp/alpha", "/tmp/demo", "alpha", "demo", "for", "pick" },
-            created.ClodexPrompt.opts.complete("", "ClodexPrompt ask ", 17)
-        )
+        assert.is_false(vim.tbl_contains(created.ClodexPrompt.opts.complete("", "ClodexPrompt ", 13), "demo"))
+        assert.are.same({}, created.ClodexPrompt.opts.complete("", "ClodexPrompt ask ", 17))
     end)
 
     it("dispatches project todo commands through the project action API", function()
@@ -247,23 +235,22 @@ describe("clodex.commands", function()
         assert.are.same(captured_prompt_context, called.context)
     end)
 
-    it("routes current-file prompt commands through the current file project action", function()
+    it("rejects project targets for prompt commands", function()
         Commands.register()
 
-        local called
-        fake_clodex.add_prompt_for_current_file_project = function(opts)
-            called = opts
+        local called = false
+        fake_clodex.add_prompt = function()
+            called = true
         end
 
-        created.ClodexPromptFile.handler({
-            args = "restructure",
-            fargs = { "restructure" },
+        created.ClodexPrompt.handler({
+            args = "restructure demo",
+            fargs = { "restructure", "demo" },
             range = 2,
         })
 
-        assert.is_not_nil(called)
-        assert.are.equal("restructure", called.category)
-        assert.are.same(captured_prompt_context, called.context)
+        assert.is_false(called)
+        assert.matches("unexpected arguments 'demo'", notify_calls[#notify_calls].message)
     end)
 
     it("uses the explicit project when provided to todo commands", function()

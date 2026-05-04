@@ -26,8 +26,6 @@
 ---| "implement_next_queued_item"
 ---| "implement_all_queued_items"
 ---| "add_prompt"
----| "add_prompt_for_project"
----| "add_prompt_for_current_file_project"
 ---| "add_bug_todo"
 ---| "open_history"
 
@@ -63,8 +61,6 @@ local PUBLIC_ACTIONS = {
     "implement_next_queued_item",
     "implement_all_queued_items",
     "add_prompt",
-    "add_prompt_for_project",
-    "add_prompt_for_current_file_project",
     "add_bug_todo",
     "open_history",
 } ---@type Clodex.PublicAction[]

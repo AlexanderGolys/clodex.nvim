@@ -216,7 +216,7 @@ describe("clodex.app", function()
 
         assert.is_true(vim.tbl_contains(command_names, "Clodex backend"))
         assert.is_true(vim.tbl_contains(command_names, "ClodexProject todo"))
-        assert.is_true(vim.tbl_contains(command_names, "ClodexPromptFile"))
+        assert.is_false(vim.tbl_contains(command_names, "ClodexPromptFile"))
         assert.is_true(vim.tbl_contains(
             vim.tbl_map(function(item)
                 return item.lhs
@@ -229,59 +229,6 @@ describe("clodex.app", function()
             end, keymaps),
             "<leader>pM"
         ))
-    end)
-
-    it("uses the current file project when opening a prompt composer", function()
-        local project = { name = "Alpha", root = "/tmp/alpha" }
-        local called
-        local app = setmetatable({
-            registry = {
-                find_for_path = function(_, path)
-                    if path == "/tmp/alpha/lua/example.lua" then
-                        return project
-                    end
-                end,
-            },
-            add_prompt_for_project = function(_, opts)
-                called = opts
-            end,
-        }, App)
-        local original_get_name = vim.api.nvim_buf_get_name
-        vim.api.nvim_buf_get_name = function()
-            return "/tmp/alpha/lua/example.lua"
-        end
-
-        app:add_prompt_for_current_file_project({ category = "ask" })
-
-        vim.api.nvim_buf_get_name = original_get_name
-        assert.are.same(project, called.project)
-        assert.are.equal("ask", called.category)
-        assert.is_true(called.project_required)
-    end)
-
-    it("reports an error when the current file is outside registered projects", function()
-        local app = setmetatable({
-            registry = {
-                find_for_path = function()
-                    return nil
-                end,
-            },
-        }, App)
-        local messages = {}
-        local original_notify = vim.notify
-        local original_get_name = vim.api.nvim_buf_get_name
-        vim.notify = function(message)
-            messages[#messages + 1] = message
-        end
-        vim.api.nvim_buf_get_name = function()
-            return "/tmp/outside/file.lua"
-        end
-
-        app:add_prompt_for_current_file_project()
-
-        vim.api.nvim_buf_get_name = original_get_name
-        vim.notify = original_notify
-        assert.matches("Current file is not inside a registered project", messages[#messages])
     end)
 
     it("surfaces hidden waiting sessions in a floating terminal", function()

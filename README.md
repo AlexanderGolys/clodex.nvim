@@ -166,9 +166,8 @@ Legacy queue items and command aliases using `todo`, `freeform`, `adjustment`, `
 - `:ClodexProject note-add`
 - `:ClodexProject bookmarks`
 - `:ClodexProject bookmark-add`
-- `:ClodexTodo [bug|implement|all] [for|project]`
-- `:ClodexPrompt [kind] [for|project]`
-- `:ClodexPromptFile [kind]`
+- `:ClodexTodo [bug|implement|all] [project]`
+- `:ClodexPrompt [kind]`
 
 Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the selected range.
 
@@ -247,8 +246,6 @@ Main entrypoints live in `lua/clodex/init.lua`:
 - `require("clodex").add_todo(opts)`
 - `require("clodex").add_bug_todo(opts)`
 - `require("clodex").add_prompt(opts)`
-- `require("clodex").add_prompt_for_project(opts)`
-- `require("clodex").add_prompt_for_current_file_project(opts)`
 - `require("clodex").implement_next_queued_item(opts)`
 - `require("clodex").implement_all_queued_items(opts)`
 
