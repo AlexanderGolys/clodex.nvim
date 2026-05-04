@@ -259,7 +259,30 @@ end
 ---@param root string
 ---@param max_files integer
 ---@return string[]
-local function list_files(root, max_files)
+local function list_files_from_git(root, max_files)
+  local result = vim.system({ "git", "-C", root, "ls-files" }, { text = true }):wait()
+  if result.code ~= 0 or vim.trim(result.stdout or "") == "" then
+    return {}
+  end
+
+  local files = {} ---@type string[]
+  for line in (result.stdout or ""):gmatch("[^\r\n]+") do
+    local rel_path = vim.trim(line)
+    if rel_path ~= "" then
+      files[#files + 1] = fs.join(root, rel_path)
+      if #files >= max_files then
+        break
+      end
+    end
+  end
+  return files
+end
+
+--- Walks the project tree while skipping known heavy/generated directories and ignored files.
+---@param root string
+---@param max_files integer
+---@return string[]
+local function list_files_from_tree(root, max_files)
   local files = {} ---@type string[]
   local stack = { root }
   local ignore_patterns = load_ignore_patterns(root)
@@ -282,6 +305,17 @@ local function list_files(root, max_files)
     end
   end
   return files
+end
+
+---@param root string
+---@param max_files integer
+---@return string[]
+local function list_files(root, max_files)
+  local git_files = list_files_from_git(root, max_files)
+  if #git_files > 0 then
+    return git_files
+  end
+  return list_files_from_tree(root, max_files)
 end
 
 ---@param path string
