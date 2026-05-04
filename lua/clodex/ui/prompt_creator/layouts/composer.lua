@@ -13,6 +13,13 @@ ComposerLayout.__index = ComposerLayout
 
 local TITLE_MIN_WRAP_WIDTH = 16
 
+---@param focus fun()
+---@return string
+local function schedule_insert_focus(focus)
+    vim.schedule(focus)
+    return vim.keycode("<Ignore>")
+end
+
 ---@param creator Clodex.PromptCreator
 ---@return Clodex.PromptCreator.ComposerLayout
 function ComposerLayout.new(creator)
@@ -87,12 +94,14 @@ function ComposerLayout:apply_keymaps()
             self:focus_body(false)
         end, { buffer = self.title_buf, silent = true })
         vim.keymap.set("i", "<S-Tab>", function()
-            self:focus_body(true)
-            return vim.keycode("<Ignore>")
+            return schedule_insert_focus(function()
+                self:focus_body(true)
+            end)
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("i", "<Down>", function()
-            self:focus_body(true)
-            return vim.keycode("<Ignore>")
+            return schedule_insert_focus(function()
+                self:focus_body(true)
+            end)
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
             buffer = self.title_buf,
@@ -111,12 +120,14 @@ function ComposerLayout:apply_keymaps()
             self:focus_title(false)
         end, { buffer = self.body_buf, silent = true })
         vim.keymap.set("i", "<S-Tab>", function()
-            self:focus_title(true)
-            return vim.keycode("<Ignore>")
+            return schedule_insert_focus(function()
+                self:focus_title(true)
+            end)
         end, { buffer = self.body_buf, silent = true, expr = true })
         vim.keymap.set("i", "<Up>", function()
-            self:focus_title(true)
-            return vim.keycode("<Ignore>")
+            return schedule_insert_focus(function()
+                self:focus_title(true)
+            end)
         end, { buffer = self.body_buf, silent = true, expr = true })
         vim.keymap.set("n", "<Down>", function()
             self:focus_title(false)
