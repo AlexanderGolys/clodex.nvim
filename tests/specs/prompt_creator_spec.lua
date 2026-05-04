@@ -915,7 +915,6 @@ describe("clodex.ui.prompt_creator", function()
         for _, map in ipairs(title_insert_maps) do
             assert.are_not.equal("<Tab>", map.lhs)
             assert.are_not.equal("<Down>", map.lhs)
-            assert.are_not.equal("<CR>", map.lhs)
         end
 
         trigger_buffer_mapping(creator.layout.title_buf, "<S-Tab>", "i")
@@ -923,6 +922,81 @@ describe("clodex.ui.prompt_creator", function()
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
         end)
+    end)
+
+    it("splits title text into details from insert-mode enter", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Fix parser details",
+                details = "Existing detail",
+            },
+            on_submit = function() end,
+        })
+
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        vim.api.nvim_win_set_cursor(creator.layout.title_win.win, { 1, #"Fix parser" })
+
+        trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "i")
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+        end)
+
+        assert.are.same({ "Fix parser" }, vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, -1, false))
+        assert.are.same(
+            { "details", "Existing detail" },
+            vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false)
+        )
+        assert.are.same({ 1, 0 }, vim.api.nvim_win_get_cursor(creator.layout.body_win.win))
+    end)
+
+    it("moves title overflow into details at a word boundary", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+        creator.content_width = function()
+            return 10
+        end
+
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Alpha Beta Gamma Delta" })
+        vim.api.nvim_win_set_cursor(creator.layout.title_win.win, { 1, #"Alpha Beta Gamma Delta" })
+        vim.api.nvim_exec_autocmds("TextChangedI", { buffer = creator.layout.title_buf })
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+        end)
+
+        assert.are.same({ "Alpha Beta" }, vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, -1, false))
+        assert.are.same({ "Gamma Delta" }, vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false))
     end)
 
     it("changes tabs by mouse hit testing", function()
