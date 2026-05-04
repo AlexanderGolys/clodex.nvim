@@ -159,20 +159,6 @@ function M.focus_border_group(kind)
     return M.title_group(kind) .. "FocusBorder"
 end
 
----@return string
-function M.preview_group()
-    return "ClodexPromptPreviewText"
-end
-
----@param kind? Clodex.PromptCategory|string
----@return string
-function M.preview_group_for(kind)
-    if M.categories.get(kind).id == "freeform" then
-        return "ClodexPromptFixPreviewText"
-    end
-    return M.preview_group()
-end
-
 ---@param opts { title: string, details?: string, max_width?: integer }
 ---@return Clodex.Prompt.NormalizeResult
 function M.normalize_title(opts)

@@ -656,7 +656,7 @@ local function queue_item_title_line(item, title, suffix, opts)
     local title_end = title_start + #title
     local marks = {
         Extmark.inline(0, 2, 2 + #prefix, Prompt.kind_name_group(kind.id)),
-        Extmark.inline(0, title_start, title_end, "ClodexQueueItem"),
+        Extmark.inline(0, title_start, title_end, Prompt.title_group(kind.id)),
     }
     if #suffix > 0 then
         if opts.suffix_spans and #opts.suffix_spans > 0 then
@@ -1958,7 +1958,7 @@ function Workspace:render_queue()
                             item = item,
                         }
                         block:append_line(preview, {
-                            Extmark.inline(0, 0, #preview, Prompt.preview_group_for(prompt_item_kind(item))),
+                            Extmark.inline(0, 0, #preview, "ClodexQueueItem"),
                         })
                     end
                 end
