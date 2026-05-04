@@ -625,7 +625,7 @@ describe("clodex.ui.prompt_creator", function()
                 has_h_switch = true
             elseif map.lhs == "l" then
                 has_l_switch = true
-            elseif map.lhs == ">" then
+            elseif map.lhs == "." then
                 has_implement_action = true
             elseif map.lhs == "<" then
                 has_old_left_switch = true
@@ -1728,7 +1728,7 @@ describe("clodex.ui.prompt_creator", function()
             end,
         })
 
-        trigger_buffer_mapping(creator.layout.title_buf, ">", "n")
+        trigger_buffer_mapping(creator.layout.title_buf, ".", "n")
 
         wait_for(function()
             return submitted_actions[2] == "exec" and creator.footer_win == nil and creator.layout == nil
@@ -1794,10 +1794,58 @@ describe("clodex.ui.prompt_creator", function()
             end,
         })
 
-        trigger_buffer_mapping(creator.layout.title_buf, "<C->>", "i")
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-.>", "i")
 
         wait_for(function()
             return submitted_actions[2] == "exec" and creator.footer_win == nil and creator.layout == nil
+        end)
+    end)
+
+    it("resets the creator from shifted plan and implement submit keymaps", function()
+        local submitted_actions = {}
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Reset prompt",
+                details = "Keep creator open",
+            },
+            on_submit = function(_, action)
+                submitted_actions[#submitted_actions + 1] = action
+                return { id = "queued-item" }
+            end,
+        })
+
+        trigger_buffer_mapping(creator.layout.title_buf, "S", "n")
+
+        wait_for(function()
+            return submitted_actions[1] == "save"
+                and creator.layout.title_win ~= nil
+                and creator.layout.title_win:valid()
+                and vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, 1, false)[1] == ""
+        end)
+
+        vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Reset prompt again" })
+        trigger_buffer_mapping(creator.layout.title_buf, "<S-.>", "n")
+
+        wait_for(function()
+            return submitted_actions[2] == "exec"
+                and creator.layout.title_win ~= nil
+                and creator.layout.title_win:valid()
+                and vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, 1, false)[1] == ""
         end)
     end)
 

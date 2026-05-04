@@ -28,9 +28,9 @@ local PromptActions = {}
 PromptActions.__index = PromptActions
 
 local SUBMIT_ACTIONS = {
-    { value = "save", label = "plan", key = "s", insert_key = "<C-s>" },
+    { value = "save", label = "plan", key = "s", insert_key = "<C-s>", reset_key = "S" },
     { value = "queue", label = "queue", key = "<CR>", insert_key = "<C-q>" },
-    { value = "exec", label = "implement", key = ">", insert_key = "<C->>" },
+    { value = "exec", label = "implement", key = ".", insert_key = "<C-.>", reset_key = "<S-.>", reset_insert_key = "<C-S-.>" },
     { value = "chat", label = "chat", key = "c", insert_key = "<C-c>" },
 }
 

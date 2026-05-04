@@ -91,6 +91,8 @@ end
 ---@field label string
 ---@field key string
 ---@field insert_key? string
+---@field reset_key? string
+---@field reset_insert_key? string
 
 ---@param input? snacks.win
 local function clear_active_input(input)

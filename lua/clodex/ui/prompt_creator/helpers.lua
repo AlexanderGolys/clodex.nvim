@@ -240,7 +240,8 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
                 Helpers.footer_item("C-←/→", "kind"),
                 Helpers.footer_item("C-s", "plan"),
                 Helpers.footer_item("C-q", "queue"),
-                Helpers.footer_item("C->", "implement"),
+                Helpers.footer_item("C-.", "implement"),
+                Helpers.footer_item("C-S-.", "implement+reset"),
                 Helpers.footer_item("C-c", "chat"),
                 Helpers.footer_item("q", "close"),
             },
@@ -261,8 +262,10 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
         {
             Helpers.footer_item("C-←/→", "kind (insert)"),
             Helpers.footer_item("s", "plan"),
+            Helpers.footer_item("S", "plan+reset"),
             Helpers.footer_item("󰌑 ", "queue"),
-            Helpers.footer_item(">", "implement"),
+            Helpers.footer_item(".", "implement"),
+            Helpers.footer_item("S-.", "implement+reset"),
             Helpers.footer_item("c", "chat"),
             Helpers.footer_item("q", "close"),
         },
@@ -326,16 +329,30 @@ end
 ---@param action Clodex.UiSelect.MultilineAction
 ---@param reset_actions table<string, boolean>
 function Helpers.apply_action_keymaps(creator, buf, action, reset_actions)
-    local submit = function()
-        creator:submit(action.value, { reset = reset_actions[action.value] == true })
+    local submit = function(reset)
+        creator:submit(action.value, { reset = reset == true or reset_actions[action.value] == true })
     end
     local normal_key = Helpers.normal_action_key(action)
     if normal_key and normal_key ~= "" then
-        vim.keymap.set("n", normal_key, submit, { buffer = buf, silent = true })
+        vim.keymap.set("n", normal_key, function()
+            submit(false)
+        end, { buffer = buf, silent = true })
     end
     local insert_key = Helpers.insert_action_key(action)
     if insert_key and insert_key ~= "" then
-        vim.keymap.set("i", insert_key, submit, { buffer = buf, silent = true })
+        vim.keymap.set("i", insert_key, function()
+            submit(false)
+        end, { buffer = buf, silent = true })
+    end
+    if action.reset_key and action.reset_key ~= "" then
+        vim.keymap.set("n", action.reset_key, function()
+            submit(true)
+        end, { buffer = buf, silent = true })
+    end
+    if action.reset_insert_key and action.reset_insert_key ~= "" then
+        vim.keymap.set("i", action.reset_insert_key, function()
+            submit(true)
+        end, { buffer = buf, silent = true })
     end
 end
 

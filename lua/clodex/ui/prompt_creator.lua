@@ -25,9 +25,9 @@ local notify = require("clodex.util.notify")
 ---@field on_submit fun(spec: Clodex.AppPromptActions.AddTodoSpec, action?: string, project?: Clodex.Project)
 
 local DEFAULT_SUBMIT_ACTIONS = {
-    { value = "save", label = "plan", key = "s", insert_key = "<C-s>" },
+    { value = "save", label = "plan", key = "s", insert_key = "<C-s>", reset_key = "S" },
     { value = "queue", label = "queue", key = "<CR>", insert_key = "<C-q>" },
-    { value = "exec", label = "implement", key = ">", insert_key = "<C->>" },
+    { value = "exec", label = "implement", key = ".", insert_key = "<C-.>", reset_key = "<S-.>", reset_insert_key = "<C-S-.>" },
     { value = "chat", label = "chat", key = "c", insert_key = "<C-c>" },
 }
 
