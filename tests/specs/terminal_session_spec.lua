@@ -177,6 +177,35 @@ describe("clodex.terminal.session", function()
         vim.fn.jobwait = original_jobwait
     end)
 
+    it("truncates long active prompt titles from the right with an omission marker", function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+            "Thinking...",
+        })
+
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "codex" },
+        })
+        session.buf = buf
+        session.job_id = 123
+        session.awaiting_response = true
+        session:set_active_prompt_title("Fix queue dispatch title overflow")
+
+        local original_jobwait = vim.fn.jobwait
+        vim.fn.jobwait = function()
+            return { -1 }
+        end
+
+        assert.are.equal(" Fix queue[...] ", session:winbar_text(16))
+        assert.are.equal(" Fix queue dispatch title overflow ", session:winbar_text(40))
+
+        vim.fn.jobwait = original_jobwait
+    end)
+
     it("detects when the session is waiting for user input", function()
         local buf = vim.api.nvim_create_buf(false, true)
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
@@ -406,12 +435,14 @@ describe("clodex.terminal.session", function()
 
         assert.matches("ClodexTerminalStatuslineDynActive_445566_DDEEFF", active_name)
         assert.matches("ClodexTerminalStatuslineDynInactive_445566_DDEEFF", inactive_name)
-        assert.are.equal(active_name, winbar_name)
-        assert.are.equal(inactive_name, inactive_winbar_name)
+        assert.matches("ClodexTerminalTitleDynActive_445566_00AA00", winbar_name)
+        assert.matches("ClodexTerminalTitleDynInactive_445566_00AA00", inactive_winbar_name)
         assert.matches("ClodexTerminalWindowDyn_445566_DDEEFF", normal_name)
 
         local active = vim.api.nvim_get_hl(0, { name = active_name, link = false })
         local inactive = vim.api.nvim_get_hl(0, { name = inactive_name, link = false })
+        local winbar = vim.api.nvim_get_hl(0, { name = winbar_name, link = false })
+        local inactive_winbar = vim.api.nvim_get_hl(0, { name = inactive_winbar_name, link = false })
         local normal = vim.api.nvim_get_hl(0, { name = normal_name, link = false })
 
         assert.are.equal(0x445566, active.bg)
@@ -419,6 +450,11 @@ describe("clodex.terminal.session", function()
         assert.is_true(active.bold)
         assert.are.equal(0x445566, inactive.bg)
         assert.are.equal(0xDDEEFF, inactive.fg)
+        assert.are.equal(0x445566, winbar.bg)
+        assert.are.equal(0x00AA00, winbar.fg)
+        assert.is_true(winbar.bold)
+        assert.are.equal(0x445566, inactive_winbar.bg)
+        assert.are.equal(0x00AA00, inactive_winbar.fg)
         assert.are.equal(0x445566, normal.bg)
         assert.are.equal(0xDDEEFF, normal.fg)
 
@@ -467,7 +503,7 @@ describe("clodex.terminal.session", function()
         vim.api.nvim_set_option_value("winbar", "%!v:lua.require('clodex.terminal.ui').winbar()", { scope = "local", win = win })
         vim.wo[win].winhl = table.concat({
             "StatusLine:ClodexTerminalStatuslineDynActive_445566_DDEEFF",
-            "WinBar:ClodexTerminalStatuslineDynActive_445566_DDEEFF",
+            "WinBar:ClodexTerminalTitleDynActive_445566_00AA00",
             "Normal:ClodexTerminalWindowDyn_445566_DDEEFF",
         }, ",")
 

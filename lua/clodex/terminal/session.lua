@@ -2,6 +2,8 @@ local fs = require("clodex.util.fs")
 local History = require("clodex.history")
 local notify = require("clodex.util.notify")
 
+local TITLE_TRUNCATION_SUFFIX = "[...]"
+
 ---@class Clodex.TerminalSession
 ---@field key string
 ---@field kind 'project'|'free'
@@ -134,6 +136,37 @@ end
 ---@return string
 local function statusline_escape(text)
     return ((text or ""):gsub("%%", "%%%%"))
+end
+
+---@param text string
+---@param max_width? integer
+---@return string
+local function truncate_title(text, max_width)
+    max_width = tonumber(max_width)
+    if not max_width or max_width <= 0 or vim.fn.strdisplaywidth(text) <= max_width then
+        return text
+    end
+
+    local suffix_width = vim.fn.strdisplaywidth(TITLE_TRUNCATION_SUFFIX)
+    if max_width <= suffix_width then
+        return TITLE_TRUNCATION_SUFFIX
+    end
+
+    local target_width = max_width - suffix_width
+    local parts = {} ---@type string[]
+    local width = 0
+    local chars = vim.fn.strchars(text)
+    for index = 0, chars - 1 do
+        local char = vim.fn.strcharpart(text, index, 1)
+        local char_width = vim.fn.strdisplaywidth(char)
+        if width + char_width > target_width then
+            break
+        end
+        parts[#parts + 1] = char
+        width = width + char_width
+    end
+
+    return table.concat(parts) .. TITLE_TRUNCATION_SUFFIX
 end
 
 ---@param spec Clodex.TerminalSession.Spec
@@ -329,8 +362,9 @@ function Session:toggle_header()
     return self.header_enabled
 end
 
+---@param max_width? integer
 ---@return string
-function Session:winbar_text()
+function Session:winbar_text(max_width)
     local active_prompt_title = self.active_prompt_title and self:is_working() and self.active_prompt_title or nil
     if not self.header_enabled and not active_prompt_title then
         return ""
@@ -338,6 +372,9 @@ function Session:winbar_text()
     local header = self.header_enabled and self:header_text() or ""
     if active_prompt_title then
         header = header ~= "" and ("%s - %s"):format(header, active_prompt_title) or active_prompt_title
+    end
+    if max_width then
+        header = truncate_title(header, math.max(max_width - 2, 1))
     end
     return (" %s "):format(statusline_escape(header))
 end
