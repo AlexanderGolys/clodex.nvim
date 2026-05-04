@@ -26,6 +26,17 @@ describe("clodex.ui.queue_workspace", function()
         return groups
     end
 
+    local function trigger_buffer_mapping(buf, lhs)
+        for _, map in ipairs(vim.api.nvim_buf_get_keymap(buf, "n")) do
+            if map.lhs == lhs then
+                assert.is_function(map.callback)
+                map.callback()
+                return
+            end
+        end
+        error(("missing normal-mode mapping %s"):format(lhs))
+    end
+
     before_each(function()
         package.loaded["clodex.ui.queue_workspace"] = nil
         original_select = package.loaded["clodex.ui.select"]
@@ -179,6 +190,25 @@ describe("clodex.ui.queue_workspace", function()
         assert.are.equal(1, close_count)
         assert.are.equal(1, tabnew_count)
         assert.are.same(project, opened_project)
+    end)
+
+    it("opens the selected project in a new tab from the footer project action", function()
+        local opened_count = 0
+        local workspace = {
+            project_buf = vim.api.nvim_create_buf(false, true),
+            queue_buf = vim.api.nvim_create_buf(false, true),
+            footer_buf = vim.api.nvim_create_buf(false, true),
+            focus = "projects",
+            open_selected_project_in_new_tab = function()
+                opened_count = opened_count + 1
+            end,
+        }
+        setmetatable(workspace, { __index = Workspace })
+
+        Workspace.attach_keymaps(workspace)
+        trigger_buffer_mapping(workspace.footer_buf, "t")
+
+        assert.are.equal(1, opened_count)
     end)
 
     it("allows implementing a planned item through the same action", function()

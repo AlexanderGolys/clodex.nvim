@@ -1521,6 +1521,13 @@ function Workspace:attach_keymaps()
     )
     map(
         self.footer_buf,
+        "t",
+        when_focused("projects", function()
+            self:open_selected_project_in_new_tab()
+        end)
+    )
+    map(
+        self.footer_buf,
         "A",
         when_focused("projects", function()
             self:activate_selected_project()
