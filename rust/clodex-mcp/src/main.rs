@@ -772,11 +772,34 @@ fn extend_commits(
     values
 }
 
+fn active_queue_candidates(active: &ActiveItem) -> Vec<&str> {
+    let mut queues = vec![active.source_queue.as_str()];
+    for queue_name in ["queued", "implemented"] {
+        if active.source_queue != queue_name {
+            queues.push(queue_name);
+        }
+    }
+    queues
+}
+
+fn active_queue_item(
+    project_root: &str,
+    active: &ActiveItem,
+) -> AppResult<Option<(String, Vec<QueueItem>, usize)>> {
+    for queue_name in active_queue_candidates(active) {
+        let items = load_queue(project_root, queue_name)?;
+        if let Some(index) = items.iter().position(|item| item.id == active.item_id) {
+            return Ok(Some((queue_name.to_string(), items, index)));
+        }
+    }
+    Ok(None)
+}
+
 fn claim_or_resume_item(project_root: &str) -> AppResult<TaskClaim> {
     if let Some(current) = load_active_state(project_root)? {
-        if let Some(item) = find_item(project_root, "implemented", &current.item_id)? {
+        if let Some((_queue_name, items, index)) = active_queue_item(project_root, &current)? {
             return Ok(TaskClaim::Task {
-                item,
+                item: items[index].clone(),
                 active_exists: true,
             });
         }
@@ -788,13 +811,10 @@ fn claim_or_resume_item(project_root: &str) -> AppResult<TaskClaim> {
         return Ok(TaskClaim::Done);
     }
 
-    let mut item = queued.remove(0);
+    let mut item = queued[0].clone();
     item.updated_at = timestamp();
+    queued[0] = item.clone();
     save_queue(project_root, "queued", &queued)?;
-
-    let mut implemented = load_queue(project_root, "implemented")?;
-    implemented.insert(0, item.clone());
-    save_queue(project_root, "implemented", &implemented)?;
 
     let active = ActiveItem {
         item_id: item.id.clone(),
@@ -807,7 +827,7 @@ fn claim_or_resume_item(project_root: &str) -> AppResult<TaskClaim> {
         "claim_next",
         json!({
             "item_id": item.id,
-            "queue": "implemented",
+            "queue": "queued",
         }),
     )?;
 
@@ -849,13 +869,10 @@ fn close_active_task(
 ) -> AppResult<Value> {
     let active =
         load_active_state(project_root)?.ok_or_else(|| AppError::new("No active queue item"))?;
-    let mut implemented = load_queue(project_root, "implemented")?;
-    let index = implemented
-        .iter()
-        .position(|item| item.id == active.item_id)
-        .ok_or_else(|| AppError::new("Active item not found in implemented queue"))?;
+    let (source_queue, mut source_items, index) = active_queue_item(project_root, &active)?
+        .ok_or_else(|| AppError::new("Active item not found in queue"))?;
 
-    let mut item = implemented.remove(index);
+    let mut item = source_items[index].clone();
     item.updated_at = timestamp();
 
     let closed_task = if success {
@@ -866,14 +883,15 @@ fn close_active_task(
         item.history_commits = extend_commits(item.history_commits.clone(), Some(commit), None);
 
         let final_queue = normalize_completion_target(None, item.completion_target.clone());
-        if final_queue == "history" {
-            save_queue(project_root, "implemented", &implemented)?;
-            let mut history = load_queue(project_root, "history")?;
-            history.insert(0, item.clone());
-            save_queue(project_root, "history", &history)?;
+        source_items.remove(index);
+        if final_queue == source_queue {
+            source_items.insert(index, item.clone());
+            save_queue(project_root, &source_queue, &source_items)?;
         } else {
-            implemented.insert(index, item.clone());
-            save_queue(project_root, "implemented", &implemented)?;
+            save_queue(project_root, &source_queue, &source_items)?;
+            let mut target_items = load_queue(project_root, &final_queue)?;
+            target_items.insert(0, item.clone());
+            save_queue(project_root, &final_queue, &target_items)?;
         }
         clear_active_state(project_root)?;
         append_event(
@@ -890,10 +908,16 @@ fn close_active_task(
         if let Some(note) = comment {
             append_failure_note(&mut item, &note);
         }
-        save_queue(project_root, "implemented", &implemented)?;
-        let mut queued = load_queue(project_root, "queued")?;
-        queued.insert(0, item.clone());
-        save_queue(project_root, "queued", &queued)?;
+        if source_queue == "queued" {
+            source_items[index] = item.clone();
+            save_queue(project_root, "queued", &source_items)?;
+        } else {
+            source_items.remove(index);
+            save_queue(project_root, &source_queue, &source_items)?;
+            let mut queued = load_queue(project_root, "queued")?;
+            queued.insert(0, item.clone());
+            save_queue(project_root, "queued", &queued)?;
+        }
         clear_active_state(project_root)?;
         append_event(
             project_root,
@@ -932,7 +956,8 @@ fn queue_status_value(project_root: &str) -> AppResult<Value> {
 
     let active = load_active_state(project_root)?;
     let current_item = match &active {
-        Some(state) => find_item(project_root, "implemented", &state.item_id)?,
+        Some(state) => active_queue_item(project_root, state)?
+            .map(|(_queue_name, items, index)| items[index].clone()),
         None => None,
     };
     let next_item = load_queue(project_root, "queued")?.into_iter().next();
@@ -1106,11 +1131,6 @@ fn clear_active_state(project_root: &str) -> AppResult<()> {
     Ok(())
 }
 
-fn find_item(project_root: &str, queue_name: &str, item_id: &str) -> AppResult<Option<QueueItem>> {
-    let items = load_queue(project_root, queue_name)?;
-    Ok(items.into_iter().find(|item| item.id == item_id))
-}
-
 fn append_event(project_root: &str, event: &str, payload: Value) -> AppResult<()> {
     let path = events_file_path(project_root);
     ensure_parent_dir(&path)?;
@@ -1250,12 +1270,12 @@ mod tests {
         })
         .expect("get task");
         assert_eq!(claimed["status"], "task");
-        assert_eq!(load_queue(&root, "queued").expect("queued len").len(), 0);
+        assert_eq!(load_queue(&root, "queued").expect("queued len").len(), 1);
         assert_eq!(
             load_queue(&root, "implemented")
                 .expect("implemented len")
                 .len(),
-            1
+            0
         );
 
         let completed = close_task(CloseTaskArgs {
@@ -1274,6 +1294,7 @@ mod tests {
                 .len(),
             0
         );
+        assert_eq!(load_queue(&root, "queued").expect("queued len").len(), 0);
         let history = load_queue(&root, "history").expect("history len");
         assert_eq!(history.len(), 1);
         assert_eq!(history[0].history_summary.as_deref(), Some("done"));
@@ -1590,16 +1611,15 @@ mod tests {
         assert_eq!(failed["status"], "task");
         assert_eq!(failed["closed_task"]["final_queue"], "queued");
         assert_eq!(failed["task"]["id"], "item-1");
+        let queued = load_queue(&root, "queued").expect("queued len");
+        assert_eq!(queued.len(), 1);
         assert_eq!(
             load_queue(&root, "implemented")
                 .expect("implemented len")
                 .len(),
-            1
+            0
         );
-        let queued = load_queue(&root, "queued").expect("queued len");
-        assert_eq!(queued.len(), 0);
-        let implemented = load_queue(&root, "implemented").expect("implemented queue");
-        assert!(implemented[0]
+        assert!(queued[0]
             .details
             .as_deref()
             .expect("details")
