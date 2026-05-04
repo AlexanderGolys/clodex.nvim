@@ -544,13 +544,12 @@ local function prompt_item_kind(item)
 end
 
 ---@param kind Clodex.PromptCategoryDef
----@return string
+---@return string, integer, integer
 local function prompt_kind_prefix(kind)
     local label = kind.label or ""
     local padding = math.max(PROMPT_KIND_PREFIX_WIDTH - vim.fn.strdisplaywidth(label), 0)
-    local left = math.floor(padding / 2)
-    local right = padding - left
-    return string.rep(" ", left) .. label .. string.rep(" ", right)
+    local padded_label = string.rep(" ", padding) .. label
+    return padded_label .. "  ", #padded_label - #label, #padded_label
 end
 
 ---@param item Clodex.QueueItem
@@ -650,12 +649,13 @@ end
 local function queue_item_title_line(item, title, suffix, opts)
     opts = opts or {}
     local kind = Prompt.categories.get(item.kind)
-    local prefix = prompt_kind_prefix(kind)
+    local prefix, prefix_label_start, prefix_label_end = prompt_kind_prefix(kind)
     local text = ("  %s%s%s"):format(prefix, title, suffix)
     local title_start = 2 + #prefix
     local title_end = title_start + #title
     local marks = {
-        Extmark.inline(0, 2, 2 + #prefix, Prompt.kind_name_group(kind.id)),
+        Extmark.inline(0, 2, 2 + #prefix, "ClodexQueueItem"),
+        Extmark.inline(0, 2 + prefix_label_start, 2 + prefix_label_end, Prompt.kind_name_group(kind.id)),
         Extmark.inline(0, title_start, title_end, Prompt.title_group(kind.id)),
     }
     if #suffix > 0 then

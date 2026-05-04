@@ -1209,7 +1209,7 @@ describe("clodex.ui.queue_workspace", function()
             "Filter: token",
             "",
             "Planned (1)",
-            "   Improvement  Fix parser",
+            "     Improvement  Fix parser",
             "    Adjust token handling",
             "",
         }, lines)
@@ -1280,12 +1280,12 @@ describe("clodex.ui.queue_workspace", function()
         workspace:render_queue()
 
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
-        assert.are.equal("     Bug      ", lines[2]:sub(3, 16))
-        assert.are.equal(" Missing Docs ", lines[3]:sub(3, 16))
-        assert.are.equal(" Improvement  ", lines[4]:sub(3, 16))
-        assert.are.equal("Fix bug", lines[2]:sub(17))
-        assert.are.equal("Write docs", lines[3]:sub(17))
-        assert.are.equal("Improve flow", lines[4]:sub(17))
+        assert.are.equal("           Bug  ", lines[2]:sub(3, 18))
+        assert.are.equal("  Missing Docs  ", lines[3]:sub(3, 18))
+        assert.are.equal("   Improvement  ", lines[4]:sub(3, 18))
+        assert.are.equal("Fix bug", lines[2]:sub(19))
+        assert.are.equal("Write docs", lines[3]:sub(19))
+        assert.are.equal("Improve flow", lines[4]:sub(19))
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
@@ -1410,7 +1410,7 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "   Improvement  Fix parser  [󰜘 abc1234]",
+            "     Improvement  Fix parser  [󰜘 abc1234]",
             "    Implemented parser fix",
             "    Adjust token handling",
             "",
@@ -1476,7 +1476,7 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "   Improvement  Fix parser  [󰜘 abc1234]",
+            "     Improvement  Fix parser  [󰜘 abc1234]",
             "    Adjust token handling",
             "",
         }, lines)
@@ -2421,9 +2421,9 @@ describe("clodex.ui.queue_workspace", function()
         local older_index = 0
         local newer_index = 0
         for index, line in ipairs(queue_lines) do
-            if line == "   Improvement  Older implemented prompt" then
+            if line == "     Improvement  Older implemented prompt" then
                 older_index = index
-            elseif line == "   Improvement  Newer implemented prompt" then
+            elseif line == "     Improvement  Newer implemented prompt" then
                 newer_index = index
             end
         end
