@@ -36,11 +36,18 @@ describe("clodex.mcp", function()
         local content = file:read("*a")
         file:close()
 
-        assert.are.same({ "codex" }, Backend.cli_cmd(values))
+        assert.are.same({
+            "codex",
+            "-c",
+            'mcp_servers.clodex.command="cargo"',
+            "-c",
+            'mcp_servers.clodex.args=["run", "--bin", "clodex-mcp"]',
+        }, Backend.cli_cmd(values))
         assert.are.equal(Mcp.codex_home(values), env.CODEX_HOME)
         assert.matches("%[mcp_servers%.clodex%]", content)
         assert.matches('command = "cargo"', content)
         assert.matches('args = %[%"run%", %"%-%-bin%", %"clodex%-mcp%"%]', content)
+        assert.matches("CLODEX_WORKSPACES_DIR", content)
 
         fs.remove(runtime_dir)
     end)
@@ -62,6 +69,9 @@ describe("clodex.mcp", function()
         assert.are.same({
             type = "local",
             command = { "cargo", "run", "--bin", "clodex-mcp" },
+            environment = {
+                CLODEX_WORKSPACES_DIR = values.storage.workspaces_dir,
+            },
             enabled = true,
         }, decoded.mcp.clodex)
 
@@ -126,6 +136,9 @@ describe("clodex.mcp", function()
         assert.are.same({ "opencode" }, spec.cmd)
         assert.are.equal(Mcp.opencode_config_path(values), spec.env.OPENCODE_CONFIG)
         assert.are.same({ "cargo", "run", "--bin", "clodex-mcp" }, decoded.mcp.clodex.command)
+        assert.are.same({
+            CLODEX_WORKSPACES_DIR = values.storage.workspaces_dir,
+        }, decoded.mcp.clodex.environment)
         assert.are.equal("term", spec.terminal_provider)
 
         fs.remove(values.mcp.runtime_dir)

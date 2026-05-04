@@ -200,7 +200,11 @@ describe("clodex.terminal.session", function()
         assert.are.same({
             {
                 job_id = 123,
-                text = "Fix parser\rAdd tests\r",
+                text = "\027[200~Fix parser\nAdd tests\027[201~",
+            },
+            {
+                job_id = 123,
+                text = "\r",
             },
         }, sent)
 

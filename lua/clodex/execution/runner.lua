@@ -159,17 +159,21 @@ function Runner:handle_completion(project, item, result, run_dir, output_path)
     fs.remove(run_dir)
 
     if result.code == 0 then
-        local summary = response_summary(message)
-        self:complete_item(project, item, summary)
-        if self.app.queue:find_item(project, item.id) == "implemented" then
-            notify.warn(
-                ("Direct Codex run finished for %s but did not update the implemented item automatically: %s"):format(
-                    project.name,
-                    item.title
-                )
-            )
-        else
+        if self.app.execution and self.app.execution.uses_prompt_skill and self.app.execution:uses_prompt_skill() then
             notify.notify(("Direct Codex run finished for %s: %s"):format(project.name, item.title))
+        else
+            local summary = response_summary(message)
+            self:complete_item(project, item, summary)
+            if self.app.queue:find_item(project, item.id) == "implemented" then
+                notify.warn(
+                    ("Direct Codex run finished for %s but did not update the implemented item automatically: %s"):format(
+                        project.name,
+                        item.title
+                    )
+                )
+            else
+                notify.notify(("Direct Codex run finished for %s: %s"):format(project.name, item.title))
+            end
         end
     else
         notify.error(
@@ -216,6 +220,7 @@ function Runner:start(project, item)
 
     local ok, system = pcall(vim.system, cmd, {
         cwd = project.root,
+        env = Backend.cli_env(self.config),
         text = true,
         stdin = prompt,
     }, vim.schedule_wrap(function(result)

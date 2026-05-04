@@ -2,7 +2,7 @@
 
 Project-aware Codex and OpenCode workflows for Neovim.
 
-`clodex.nvim` keeps one persistent terminal session per registered project root, one shared free session outside registered projects, and a project-local `.clodex/` workspace for queue data, notes, bookmarks, and execution metadata.
+`clodex.nvim` keeps one persistent terminal session per registered project root, one shared free session outside registered projects, MCP-managed queue data under Neovim's local data directory, and project-local `.clodex/` files for notes, bookmarks, skills, and other durable project context.
 
 ## What it does
 
@@ -51,7 +51,7 @@ require("clodex").setup({
     opencode_cmd = { "opencode" },
     storage = {
         projects_file = vim.fn.stdpath("data") .. "/clodex/projects.json",
-        workspaces_dir = ".clodex",
+        workspaces_dir = vim.fn.stdpath("data") .. "/clodex/workspaces",
         session_state_dir = vim.fn.stdpath("data") .. "/clodex/session-state",
         history_file = vim.fn.stdpath("data") .. "/clodex/history.md",
     },
@@ -180,10 +180,10 @@ The debug state panel uses the same shared Clodex UI panel API as the prompt cre
 
 - `planned`: captured work not ready to run yet
 - `queued`: ready to dispatch
-- `implemented`: dispatched and finished, waiting for review unless completion goes straight to history
+- `implemented`: claimed by the MCP loop and then finished, waiting for review unless completion goes straight to history
 - `history`: verified or directly completed work with summary and commit metadata
 
-Queued execution uses project-local skills under `.clodex/skills/` together with the checked-in `prompt-nvim-clodex` workflow in `.codex/skills/prompt-nvim-clodex/SKILL.md`. When the MCP helper is available, queued work runs through the local `get_task` / `close_task` loop and can create follow-up prompts through `create_prompt`. If MCP is unavailable, the workflow falls back to editing the same `.clodex/*.json` files directly. The task returned by `get_task` is authoritative; when a prompt is queued while another item is already active, the returned task can intentionally differ from the item that launched the agent.
+Queued execution uses project-local skills under `.clodex/skills/` together with the checked-in `prompt-nvim-clodex` workflow in `.codex/skills/prompt-nvim-clodex/SKILL.md`. Queue JSON lives under `storage.workspaces_dir` by default, and the MCP helper receives that path through its runtime config so agents use `get_task`, `close_task`, and `create_prompt` instead of editing queue files directly. The task returned by `get_task` is authoritative; when a prompt is queued while another item is already active, the returned task can intentionally differ from the item that launched the agent.
 
 ### MCP tools
 
@@ -199,7 +199,7 @@ Typical patterns:
 - MCP-driven delegation loop: `get_task` -> implement -> `close_task` -> MCP either returns the next task or reports that no queued work remains
 - planning follow-up: finish an `ask`/discussion item, then use `create_prompt` to queue the next concrete task
 
-The prompt creator keeps footer actions visible, docks the target-project picker on the left, preserves compatible drafts across kind switches, and can preview attached clipboard images in a separate pane. In normal mode, `s`, `<CR>`, `>`, and `c` plan, queue, implement immediately, or send straight to the live chat; insert mode uses `C-s`, `C-q`, `C->`, and `C-c` for the same actions. Queue, implement, and chat submissions close the creator after success. Implement submissions first place the prompt in the queued lane and then dispatch it through the same interactive path as the main panel implement action. Interactive Codex prompt dispatch sends the final submit keystroke with the prompt payload, while OpenCode keeps its delayed submit path.
+The prompt creator keeps footer actions visible, docks the target-project picker on the left, preserves compatible drafts across kind switches, and can preview attached clipboard images in a separate pane. In normal mode, `s`, `<CR>`, `>`, and `c` plan, queue, implement immediately, or send straight to the live chat; insert mode uses `C-s`, `C-q`, `C->`, and `C-c` for the same actions. Queue, implement, and chat submissions close the creator after success. Implement submissions first place the prompt in the queued lane; Codex uses direct `codex exec` when available, while OpenCode keeps the interactive terminal flow. Interactive queued dispatch now sends only `$prompt-nvim-clodex`; the MCP task response supplies the actual prompt text and queue contract. Codex terminal dispatch uses bracketed paste followed by a deferred submit keystroke, and OpenCode keeps its delayed submit path.
 Prompt creator title fields consume insert-mode `Down` and `Enter` when moving focus into the lower pane, so navigation does not leave escape text in the prompt.
 
 In the queue workspace project panel, press `I` to set, change, or remove a custom project icon through `snacks.picker.icons()`.
@@ -210,17 +210,13 @@ Clodex keeps durable project data inside each repository:
 
 - `README.md`
 - `TODO.md`
-- `.clodex/planned.json`
-- `.clodex/queued.json`
-- `.clodex/implemented.json`
-- `.clodex/history.json`
 - `.clodex/skills/`
 - `.clodex/PROJECT_DICTIONARY.md`
 - `.clodex/cheatsheet.md`
 - `.clodex/notes/`
 - `.clodex/bookmarks.json`
 
-Global plugin state stays under `stdpath("data")/clodex/`, including the project registry, session snapshots, MCP runtime config, and the optional history markdown log.
+Queue state stays under `storage.workspaces_dir`, which defaults to `stdpath("data")/clodex/workspaces`, with legacy project-local queue files migrated there on first access. Global plugin state stays under `stdpath("data")/clodex/`, including the project registry, session snapshots, MCP runtime config, and the optional history markdown log.
 
 ## Public API
 

@@ -44,11 +44,31 @@ describe("clodex.ui.win", function()
 
         assert.are.same({
             position = "float",
+            relative = "editor",
             show = true,
             fixbuf = false,
         }, captured.defaults)
         assert.are.equal("minimal", captured.style)
         assert.are.equal(23, win.buf)
         assert.is_false(win.opts.fixbuf)
+    end)
+
+    it("bumps low zindex values to avoid invalid backdrop zindex", function()
+        local win = ui_win.open({
+            buf = 23,
+            zindex = 1,
+        })
+
+        assert.are.equal(2, win.opts.zindex)
+    end)
+
+    it("keeps zindex at 1 when backdrop is disabled", function()
+        local win = ui_win.open({
+            buf = 23,
+            zindex = 1,
+            backdrop = false,
+        })
+
+        assert.are.equal(1, win.opts.zindex)
     end)
 end)

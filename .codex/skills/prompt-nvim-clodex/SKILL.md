@@ -1,12 +1,12 @@
 ---
 name: prompt-nvim-clodex
-description: Handle clodex.nvim-managed queued work by updating the local project queue files after implementation.
+description: Handle clodex.nvim-managed queued work through the local Clodex MCP task loop.
 ---
 
 Treat obvious typos in the user-written title and prompt text as mistakes to silently normalize before you interpret the task.
 Keep the original intent, but do not preserve clearly accidental misspellings, duplicated words, or broken punctuation in your understanding of the request.
 
-Use this skill when a prompt includes `$prompt-nvim-clodex`, or when you are doing normal project work inside a repository managed by clodex.nvim and need to record the outcome in that project's local queue history.
+Use this skill when a prompt includes `$prompt-nvim-clodex`, or when you are doing normal project work inside a repository managed by clodex.nvim and need to record the outcome in that project's Clodex queue history.
 
 When the prompt provides a queue item id or tells you to use the Clodex queued-work MCP loop:
 
@@ -25,16 +25,16 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
 9. If `close_task` returns `status = done`, stop; queued work is finished.
 10. When a conversation in planning mode should produce a new follow-up prompt instead of immediate code changes, prefer the `create_prompt` MCP tool to add the new prompt directly to the project queue.
 11. Do not rely on internal queue-mutating helpers as part of the public workflow; the MCP loop itself owns task claiming, requeueing, completion, and exhaustion.
-12. Only fall back to editing `.clodex/*.json` queue files directly when the `clodex` MCP server is unavailable in the session.
+12. Do not edit queue JSON files directly. Queue storage is MCP-managed local data and may live outside the project root.
 
 # Manual History
 
 For normal project work outside queued prompt execution:
 
-1. Update the project-local queue files under `.clodex/` after the work is complete.
+1. If queue history needs to be recorded, use the `clodex` MCP server instead of editing queue JSON files directly.
 2. Before any commit, update relevant `README.md` content and agent/context files so they describe the current behavior, workflow, and user-facing changes introduced by the work.
-3. Add a new item to the front of `.clodex/history.json` unless the newest matching history item already represents the same completed task, in which case update it in place.
-4. Do not modify unrelated items in `.clodex/planned.json`, `.clodex/queued.json`, or `.clodex/implemented.json`.
+3. Prefer `create_prompt` for follow-up work that should be queued after a discussion or planning task.
+4. Do not modify queue storage files directly, including planned, queued, implemented, history, active-task, or event files.
 5. Normalize obvious typos in the user request before you turn it into a title, prompt, or summary.
 6. Keep the original intent, but do not preserve clearly accidental misspellings, duplicated words, or broken punctuation.
 7. Use a concise `title` that describes the completed task.
@@ -47,4 +47,4 @@ For normal project work outside queued prompt execution:
 14. If you create a new history item, also set `created_at` and include a non-empty `id`; a generated unique string is fine.
 15. Preserve existing items instead of rewriting the whole file unnecessarily.
 
-Only create or update a history record when the conversation actually resulted in project work worth remembering. Do not create history items for pure discussion, exploration, or no-op answers.
+Only create or update queue history through MCP when the conversation actually resulted in project work worth remembering. Do not create history items for pure discussion, exploration, or no-op answers.

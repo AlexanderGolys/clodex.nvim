@@ -499,7 +499,7 @@ function ProjectActions:open_project_notes_picker(project)
                 text = ("%s  %s"):format(note.title, summary),
                 preview = {
                     text = table.concat(vim.fn.readfile(note.path), "\n"),
-                    ft = "markdown",
+                    ft = "text",
                     loc = false,
                 },
                 preview_title = note.title,
@@ -606,7 +606,7 @@ function ProjectActions:open_project_bookmarks_picker(project)
                 text = ("%s  %s:%d  %s"):format(bookmark.title, bookmark.path, bookmark.line, bookmark.description),
                 preview = {
                     text = table.concat(self.app.project_bookmarks:preview_lines(project, bookmark), "\n"),
-                    ft = "markdown",
+                    ft = "text",
                     loc = false,
                 },
                 preview_title = bookmark.title,

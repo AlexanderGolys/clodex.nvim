@@ -1,4 +1,4 @@
-describe("clodex.ui.prompt_creator split anchoring", function()
+describe("clodex.ui.prompt_creator editor anchoring", function()
     local Creator
     local creator
     local opened_windows
@@ -126,14 +126,15 @@ describe("clodex.ui.prompt_creator split anchoring", function()
         package.loaded["clodex.util.notify"] = original_notify
     end)
 
-    it("keeps the prompt inside the source split when an image is attached", function()
+    it("centers the prompt on the full editor grid when opened from a split", function()
         vim.cmd.vsplit()
         vim.cmd("vertical resize 60")
 
         local anchor_win = vim.api.nvim_get_current_win()
         local anchor_pos = vim.api.nvim_win_get_position(anchor_win)
         local anchor_width = vim.api.nvim_win_get_width(anchor_win)
-        local anchor_height = vim.api.nvim_win_get_height(anchor_win)
+        local editor_width = vim.o.columns
+        local editor_height = vim.o.lines
 
         creator = Creator.open({
             app = {
@@ -160,14 +161,10 @@ describe("clodex.ui.prompt_creator split anchoring", function()
         local body_config = vim.api.nvim_win_get_config(creator.layout.body_win.win)
         local footer_config = vim.api.nvim_win_get_config(creator.footer_win.win)
 
-        assert.are.equal(anchor_win, creator.anchor_win)
-        assert.are.equal(anchor_width, creator:editor_size())
-        assert.are.equal(anchor_height, select(2, creator:editor_size()))
-        assert.is_true(title_config.col >= anchor_pos[2])
-        assert.is_true(body_config.col >= anchor_pos[2])
-        assert.is_true(footer_config.col >= anchor_pos[2])
-        assert.is_true(title_config.col + title_config.width <= anchor_pos[2] + anchor_width)
-        assert.is_true(body_config.col + body_config.width <= anchor_pos[2] + anchor_width)
-        assert.is_true(footer_config.col + footer_config.width <= anchor_pos[2] + anchor_width)
+        assert.are.equal(editor_width, creator:editor_size())
+        assert.are.equal(editor_height, select(2, creator:editor_size()))
+        assert.is_true(title_config.col < anchor_pos[2] or title_config.col + title_config.width > anchor_pos[2] + anchor_width)
+        assert.is_true(body_config.col < anchor_pos[2] or body_config.col + body_config.width > anchor_pos[2] + anchor_width)
+        assert.is_true(footer_config.col < anchor_pos[2] or footer_config.col + footer_config.width > anchor_pos[2] + anchor_width)
     end)
 end)

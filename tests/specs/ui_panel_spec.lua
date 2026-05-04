@@ -195,4 +195,24 @@ describe("clodex.ui.panel", function()
         assert.is_false(vim.api.nvim_win_is_valid(background_win))
         assert.is_nil(panel.background)
     end)
+
+    it("preserves resolved window options when updating a block", function()
+        local panel = Panel.new({
+            id = "demo",
+            blocks = {
+                {
+                    id = "body",
+                    win = { width = 10, height = 1, row = 1, col = 1, border = "rounded" },
+                },
+            },
+        })
+
+        panel:open()
+        local block = panel:block("body")
+        block.win.opts.relative = "editor"
+        block:set_size({ width = 20 })
+
+        assert.are.equal("editor", block.win.opts.relative)
+        assert.are.equal(20, vim.api.nvim_win_get_width(block:winid()))
+    end)
 end)

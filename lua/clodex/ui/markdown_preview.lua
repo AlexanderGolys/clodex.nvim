@@ -46,7 +46,7 @@ end
 ---@param opts { title: string, lines: string[], filetype?: string, width?: integer, height?: integer }
 function Preview:show(opts)
     local lines = #opts.lines > 0 and opts.lines or { "" }
-    local filetype = opts.filetype or "markdown"
+    local filetype = opts.filetype or "text"
 
     if self.buf == nil or not vim.api.nvim_buf_is_valid(self.buf) then
         self.buf = ui_win.create_buffer({
@@ -90,7 +90,7 @@ function Preview:show(opts)
         col = function()
             return math.max(math.floor((editor_width - width) / 2), 1)
         end,
-        view = "markdown",
+        view = "wrapped_text",
         bo = {
             buftype = "nofile",
             modifiable = false,

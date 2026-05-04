@@ -38,7 +38,7 @@ describe("clodex.workspace.execution", function()
         assert.matches("Use the `clodex` MCP server as the primary queue interface", content)
         assert.matches("Call `get_task`", content)
         assert.matches("Call `close_task`", content)
-        assert.matches("fall back to editing `%.clodex/%*%.json` queue files directly", content)
+        assert.matches("Do not edit queue JSON files directly", content)
         assert.matches("%$prompt%-nvim%-clodex", content)
 
         fs.remove(root)
@@ -61,7 +61,7 @@ describe("clodex.workspace.execution", function()
         fs.remove(root)
     end)
 
-    it("renders queue prompts with MCP task-loop instructions", function()
+    it("renders queued dispatches as skill-only prompts", function()
         local root = temp_dir()
         local project = {
             name = "Demo",
@@ -87,18 +87,9 @@ describe("clodex.workspace.execution", function()
             prompt = "Plan the feature",
         })
 
-        assert.not_matches("current queued item id", todo_prompt)
-        assert.matches("returned task id and `work_prompt` are authoritative", todo_prompt)
-        assert.matches("may differ from the item that launched this prompt", todo_prompt)
-        assert.matches("calling `get_task`", todo_prompt)
-        assert.matches("call `close_task` with `success`, `comment`, and `commit_id`", todo_prompt)
-        assert.not_matches("run compaction", todo_prompt)
-        assert.matches("%$prompt%-nvim%-clodex", todo_prompt)
-
-        assert.matches("close directly to `history`", bug_prompt)
-        assert.matches("generating follow%-up prompts only", vision_prompt)
-        assert.matches("Do not change code or create a git commit", vision_prompt)
-        assert.matches("commit_id = \"\"", vision_prompt)
+        assert.are.equal("$prompt-nvim-clodex", todo_prompt)
+        assert.are.equal("$prompt-nvim-clodex", bug_prompt)
+        assert.are.equal("$prompt-nvim-clodex", vision_prompt)
 
         fs.remove(root)
     end)

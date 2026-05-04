@@ -4,7 +4,6 @@ local SnacksSelect = require("snacks.picker.select")
 local Prompt = require("clodex.prompt")
 local PromptContext = require("clodex.prompt.context")
 local ui_win = require("clodex.ui.win")
-local unpack_values = require("clodex.util").unpack_values
 
 local MODAL_ZINDEX = 100
 local PROMPT_EDITOR_MIN_HEIGHT = 8
@@ -37,6 +36,22 @@ local PROMPT_EDITOR_HINT_KEYS = {
 }
 local active_input
 local prompt_context_completion = {} ---@type table<integer, Clodex.PromptContext.Capture?>
+
+---@param ... string|string[]
+---@return string[]
+local function collect_lines(...)
+  local lines = {}
+  for _, value in ipairs({ ... }) do
+    if type(value) == "table" then
+      for _, line in ipairs(value) do
+        lines[#lines + 1] = line
+      end
+    elseif value ~= nil then
+      lines[#lines + 1] = value
+    end
+  end
+  return lines
+end
 
 ---@param win? snacks.win
 local function focus_input_window(win)
@@ -444,7 +459,7 @@ function M.pick_project(projects, opts, on_choice)
       label = "No active project",
       preview = with_preview and {
         text = "# Clodex Project\n\n- Active project override is disabled for this tab.",
-        ft = "markdown",
+        ft = "text",
         loc = false,
       } or nil,
       preview_title = with_preview and "No active project" or nil,
@@ -466,7 +481,7 @@ function M.pick_project(projects, opts, on_choice)
           ("- Exists on disk: `%s`"):format(vim.uv.fs_stat(project.root) ~= nil and "yes" or "no"),
           ("- Active in this tab: `%s`"):format(opts.active_root == project.root and "yes" or "no"),
         }, "\n"),
-        ft = "markdown",
+        ft = "text",
         loc = false,
       } or nil,
       preview_title = with_preview and project.name or nil,
@@ -763,14 +778,13 @@ function M.multiline_input(opts, on_confirm)
   local max_height = math.max(editor_height - PROMPT_EDITOR_HEIGHT_MARGIN, min_height)
   local width = math.min(
     math.max(
-      longest_width(vim.tbl_flatten({ title, unpack_values(detail_lines), hint_lines }))
-        + PROMPT_EDITOR_WIDTH_PADDING,
+      longest_width(collect_lines(title, detail_lines, hint_lines)) + PROMPT_EDITOR_WIDTH_PADDING,
       PROMPT_EDITOR_MIN_WIDTH
     ),
     math.max(editor_width - PROMPT_EDITOR_MAX_MARGIN - PROMPT_EDITOR_BORDER_COLS, 24)
   )
   local title_buf = ui_win.create_buffer({ preset = "text" })
-  local body_buf = ui_win.create_buffer({ preset = "markdown" })
+  local body_buf = ui_win.create_buffer({ preset = "text" })
   local hint_buf = ui_win.create_buffer({ preset = "scratch" })
   vim.bo[hint_buf].modifiable = false
 
@@ -869,7 +883,6 @@ function M.multiline_input(opts, on_confirm)
       spell = false,
     },
     bo = {
-      filetype = "markdown",
       buftype = "nofile",
       modifiable = true,
     },
@@ -1077,7 +1090,7 @@ function M.multiline_input(opts, on_confirm)
         disabled = item.disabled,
         preview = {
           text = table.concat(preview_lines, "\n"),
-          ft = "markdown",
+          ft = "text",
           loc = false,
         },
         preview_title = item.label,
@@ -1236,12 +1249,12 @@ function M.multiline_message_input(opts, on_confirm)
   local max_height = math.max(editor_height - PROMPT_EDITOR_HEIGHT_MARGIN, min_height)
   local width = math.min(
     math.max(
-      longest_width(vim.tbl_flatten({ unpack_values(default_lines), hint_lines })) + PROMPT_EDITOR_WIDTH_PADDING,
+      longest_width(collect_lines(default_lines, hint_lines)) + PROMPT_EDITOR_WIDTH_PADDING,
       PROMPT_EDITOR_MIN_WIDTH
     ),
     math.max(editor_width - PROMPT_EDITOR_MAX_MARGIN - PROMPT_EDITOR_BORDER_COLS, 24)
   )
-  local body_buf = ui_win.create_buffer({ preset = "markdown" })
+  local body_buf = ui_win.create_buffer({ preset = "text" })
   local hint_buf = ui_win.create_buffer({ preset = "scratch" })
   vim.bo[hint_buf].modifiable = false
 
@@ -1296,7 +1309,6 @@ function M.multiline_message_input(opts, on_confirm)
       spell = false,
     },
     bo = {
-      filetype = "markdown",
       buftype = "nofile",
       modifiable = true,
     },

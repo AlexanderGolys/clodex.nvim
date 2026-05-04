@@ -138,7 +138,7 @@ local function defaults()
         opencode_cmd = { "opencode" },
         storage = {
             projects_file = fs.join(storage_root, "projects.json"),
-            workspaces_dir = ".clodex",
+            workspaces_dir = fs.join(storage_root, "workspaces"),
             session_state_dir = fs.join(storage_root, "session-state"),
             history_file = fs.join(storage_root, "history.md"),
         },

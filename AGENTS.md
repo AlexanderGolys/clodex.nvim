@@ -6,9 +6,9 @@
 - Core module groups are `app/`, `execution/`, `project/`, `prompt/`, `session/`, `tab/`, `terminal/`, `ui/`, `util/`, and `workspace/`.
 - The bundled MCP helper lives in `rust/clodex-mcp/`.
 - Checked-in workflow skill content lives in `.codex/skills/prompt-nvim-clodex/` and is synced into project-local `.clodex/skills/` at runtime.
-- Durable per-project user files may include root `README.md` and `TODO.md` plus `.clodex/` queue data.
+- Durable per-project user files may include root `README.md` and `TODO.md` plus `.clodex/` skills, notes, bookmarks, and project context files. Queue JSON is MCP-managed local data under `storage.workspaces_dir`.
 - Tests live in `tests/specs/` and use `tests/minimal_init.lua`.
-- Keep project-local agent data under each repository's `.clodex/` directory; avoid new global state unless it is explicitly plugin-global config/runtime data.
+- Keep project-local agent context under each repository's `.clodex/` directory, but keep queue state under the configured local workspace directory so agents do not directly edit queue JSON.
 
 ## Product Rules
 - Treat `snacks.nvim` as required infrastructure.
@@ -16,7 +16,7 @@
 - Keep one persistent session per registered project root and one shared free session rooted at `session.free_root`.
 - Project sessions always start with `cwd = project.root`; the free session always starts with `cwd = session.free_root`.
 - Keep queue and workspace summaries focused on durable repository facts plus queue contents; do not reintroduce inferred live task tracking.
-- Keep queued workflow behavior centered on project-local queue files and the local MCP helper.
+- Keep queued workflow behavior centered on the local MCP helper and its configured local queue workspace.
 - Treat the public queued MCP contract as loop-based: use `get_task`, `close_task`, and `create_prompt`; keep queue mutation internals out of the exposed agent workflow.
 - Treat the task returned by `get_task` as authoritative; it may differ from the queued prompt that launched the agent when another item is already active.
 - Default queued git workflow stays commit-based unless a task explicitly needs branch-and-PR behavior.

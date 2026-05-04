@@ -194,7 +194,6 @@ function M.refresh_chrome(win)
         target = current_window()
     end
     M.apply_window(target)
-    pcall(vim.cmd.redrawstatus)
 end
 
 function M.refresh_all_chrome()

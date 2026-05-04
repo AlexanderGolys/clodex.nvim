@@ -34,372 +34,470 @@
 ---@type Clodex.Config.Highlights
 local M = {
   groups = {
+-- &&&ClodexQueueNormal&&&Lorem Ipsum&&&
     ClodexQueueNormal = {
       fg = { from = { "NormalFloat", "Normal" } },
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       blend = 0,
     },
-    ClodexQueueFocusActive = {
+-- &&&ClodexQueueFocusActive&&&Lorem Ipsum&&&
+ClodexQueueFocusActive = {
       fg = { from = { "NormalFloat", "Normal" } },
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
       blend = 0,
     },
-    ClodexQueueFocusInactive = {
+-- &&&ClodexQueueFocusInactive&&&Lorem Ipsum&&&
+ClodexQueueFocusInactive = {
       fg = { from = { "NormalFloat", "Normal" } },
       bg = { from = { "NormalFloat", "Normal" }, attr = "bg" },
       blend = 0,
     },
-    ClodexPickerProject = {
+-- &&&ClodexPickerProject&&&Lorem Ipsum&&&
+ClodexPickerProject = {
       fg = { from = { "DiagnosticError", "ErrorMsg" } },
       bold = true,
     },
-    ClodexPickerRoot = {
+-- &&&ClodexPickerRoot&&&Lorem Ipsum&&&
+ClodexPickerRoot = {
       fg = { from = "Directory" },
       italic = true,
     },
-    ClodexPromptImprovementTitle = {
+-- &&&ClodexPromptImprovementTitle&&&Lorem Ipsum&&&
+ClodexPromptImprovementTitle = {
       fg = { from = "@constructor" },
-      bold = false,
+      bold =true,
     },
-    ClodexPromptImprovementKindName = {
+-- &&&ClodexPromptImprovementKindName&&&Lorem Ipsum&&&
+ClodexPromptImprovementKindName = {
       fg = { from = "@constructor" },
       bold = true,
     },
-    ClodexPromptTodoTitle = {
+-- &&&ClodexPromptTodoTitle&&&Lorem Ipsum&&&
+ClodexPromptTodoTitle = {
       link = "ClodexPromptImprovementTitle",
+      bold = true,
     },
-    ClodexPromptTodoKindName = {
+-- &&&ClodexPromptTodoKindName&&&Lorem Ipsum&&&
+ClodexPromptTodoKindName = {
       link = "ClodexPromptImprovementKindName",
+      bold = true,
     },
-    ClodexPromptBugTitle = {
+-- &&&ClodexPromptBugTitle&&&Lorem Ipsum&&&
+ClodexPromptBugTitle = {
       fg = { from = "DiagnosticError" },
       bold = true,
     },
-    ClodexPromptNotWorkingTitle = {
+-- &&&ClodexPromptNotWorkingTitle&&&Lorem Ipsum&&&
+ClodexPromptNotWorkingTitle = {
       fg = { from = "DiagnosticError", adjust = 0.18 },
       bold = true,
     },
-    ClodexPromptFixTitle = {
+-- &&&ClodexPromptFixTitle&&&Lorem Ipsum&&&
+ClodexPromptFixTitle = {
       fg = { from = { "Normal", "NormalFloat" } },
       bold = true,
     },
-    ClodexPromptFreeformTitle = {
+-- &&&ClodexPromptFreeformTitle&&&Lorem Ipsum&&&
+ClodexPromptFreeformTitle = {
       link = "ClodexPromptFixTitle",
     },
-    ClodexPromptAdjustmentTitle = {
+-- &&&ClodexPromptAdjustmentTitle&&&Lorem Ipsum&&&
+ClodexPromptAdjustmentTitle = {
       link = "ClodexPromptFixTitle",
     },
-    ClodexPromptFeatureTitle = {
+-- &&&ClodexPromptFeatureTitle&&&Lorem Ipsum&&&
+ClodexPromptFeatureTitle = {
       fg = { from = "Function" },
       bold = true,
     },
-    ClodexPromptRestructureTitle = {
+-- &&&ClodexPromptRestructureTitle&&&Lorem Ipsum&&&
+ClodexPromptRestructureTitle = {
       fg = { from = "String" },
       bold = true,
     },
-    ClodexPromptRefactorTitle = {
+-- &&&ClodexPromptRefactorTitle&&&Lorem Ipsum&&&
+ClodexPromptRefactorTitle = {
       link = "ClodexPromptRestructureTitle",
     },
-    ClodexPromptVisionTitle = {
+-- &&&ClodexPromptVisionTitle&&&Lorem Ipsum&&&
+ClodexPromptVisionTitle = {
       fg = { from = "PreProc" },
       bold = true,
     },
-    ClodexPromptIdeaTitle = {
+-- &&&ClodexPromptIdeaTitle&&&Lorem Ipsum&&&
+ClodexPromptIdeaTitle = {
       link = "ClodexPromptVisionTitle",
     },
-    ClodexPromptCleanupTitle = {
+-- &&&ClodexPromptCleanupTitle&&&Lorem Ipsum&&&
+ClodexPromptCleanupTitle = {
       fg = { from = "Comment" },
       bold = true,
     },
-    ClodexPromptDocsTitle = {
+-- &&&ClodexPromptDocsTitle&&&Lorem Ipsum&&&
+ClodexPromptDocsTitle = {
       fg = { from = "Special" },
       bold = true,
     },
-    ClodexPromptExplainTitle = {
+-- &&&ClodexPromptExplainTitle&&&Lorem Ipsum&&&
+ClodexPromptExplainTitle = {
       fg = { from = "Type" },
       bold = true,
     },
-    ClodexPromptImprovementTitleActive = {
+-- &&&ClodexPromptImprovementTitleActive&&&Lorem Ipsum&&&
+ClodexPromptImprovementTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptImprovementTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptTodoTitleActive = {
+-- &&&ClodexPromptTodoTitleActive&&&Lorem Ipsum&&&
+ClodexPromptTodoTitleActive = {
       link = "ClodexPromptImprovementTitleActive",
     },
-    ClodexPromptBugTitleActive = {
+-- &&&ClodexPromptBugTitleActive&&&Lorem Ipsum&&&
+ClodexPromptBugTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptBugTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptNotWorkingTitleActive = {
+-- &&&ClodexPromptNotWorkingTitleActive&&&Lorem Ipsum&&&
+ClodexPromptNotWorkingTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptNotWorkingTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptFixTitleActive = {
+-- &&&ClodexPromptFixTitleActive&&&Lorem Ipsum&&&
+ClodexPromptFixTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptFixTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptFreeformTitleActive = {
+-- &&&ClodexPromptFreeformTitleActive&&&Lorem Ipsum&&&
+ClodexPromptFreeformTitleActive = {
       link = "ClodexPromptFixTitleActive",
     },
-    ClodexPromptFeatureTitleActive = {
+-- &&&ClodexPromptFeatureTitleActive&&&Lorem Ipsum&&&
+ClodexPromptFeatureTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptFeatureTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptRestructureTitleActive = {
+-- &&&ClodexPromptRestructureTitleActive&&&Lorem Ipsum&&&
+ClodexPromptRestructureTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptRestructureTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptRefactorTitleActive = {
+-- &&&ClodexPromptRefactorTitleActive&&&Lorem Ipsum&&&
+ClodexPromptRefactorTitleActive = {
       link = "ClodexPromptRestructureTitleActive",
     },
-    ClodexPromptVisionTitleActive = {
+-- &&&ClodexPromptVisionTitleActive&&&Lorem Ipsum&&&
+ClodexPromptVisionTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptVisionTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptIdeaTitleActive = {
+-- &&&ClodexPromptIdeaTitleActive&&&Lorem Ipsum&&&
+ClodexPromptIdeaTitleActive = {
       link = "ClodexPromptVisionTitleActive",
     },
-    ClodexPromptCleanupTitleActive = {
+-- &&&ClodexPromptCleanupTitleActive&&&Lorem Ipsum&&&
+ClodexPromptCleanupTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptCleanupTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptDocsTitleActive = {
+-- &&&ClodexPromptDocsTitleActive&&&Lorem Ipsum&&&
+ClodexPromptDocsTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptDocsTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptExplainTitleActive = {
+-- &&&ClodexPromptExplainTitleActive&&&Lorem Ipsum&&&
+ClodexPromptExplainTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = "ClodexPromptExplainTitle", attr = "fg" },
       bold = true,
     },
-    ClodexPromptSourceTab = {
+-- &&&ClodexPromptSourceTab&&&Lorem Ipsum&&&
+ClodexPromptSourceTab = {
       fg = { from = { "Comment", "Normal" } },
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bold = true,
     },
-    ClodexPromptSourceTabActive = {
+-- &&&ClodexPromptSourceTabActive&&&Lorem Ipsum&&&
+ClodexPromptSourceTabActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = { "Comment", "Normal" }, attr = "fg" },
       bold = true,
     },
-    ClodexPromptPreviewText = {
+-- &&&ClodexPromptPreviewText&&&Lorem Ipsum&&&
+ClodexPromptPreviewText = {
       fg = { from = "Directory" },
     },
-    ClodexPromptFixPreviewText = {
+-- &&&ClodexPromptFixPreviewText&&&Lorem Ipsum&&&
+ClodexPromptFixPreviewText = {
       fg = { from = { "Comment", "LineNr", "Normal" } },
     },
-    ClodexPromptFreeformPreviewText = {
+-- &&&ClodexPromptFreeformPreviewText&&&Lorem Ipsum&&&
+ClodexPromptFreeformPreviewText = {
       link = "ClodexPromptFixPreviewText",
     },
-    ClodexBookmarkLine = {
+-- &&&ClodexBookmarkLine&&&Lorem Ipsum&&&
+ClodexBookmarkLine = {
       bg = { from = { "CursorLine", "Visual" }, attr = "bg" },
     },
-    ClodexBookmarkVirtualText = {
+-- &&&ClodexBookmarkVirtualText&&&Lorem Ipsum&&&
+ClodexBookmarkVirtualText = {
       fg = { from = { "DiagnosticHint", "Comment" } },
       italic = true,
     },
-    ClodexQueueProjectActive = {
+-- &&&ClodexQueueProjectActive&&&Lorem Ipsum&&&
+ClodexQueueProjectActive = {
       fg = { from = "Directory" },
       bold = true,
     },
-    ClodexQueueProjectCurrent = {
+-- &&&ClodexQueueProjectCurrent&&&Lorem Ipsum&&&
+ClodexQueueProjectCurrent = {
       fg = { from = { "DiagnosticOk", "Directory" } },
       bold = true,
     },
-    ClodexQueueProjectInactive = {
+-- &&&ClodexQueueProjectInactive&&&Lorem Ipsum&&&
+ClodexQueueProjectInactive = {
       fg = { from = "Comment" },
       italic = true,
     },
-    ClodexQueueCounts = {
+-- &&&ClodexQueueCounts&&&Lorem Ipsum&&&
+ClodexQueueCounts = {
       fg = { from = "Identifier" },
     },
-    ClodexQueueHeader = {
+-- &&&ClodexQueueHeader&&&Lorem Ipsum&&&
+ClodexQueueHeader = {
       fg = { from = "Title" },
       bold = true,
     },
-    ClodexQueueItem = {
+-- &&&ClodexQueueItem&&&Lorem Ipsum&&&
+ClodexQueueItem = {
       fg = { from = "Normal" },
     },
-    ClodexQueueItemMuted = {
+-- &&&ClodexQueueItemMuted&&&Lorem Ipsum&&&
+ClodexQueueItemMuted = {
       fg = { from = { "Comment", "Normal" } },
     },
-    ClodexQueueFooter = {
+-- &&&ClodexQueueFooter&&&Lorem Ipsum&&&
+ClodexQueueFooter = {
       fg = { from = { "Comment", "Normal" } },
     },
-    ClodexProjectRemoteAttached = {
+-- &&&ClodexProjectRemoteAttached&&&Lorem Ipsum&&&
+ClodexProjectRemoteAttached = {
       fg = { from = "GitSignsAdd" },
       bold = true,
     },
-    ClodexProjectRemoteDetached = {
+-- &&&ClodexProjectRemoteDetached&&&Lorem Ipsum&&&
+ClodexProjectRemoteDetached = {
       fg = { from = { "Comment", "NonText" } },
       bold = true,
     },
-    ClodexQueueSelectionActive = {
+-- &&&ClodexQueueSelectionActive&&&Lorem Ipsum&&&
+ClodexQueueSelectionActive = {
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = 0.10 },
       blend = 0,
     },
-    ClodexQueueSelectionInactive = {
+-- &&&ClodexQueueSelectionInactive&&&Lorem Ipsum&&&
+ClodexQueueSelectionInactive = {
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = 0.04 },
       blend = 0,
     },
-    ClodexQueueCursorActive = {
+-- &&&ClodexQueueCursorActive&&&Lorem Ipsum&&&
+ClodexQueueCursorActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
       blend = 0,
     },
-    ClodexQueueCursorInactive = {
+-- &&&ClodexQueueCursorInactive&&&Lorem Ipsum&&&
+ClodexQueueCursorInactive = {
       fg = { from = { "NormalFloat", "Normal" }, attr = "bg" },
       bg = { from = { "NormalFloat", "Normal" }, attr = "bg" },
       blend = 0,
     },
-    ClodexQueueActiveBorder = {
+-- &&&ClodexQueueActiveBorder&&&Lorem Ipsum&&&
+ClodexQueueActiveBorder = {
       fg = { from = { "Identifier", "FloatBorder" } },
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
       bold = true,
     },
-    ClodexQueueInactiveBorder = {
+-- &&&ClodexQueueInactiveBorder&&&Lorem Ipsum&&&
+ClodexQueueInactiveBorder = {
       fg = { from = { "Comment", "FloatBorder" } },
       bg = { from = { "NormalFloat", "Normal" }, attr = "bg" },
     },
-    ClodexPromptEditorNormal = {
+-- &&&ClodexPromptEditorNormal&&&Lorem Ipsum&&&
+ClodexPromptEditorNormal = {
       fg = { from = { "NormalFloat", "Normal" } },
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       blend = 0,
     },
-    ClodexPromptEditorBorder = {
+-- &&&ClodexPromptEditorBorder&&&Lorem Ipsum&&&
+ClodexPromptEditorBorder = {
       fg = { from = { "Identifier", "FloatBorder" } },
       bold = true,
     },
-    ClodexPromptEditorTitle = {
+-- &&&ClodexPromptEditorTitle&&&Lorem Ipsum&&&
+ClodexPromptEditorTitle = {
       fg = { from = { "Title", "Identifier" } },
       bold = true,
     },
-    ClodexPromptEditorSubtitle = {
+-- &&&ClodexPromptEditorSubtitle&&&Lorem Ipsum&&&
+ClodexPromptEditorSubtitle = {
       fg = { from = { "Comment", "Normal" } },
       italic = true,
     },
-    ClodexPromptEditorFooter = {
+-- &&&ClodexPromptEditorFooter&&&Lorem Ipsum&&&
+ClodexPromptEditorFooter = {
       fg = { from = { "Comment", "LineNr" } },
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
     },
-    ClodexPromptEditorHint = {
+-- &&&ClodexPromptEditorHint&&&Lorem Ipsum&&&
+ClodexPromptEditorHint = {
       fg = { from = { "Comment", "LineNr" } },
       bg = { from = { "ColorColumn", "Visual", "Pmenu" }, attr = "bg" },
     },
-    ClodexPromptEditorKey = {
+-- &&&ClodexPromptEditorKey&&&Lorem Ipsum&&&
+ClodexPromptEditorKey = {
       fg = { from = { "Identifier", "Special" } },
       bold = true,
     },
-    ClodexPromptEditorContext = {
+-- &&&ClodexPromptEditorContext&&&Lorem Ipsum&&&
+ClodexPromptEditorContext = {
       fg = "#4aa8d8",
       bold = true,
     },
-    ClodexTerminalStatusline = {
+-- &&&ClodexTerminalStatusline&&&Lorem Ipsum&&&
+ClodexTerminalStatusline = {
       fg = { from = { "Comment", "Normal" } },
       bg = { from = { "Normal", "NormalFloat" }, attr = "bg" },
     },
-    ClodexTerminalStatuslineActive = {
+-- &&&ClodexTerminalStatuslineActive&&&Lorem Ipsum&&&
+ClodexTerminalStatuslineActive = {
       fg = { from = { "Normal", "Title" } },
       bg = { from = { "Normal", "NormalFloat" }, attr = "bg" },
       bold = true,
     },
-    ClodexConfirmButton = {
+-- &&&ClodexConfirmButton&&&Lorem Ipsum&&&
+ClodexConfirmButton = {
       fg = { from = { "Comment", "Normal" } },
       bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bold = true,
     },
-    ClodexConfirmButtonActive = {
+-- &&&ClodexConfirmButtonActive&&&Lorem Ipsum&&&
+ClodexConfirmButtonActive = {
       fg = { from = { "Title", "Identifier" } },
       bg = { from = { "CursorLine", "PmenuSel", "Visual" }, attr = "bg" },
       bold = true,
     },
-    ClodexQueueTodoName = {
+-- &&&ClodexQueueTodoName&&&Lorem Ipsum&&&
+ClodexQueueTodoName = {
       fg = "#d8873a",
       bold = true,
     },
-    ClodexQueueTodoBracket = {
+-- &&&ClodexQueueTodoBracket&&&Lorem Ipsum&&&
+ClodexQueueTodoBracket = {
       fg = "#eab36f",
+      bold = true,
     },
-    ClodexQueueTodoCount = {
+-- &&&ClodexQueueTodoCount&&&Lorem Ipsum&&&
+ClodexQueueTodoCount = {
       fg = "#f5c78a",
       bold = true,
     },
-    ClodexQueueQueuedName = {
+-- &&&ClodexQueueQueuedName&&&Lorem Ipsum&&&
+ClodexQueueQueuedName = {
       fg = "#4aa8d8",
       bold = true,
     },
-    ClodexQueueQueuedBracket = {
+-- &&&ClodexQueueQueuedBracket&&&Lorem Ipsum&&&
+ClodexQueueQueuedBracket = {
       fg = "#74c2e8",
     },
-    ClodexQueueQueuedCount = {
+-- &&&ClodexQueueQueuedCount&&&Lorem Ipsum&&&
+ClodexQueueQueuedCount = {
       fg = "#9ad8f2",
       bold = true,
     },
-    ClodexQueueImplementedName = {
+-- &&&ClodexQueueImplementedName&&&Lorem Ipsum&&&
+ClodexQueueImplementedName = {
       fg = "#f5a0d0",
       bold = true,
     },
-    ClodexQueueImplementedBracket = {
+-- &&&ClodexQueueImplementedBracket&&&Lorem Ipsum&&&
+ClodexQueueImplementedBracket = {
       fg = "#f8b8dc",
     },
-    ClodexQueueImplementedCount = {
+-- &&&ClodexQueueImplementedCount&&&Lorem Ipsum&&&
+ClodexQueueImplementedCount = {
       fg = "#fcd0e8",
       bold = true,
     },
-    ClodexQueueHistoryName = {
+-- &&&ClodexQueueHistoryName&&&Lorem Ipsum&&&
+ClodexQueueHistoryName = {
       fg = "#79b98f",
       bold = true,
     },
-    ClodexQueueHistoryBracket = {
+-- &&&ClodexQueueHistoryBracket&&&Lorem Ipsum&&&
+ClodexQueueHistoryBracket = {
       fg = "#9ad0ac",
     },
-    ClodexQueueHistoryCount = {
+-- &&&ClodexQueueHistoryCount&&&Lorem Ipsum&&&
+ClodexQueueHistoryCount = {
       fg = "#b7e1c4",
       bold = true,
     },
-    ClodexStateSection = {
+-- &&&ClodexStateSection&&&Lorem Ipsum&&&
+ClodexStateSection = {
       fg = { from = "Directory" },
     },
-    ClodexStateFieldLabel = {
+-- &&&ClodexStateFieldLabel&&&Lorem Ipsum&&&
+ClodexStateFieldLabel = {
       fg = { from = "@constructor" },
     },
-    ClodexStateStatusActive = {
+-- &&&ClodexStateStatusActive&&&Lorem Ipsum&&&
+ClodexStateStatusActive = {
       fg = { from = "@diff.plus" },
     },
-    ClodexStateStatusStopped = {
+-- &&&ClodexStateStatusStopped&&&Lorem Ipsum&&&
+ClodexStateStatusStopped = {
       fg = { from = "ErrorMsg" },
     },
-    ClodexStateStatusOffline = {
+-- &&&ClodexStateStatusOffline&&&Lorem Ipsum&&&
+ClodexStateStatusOffline = {
       fg = { from = "@error" },
     },
-    ClodexStateBoolean = {
+-- &&&ClodexStateBoolean&&&Lorem Ipsum&&&
+ClodexStateBoolean = {
       fg = { from = "@boolean" },
     },
-    ClodexStateNil = {
+-- &&&ClodexStateNil&&&Lorem Ipsum&&&
+ClodexStateNil = {
       fg = { from = "@constant" },
     },
-    ClodexStateMarker = {
+-- &&&ClodexStateMarker&&&Lorem Ipsum&&&
+ClodexStateMarker = {
       fg = { from = "SpecialChar" },
     },
-    ClodexStateEntryTitle = {
+-- &&&ClodexStateEntryTitle&&&Lorem Ipsum&&&
+ClodexStateEntryTitle = {
       fg = { from = "Identifier" },
     },
-    ClodexStateCommandName = {
+-- &&&ClodexStateCommandName&&&Lorem Ipsum&&&
+ClodexStateCommandName = {
       fg = { from = "Identifier" },
     },
-    ClodexStateCommandHint = {
+-- &&&ClodexStateCommandHint&&&Lorem Ipsum&&&
+ClodexStateCommandHint = {
       fg = { from = "Comment" },
     },
-    ClodexCommitId = {
+-- &&&ClodexCommitId&&&Lorem Ipsum&&&
+ClodexCommitId = {
       fg = "#e0af68",
       bold = true,
     },

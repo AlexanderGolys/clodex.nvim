@@ -16,8 +16,8 @@ local M = {}
 ---@field term_cursor_nc? string
 ---@field winblend? integer
 
----@alias Clodex.UiWin.BufferPreset "scratch"|"text"|"markdown"|"workspace"
----@alias Clodex.UiWin.ViewPreset "panel"|"text"|"markdown"|"footer"
+---@alias Clodex.UiWin.BufferPreset "scratch"|"text"|"workspace"
+---@alias Clodex.UiWin.ViewPreset "panel"|"text"|"wrapped_text"|"footer"
 ---@alias Clodex.UiWin.ThemePreset "default_float"|"prompt_editor"|"prompt_footer"|"queue_active"|"queue_inactive"
 
 local VIEW_PRESETS = {
@@ -37,7 +37,7 @@ local VIEW_PRESETS = {
     linebreak = false,
     breakindent = false,
   },
-  markdown = {
+  wrapped_text = {
     wrap = true,
     linebreak = true,
     breakindent = true,
@@ -118,13 +118,6 @@ local BUFFER_PRESETS = {
     bufhidden = "wipe",
     swapfile = false,
     modifiable = true,
-  },
-  markdown = {
-    buftype = "nofile",
-    bufhidden = "wipe",
-    swapfile = false,
-    modifiable = true,
-    filetype = "markdown",
   },
   workspace = {
     buftype = "nofile",
@@ -211,6 +204,26 @@ local function winid_is_valid(win)
   return type(win) == "number" and win > 0 and vim.api.nvim_win_is_valid(win)
 end
 
+local MIN_WINDOW_ZINDEX = 1
+
+---@param opts snacks.win.Config
+---@return snacks.win.Config
+local function normalize_zindex(opts)
+  local zindex = opts.zindex
+  if type(zindex) ~= "number" then
+    return opts
+  end
+
+  -- Snacks puts float backdrops at zindex - 1, so we keep at least 2 for
+  -- active backdrop windows.
+  local minimum = opts.backdrop == false and MIN_WINDOW_ZINDEX or (MIN_WINDOW_ZINDEX + 1)
+  if zindex < minimum then
+    opts.zindex = minimum
+  end
+
+  return opts
+end
+
 ---@param win snacks.win
 ---@return snacks.win
 local function harden_snacks_window(win)
@@ -252,13 +265,15 @@ function M.open(opts)
   opts.view = nil
   opts.theme = nil
   opts.theme_overrides = nil
-  local resolved = Snacks.win.resolve({
-    position = "float",
-    show = true,
-    -- Clodex uses this helper for dedicated float views whose buffers should not
-    -- be "fixed" by Snacks buffer-swapping autocommands.
+    local resolved = Snacks.win.resolve({
+        position = "float",
+        relative = "editor",
+        show = true,
+        -- Clodex uses this helper for dedicated float views whose buffers should not
+        -- be "fixed" by Snacks buffer-swapping autocommands.
     fixbuf = false,
   }, style, opts)
+  resolved = normalize_zindex(resolved)
   local win = Snacks.win(resolved)
   if win then
     win = harden_snacks_window(win)

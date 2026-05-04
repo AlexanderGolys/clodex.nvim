@@ -83,8 +83,8 @@ local PROJECT_SEARCH_FIELDS = {
     "root",
 }
 local ITEM_TITLE_PREFIX_WIDTH = 2
-local FILE_ICON = "󰈔 "
-local TIMESTAMP_ICON = " "
+local FILE_ICON = " "
+local TIMESTAMP_ICON = " " 
 local PROJECT_DETAIL_LABELS = {
     FILE_ICON,
     TIMESTAMP_ICON,

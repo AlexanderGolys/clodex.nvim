@@ -23,17 +23,51 @@ end
 
 ---@param values? Clodex.Config.Values
 ---@return string[]
-local function server_args(values)
+local function raw_server_args(values)
     local configured = values and values.mcp and values.mcp.cmd or nil
-    if type(configured) ~= "table" or #configured <= 1 then
-        return {}
+    local args = {}
+    local has_configured_command = type(configured) == "table" and #configured > 0
+    if has_configured_command and #configured > 1 then
+        for index = 2, #configured do
+            args[#args + 1] = configured[index]
+        end
     end
 
-    local args = {}
-    for index = 2, #configured do
-        args[#args + 1] = toml_string(configured[index])
+    local has_workspace_dir = false
+    for _, arg in ipairs(args) do
+        if arg == "--workspace-dir" then
+            has_workspace_dir = true
+            break
+        end
     end
+    local workspace_dir = values and values.storage and values.storage.workspaces_dir or nil
+    if
+        not has_configured_command
+        and not has_workspace_dir
+        and type(workspace_dir) == "string"
+        and vim.trim(workspace_dir) ~= ""
+    then
+        args[#args + 1] = "--workspace-dir"
+        args[#args + 1] = fs.normalize(vim.fn.expand(workspace_dir))
+    end
+
     return args
+end
+
+---@param values Clodex.Config.Values
+---@return string?
+local function queue_workspace_dir(values)
+    local workspace_dir = values and values.storage and values.storage.workspaces_dir or nil
+    if type(workspace_dir) ~= "string" or vim.trim(workspace_dir) == "" then
+        return nil
+    end
+    return fs.normalize(vim.fn.expand(workspace_dir))
+end
+
+---@param values? Clodex.Config.Values
+---@return string[]
+local function server_args(values)
+    return vim.tbl_map(toml_string, raw_server_args(values))
 end
 
 ---@param values Clodex.Config.Values
@@ -109,8 +143,9 @@ function M.runtime_signature(values)
         return nil
     end
 
-    local parts = { runtime_root(values) }
+    local parts = { runtime_root(values), values.storage and values.storage.workspaces_dir or "" }
     vim.list_extend(parts, cmd)
+    vim.list_extend(parts, raw_server_args(values))
     return table.concat(parts, RUNTIME_SIGNATURE_SEPARATOR)
 end
 
@@ -148,6 +183,10 @@ local function write_codex_runtime(values)
     if #server_cmd_args > 0 then
         lines[#lines + 1] = ("args = [%s]"):format(table.concat(server_cmd_args, ", "))
     end
+    local workspace_dir = queue_workspace_dir(values)
+    if workspace_dir then
+        lines[#lines + 1] = ("env = { CLODEX_WORKSPACES_DIR = %s }"):format(toml_string(workspace_dir))
+    end
 
     fs.write_file(M.codex_config_path(values), table.concat(lines, "\n") .. "\n")
 end
@@ -155,11 +194,16 @@ end
 ---@param values Clodex.Config.Values
 local function write_opencode_runtime(values)
     local cmd = assert(M.server_cmd(values))
+    local command = { cmd[1] }
+    vim.list_extend(command, raw_server_args(values))
     fs.write_json(M.opencode_config_path(values), {
         mcp = {
             [SERVER_NAME] = {
                 type = "local",
-                command = cmd,
+                command = command,
+                environment = queue_workspace_dir(values) and {
+                    CLODEX_WORKSPACES_DIR = queue_workspace_dir(values),
+                } or nil,
                 enabled = true,
             },
         },

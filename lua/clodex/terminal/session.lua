@@ -314,19 +314,11 @@ function Session:header_text()
     return ("[Codex CLI] %s"):format(self.title)
 end
 
---- Ensures the header line in the terminal buffer reflects current session settings.
---- This normalizes what users see when entering buffers and when settings change.
---- It also removes stale headers when header mode is disabled.
-function Session:sync_header()
-    vim.cmd.redrawstatus()
-end
-
 --- Toggles whether the header row is shown in the terminal buffer.
 --- The new setting is applied immediately and persisted for the session lifecycle.
 --- Callers use this for user-facing header visibility toggles.
 function Session:toggle_header()
     self.header_enabled = not self.header_enabled
-    self:sync_header()
     return self.header_enabled
 end
 
@@ -426,9 +418,7 @@ function Session:waiting_state()
     end
 end
 
----@param opts? { sync_header?: boolean }
-function Session:update_buffer_state(opts)
-    opts = opts or {}
+function Session:update_buffer_state()
     if not self:buf_valid() then
         return
     end
@@ -453,9 +443,6 @@ function Session:update_buffer_state(opts)
         buffer = self.buf,
         silent = true,
     })
-    if opts.sync_header ~= false then
-        self:sync_header()
-    end
 end
 
 --- Starts the terminal if needed and initializes buffer state.
@@ -483,7 +470,7 @@ function Session:ensure_started()
 
     self.buf = vim.api.nvim_create_buf(false, true)
     self.archived_line_count = 0
-    self:update_buffer_state({ sync_header = false })
+    self:update_buffer_state()
 
     local job_id
     local started
@@ -512,8 +499,7 @@ function Session:ensure_started()
 
     self.job_id = job_id
     attach_termclose_handler(self)
-    self:update_buffer_state({ sync_header = false })
-    self:sync_header()
+    self:update_buffer_state()
     return true
 end
 
@@ -565,6 +551,12 @@ local function is_opencode_backend(self)
 end
 
 ---@param text string
+---@return string
+local function bracketed_paste(text)
+    return ("\027[200~%s\027[201~"):format(text)
+end
+
+---@param text string
 ---@return boolean
 function Session:dispatch_prompt(text)
     text = vim.trim(text or "")
@@ -580,7 +572,7 @@ function Session:dispatch_prompt(text)
     if opencode then
         normalized = text:gsub("\r\n", "\n")
     else
-        normalized = text:gsub("\r\n", "\n"):gsub("\n", "\r") .. "\r"
+        normalized = bracketed_paste(text:gsub("\r\n", "\n"):gsub("\r", "\n"))
     end
     local ok = pcall(vim.fn.chansend, self.job_id, normalized)
     if not ok then
@@ -590,13 +582,11 @@ function Session:dispatch_prompt(text)
 
     self.awaiting_response = true
 
-    if opencode then
-        vim.defer_fn(function()
-            if self.job_id then
-                pcall(vim.fn.chansend, self.job_id, "\r")
-            end
-        end, 40)
-    end
+    vim.defer_fn(function()
+        if self.job_id then
+            pcall(vim.fn.chansend, self.job_id, "\r")
+        end
+    end, 40)
     return true
 end
 

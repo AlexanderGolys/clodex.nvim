@@ -6,10 +6,10 @@ local PromptSubmit = require("clodex.prompt.submit")
 local Extmark = require("clodex.ui.extmark")
 local UiBlock = require("clodex.ui.panel.block")
 local UiPanel = require("clodex.ui.panel.panel")
+local Helpers = require("clodex.ui.prompt_creator.helpers")
 local LAYOUT = require("clodex.ui.prompt_creator.layout_config")
 local ui_select = require("clodex.ui.select")
 local notify = require("clodex.util.notify")
-local ui_win = require("clodex.ui.win")
 
 ---@class Clodex.PromptCreator.OpenOpts
 ---@field app Clodex.App
@@ -38,304 +38,6 @@ local RESET_AFTER_SUBMIT_ACTIONS = {
 
 local TAB_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-tabs")
 local FOOTER_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-footer")
-
----@param value integer
----@param minimum integer
----@param maximum integer
----@return integer
-local function clamp(value, minimum, maximum)
-    return math.min(math.max(value, minimum), maximum)
-end
-
----@param preset Clodex.UiWin.BufferPreset
----@return integer
-local function prompt_buffer(preset)
-    return ui_win.create_buffer({
-        preset = preset,
-        bo = { bufhidden = "hide" },
-    })
-end
-
----@param win? snacks.win
----@return integer
-local function window_border_padding(win)
-    if not win or not win.opts then
-        return 0
-    end
-    local border = win.opts.border
-    return border == nil or border == "none" and 0 or 1
-end
-
----@param bufs integer[]
-local function close_buffer_windows(bufs)
-    local targets = {} ---@type table<integer, boolean>
-    for _, buf in ipairs(bufs) do
-        if type(buf) == "number" and buf > 0 and vim.api.nvim_buf_is_valid(buf) then
-            targets[buf] = true
-        end
-    end
-
-    for _, winid in ipairs(vim.api.nvim_list_wins()) do
-        local ok, buf = pcall(vim.api.nvim_win_get_buf, winid)
-        if ok and targets[buf] then
-            ui_win.close(winid)
-        end
-    end
-end
-
----@param winid integer
----@param mappings table<string, string>
-local function update_winhl(winid, mappings)
-    if winid == 0 or not vim.api.nvim_win_is_valid(winid) then
-        return
-    end
-
-    local fields = {} ---@type table<string, string>
-    for part in (vim.wo[winid].winhl or ""):gmatch("[^,]+") do
-        local source, target = part:match("^([^:]+):(.+)$")
-        if source and target then
-            fields[source] = target
-        end
-    end
-    for source, target in pairs(mappings) do
-        fields[source] = target
-    end
-
-    local parts = {}
-    for source, target in pairs(fields) do
-        parts[#parts + 1] = ("%s:%s"):format(source, target)
-    end
-    table.sort(parts)
-    vim.api.nvim_set_option_value("winhl", table.concat(parts, ","), { win = winid })
-end
-
----@param winid integer
----@param hl_group string
-local function hide_window_cursor(winid, hl_group)
-    update_winhl(winid, {
-        Cursor = hl_group,
-        lCursor = hl_group,
-        CursorIM = hl_group,
-        TermCursor = hl_group,
-        TermCursorNC = hl_group,
-    })
-end
-
----@param buf integer
----@return string?
-local function prompt_context_base_at_cursor(buf)
-    if not vim.api.nvim_buf_is_valid(buf) or vim.api.nvim_get_current_buf() ~= buf then
-        return nil
-    end
-
-    local cursor_col = vim.api.nvim_win_get_cursor(0)[2]
-    local line = vim.api.nvim_get_current_line()
-    local start_col = cursor_col
-    while start_col > 0 do
-        if line:sub(start_col, start_col):match("[%w_&]") == nil then
-            break
-        end
-        start_col = start_col - 1
-    end
-
-    local base = line:sub(start_col + 1, cursor_col)
-    return base ~= "" and vim.startswith(base, "&") and base or nil
-end
-
----@param app? Clodex.App
----@param project Clodex.Project
----@return Clodex.ProjectDetails.Snapshot?
-local function project_details(app, project)
-    local store = app and app.project_details_store or nil
-    if not store then
-        return nil
-    end
-    return store:get_cached(project) or (store.get and store:get(project)) or nil
-end
-
----@param context? Clodex.PromptContext.Capture
----@param project Clodex.Project
----@return Clodex.PromptContext.Capture?
-local function project_context(context, project)
-    if not context then
-        return nil
-    end
-
-    local updated = vim.deepcopy(context)
-    updated.project_root = project.root
-    if updated.file_path and updated.file_path ~= "" then
-        local relative = vim.fs.relpath(project.root, updated.file_path)
-        updated.relative_path = relative and relative ~= "" and relative or vim.fs.basename(updated.file_path)
-    end
-    return updated
-end
-
----@param projects? Clodex.Project[]
----@param project Clodex.Project
----@return Clodex.Project[]
-local function normalize_projects(projects, project)
-    local items = {} ---@type Clodex.Project[]
-    local seen = {} ---@type table<string, boolean>
-    for _, item in ipairs(projects or {}) do
-        if item and item.root and not seen[item.root] then
-            seen[item.root] = true
-            items[#items + 1] = item
-        end
-    end
-    if project and project.root and not seen[project.root] then
-        items[#items + 1] = project
-    end
-    return items
-end
-
----@return string?
-local function read_clipboard_message_register()
-    for _, register in ipairs({ "+", '"', "*" }) do
-        local message = vim.trim((vim.fn.getreg(register) or ""):gsub("\r\n", "\n"))
-        if message ~= "" then
-            return message
-        end
-    end
-end
-
----@param kind Clodex.PromptCategory
----@param context? Clodex.PromptContext.Capture
----@return table?
-local function selection_seed(kind, context)
-    if not context or not context.selection_text or kind == "bug" then
-        return nil
-    end
-
-    local spec = Prompt.parse(Prompt.render(KindRegistry.get(kind).default_title, "&selection"))
-    return spec and {
-        title = spec.title,
-        details = spec.details or "",
-    } or nil
-end
-
----@param image_path string
----@return string[]
-local function preview_fallback_lines(image_path)
-    return {
-        "# Clipboard image",
-        "",
-        ("`%s`"):format(image_path),
-        "",
-        "Inline preview unavailable. The prompt still keeps the attached image path.",
-    }
-end
-
----@param parts string[]
----@return string
-local function footer_line(parts)
-    return table.concat(parts, "   ")
-end
-
----@param insert_mode boolean
----@param has_variants boolean
----@param has_multiple_projects boolean
----@return string[]
-local function footer_lines(insert_mode, has_variants, has_multiple_projects)
-    if insert_mode then
-        return {
-            "Tab/S-Tab: move focus   C-v: image",
-            "C-←/→: kind   C-s: plan   C-q: queue   C->: implement   C-c: chat   q: close",
-        }
-    end
-
-    local row_one = { "←/→ or h/l: kind" }
-    if has_multiple_projects then
-        row_one[#row_one + 1] = "↑/↓ or j/k: project"
-    end
-    if has_variants then
-        row_one[#row_one + 1] = "[/]: source"
-    end
-    row_one[#row_one + 1] = "C-v: image"
-
-    return {
-        footer_line(row_one),
-        "C-←/→: kind (insert)   s: plan   ⏎: queue   >: implement   c: chat   q: close",
-    }
-end
-
----@param insert_mode boolean
----@param has_variants boolean
----@param has_multiple_projects boolean
----@return { row: integer, text: string, match_text?: string }[]
-local function footer_key_labels(insert_mode, has_variants, has_multiple_projects)
-    if insert_mode then
-        return {
-            { row = 0, text = "Tab/S-Tab" },
-            { row = 0, text = "C-v" },
-            { row = 1, text = "C-←/→" },
-            { row = 1, text = "C-s" },
-            { row = 1, text = "C-q" },
-            { row = 1, text = "C->" },
-            { row = 1, text = "C-c" },
-            { row = 1, text = "q", match_text = "q: close" },
-        }
-    end
-
-    local labels = {
-        { row = 0, text = "←/→" },
-        { row = 0, text = "h/l" },
-        { row = 0, text = "C-v" },
-        { row = 1, text = "C-←/→" },
-        { row = 1, text = "s", match_text = "s: plan" },
-        { row = 1, text = "⏎" },
-        { row = 1, text = ">", match_text = ">: implement" },
-        { row = 1, text = "c", match_text = "c: chat" },
-        { row = 1, text = "q", match_text = "q: close" },
-    }
-    if has_multiple_projects then
-        labels[#labels + 1] = { row = 0, text = "↑/↓" }
-        labels[#labels + 1] = { row = 0, text = "j/k" }
-    end
-    if has_variants then
-        labels[#labels + 1] = { row = 0, text = "[/]" }
-    end
-    return labels
-end
-
----@param action Clodex.UiSelect.MultilineAction
----@return string?
-local function normal_action_key(action)
-    return action.key
-end
-
----@param action Clodex.UiSelect.MultilineAction
----@return string?
-local function insert_action_key(action)
-    return action.insert_key or action.key
-end
-
----@param buf integer
----@param action Clodex.UiSelect.MultilineAction
-local function apply_action_keymaps(self, buf, action)
-    local submit = function()
-        self:submit(action.value, { reset = RESET_AFTER_SUBMIT_ACTIONS[action.value] == true })
-    end
-    local normal_key = normal_action_key(action)
-    if normal_key and normal_key ~= "" then
-        vim.keymap.set("n", normal_key, submit, { buffer = buf, silent = true })
-    end
-    local insert_key = insert_action_key(action)
-    if insert_key and insert_key ~= "" then
-        vim.keymap.set("i", insert_key, submit, { buffer = buf, silent = true })
-    end
-end
-
----@param spans { start_col: integer, end_col: integer, index: integer }[]
----@param column integer
----@return integer?
-local function tab_index_at_column(spans, column)
-    local col = math.max((tonumber(column) or 1) - 1, 0)
-    for _, span in ipairs(spans) do
-        if col >= span.start_col and col < span.end_col then
-            return span.index
-        end
-    end
-end
 
 ---@class Clodex.PromptCreator
 ---@field app Clodex.App
@@ -376,6 +78,7 @@ end
 local Creator = {}
 Creator.__index = Creator
 
+-- Open block
 ---@param owner table
 ---@param block_field string
 ---@param win_field string
@@ -398,7 +101,7 @@ function Creator:open_block(owner, block_field, win_field, id, buf, win_opts)
         block:update()
         if self.state and self.state.kind then
             local prompt_hl = Prompt.title_group(self.state.kind)
-            update_winhl(win.win, { FloatBorder = prompt_hl, FloatTitle = prompt_hl })
+            Helpers.update_winhl(win.win, { FloatBorder = prompt_hl, FloatTitle = prompt_hl })
         end
     end
     owner[win_field] = win
@@ -406,12 +109,14 @@ function Creator:open_block(owner, block_field, win_field, id, buf, win_opts)
     return win, block
 end
 
+-- Create buffer
 ---@param preset Clodex.UiWin.BufferPreset
 ---@return integer
 function Creator:prompt_buffer(preset)
-    return prompt_buffer(preset)
+    return Helpers.prompt_buffer(preset)
 end
 
+-- Remove block
 ---@param id string
 function Creator:remove_block(id)
     if self.panel then
@@ -424,17 +129,7 @@ local LAYOUT_BUILDERS = {
     clipboard_preview = require("clodex.ui.prompt_creator.layouts.clipboard_preview"),
 }
 
----@param kind Clodex.PromptCategory
----@param variant? string
----@return string[]
-local function layout_draft_fields(kind, variant)
-    local layout_id = KindRegistry.layout_id(kind, variant)
-    if layout_id == "clipboard_preview" then
-        return { "title" }
-    end
-    return { "title", "details" }
-end
-
+-- New creator
 ---@param opts Clodex.PromptCreator.OpenOpts
 ---@return Clodex.PromptCreator
 function Creator.new(opts)
@@ -446,7 +141,7 @@ function Creator.new(opts)
     end
 
     local initial_kind = KindRegistry.is_valid(opts.initial_kind) and opts.initial_kind or "todo"
-    local projects = normalize_projects(opts.projects, opts.project)
+    local projects = Helpers.normalize_projects(opts.projects, opts.project)
     local project = opts.project
     local project_index = 1
     local active_project_root = opts.active_project_root or opts.project.root
@@ -471,7 +166,7 @@ function Creator.new(opts)
         projects = projects,
         project = project,
         project_index = project_index,
-        context = project_context(opts.context, project),
+        context = Helpers.project_context(opts.context, project),
         submit_actions = vim.deepcopy(opts.submit_actions or DEFAULT_SUBMIT_ACTIONS),
         mode = opts.mode or "new",
         lock_kind = opts.lock_kind == true,
@@ -481,7 +176,7 @@ function Creator.new(opts)
         variant_index = 1,
         state = {
             project = project,
-            context = project_context(opts.context, project),
+            context = Helpers.project_context(opts.context, project),
             kind = initial_kind,
             variant = nil,
             title = "",
@@ -492,10 +187,10 @@ function Creator.new(opts)
         drafts = DraftStore.new(),
         field_cache = {},
         field_history = {},
-        project_bg_buf = prompt_buffer("scratch"),
-        project_buf = prompt_buffer("scratch"),
-        kind_buf = prompt_buffer("scratch"),
-        footer_buf = prompt_buffer("scratch"),
+        project_bg_buf = Helpers.prompt_buffer("scratch"),
+        project_buf = Helpers.prompt_buffer("scratch"),
+        kind_buf = Helpers.prompt_buffer("scratch"),
+        footer_buf = Helpers.prompt_buffer("scratch"),
         is_closing = false,
         project_line_map = {},
         kind_tab_spans = {},
@@ -543,13 +238,17 @@ function Creator.new(opts)
     return self
 end
 
+-- Prime drafts
 ---@param initial_draft? table
 function Creator:prime_drafts(initial_draft)
     for _, kind in ipairs(self.kinds) do
         local default_mode = KindRegistry.default_mode(kind.id)
         for _, variant in ipairs(KindRegistry.modes(kind.id)) do
-            local draft = kind.id == self.state.kind and initial_draft and variant.id == default_mode and vim.deepcopy(initial_draft)
-                or (variant.id == default_mode and selection_seed(kind.id, self.context))
+            local draft = kind.id == self.state.kind
+                    and initial_draft
+                    and variant.id == default_mode
+                    and vim.deepcopy(initial_draft)
+                or (variant.id == default_mode and Helpers.selection_seed(kind.id, self.context))
                 or KindRegistry.default_draft(kind.id, variant.id)
             self.drafts:set(kind.id, variant.id, draft)
         end
@@ -557,29 +256,34 @@ function Creator:prime_drafts(initial_draft)
     self:sync_state_from_draft()
 end
 
+-- Current kind
 ---@return Clodex.PromptCategory
 function Creator:kind()
     return self.kinds[self.kind_index].id
 end
 
+-- Visible variants
 ---@return table[]
 function Creator:variants()
     local modes = KindRegistry.modes(self:kind())
     return #modes > 1 and modes or {}
 end
 
+-- Current variant
 ---@return string?
 function Creator:variant()
     local current = KindRegistry.modes(self:kind())[self.variant_index]
     return current and current.id or nil
 end
 
+-- Sync state
 function Creator:sync_state_from_draft()
     self.state.kind = self:kind()
     local kind_default_title = KindRegistry.get(self.state.kind).default_title or ""
     local variants = KindRegistry.modes(self.state.kind)
     self.variant_index = math.min(math.max(self.variant_index, 1), math.max(#variants, 1))
-    self.state.variant = variants[self.variant_index] and variants[self.variant_index].id or KindRegistry.default_mode(self.state.kind)
+    self.state.variant = variants[self.variant_index] and variants[self.variant_index].id
+        or KindRegistry.default_mode(self.state.kind)
 
     local default_draft = KindRegistry.default_draft(self.state.kind, self.state.variant)
     local draft = self:merge_cached_fields(
@@ -607,13 +311,7 @@ function Creator:sync_state_from_draft()
     end
 end
 
----@param kind Clodex.PromptCategory
----@param variant? string
----@return string[]
-function Creator:draft_fields_for(kind, variant)
-    return layout_draft_fields(kind, variant)
-end
-
+-- Cache fields
 ---@param fields string[]
 ---@param draft table
 function Creator:update_field_cache(fields, draft)
@@ -630,6 +328,7 @@ function Creator:update_field_cache(fields, draft)
     end
 end
 
+-- Merge fields
 ---@param kind Clodex.PromptCategory
 ---@param variant? string
 ---@param draft table
@@ -637,7 +336,7 @@ end
 ---@return table
 function Creator:merge_cached_fields(kind, variant, draft, default_draft)
     local merged = vim.deepcopy(draft or {})
-    for _, field in ipairs(self:draft_fields_for(kind, variant)) do
+    for _, field in ipairs(Helpers.layout_draft_fields(kind, variant)) do
         local cached = self.field_cache[field]
         local current = merged[field]
         local default_value = default_draft[field]
@@ -648,19 +347,22 @@ function Creator:merge_cached_fields(kind, variant, draft, default_draft)
     return merged
 end
 
+-- Prompt context
 ---@return Clodex.PromptContext.Capture?
 function Creator:prompt_context()
     return self.state.context or self.context
 end
 
+-- Refresh context
 ---@param buf integer
 function Creator:refresh_prompt_context(buf)
-    ui_select.refresh_prompt_context(buf, self:prompt_context())
+    Helpers.refresh_prompt_context(buf, self:prompt_context())
 end
 
+-- Trigger context
 ---@param buf integer
 function Creator:maybe_trigger_prompt_context_completion(buf)
-    local base = prompt_context_base_at_cursor(buf)
+    local base = Helpers.prompt_context_base_at_cursor(buf)
     if not base or vim.fn.pumvisible() == 1 or #ui_select.prompt_context_complete(0, base) == 0 then
         return
     end
@@ -671,6 +373,7 @@ function Creator:maybe_trigger_prompt_context_completion(buf)
     end)
 end
 
+-- Refresh contexts
 function Creator:refresh_layout_prompt_contexts()
     if not self.layout or not self.layout.buffers then
         return
@@ -682,6 +385,7 @@ function Creator:refresh_layout_prompt_contexts()
     end
 end
 
+-- Open completion
 ---@param buf integer
 function Creator:trigger_context_completion(buf)
     self:refresh_prompt_context(buf)
@@ -693,6 +397,7 @@ function Creator:trigger_context_completion(buf)
     end)
 end
 
+-- Attach context
 ---@param buf integer
 function Creator:attach_prompt_context(buf)
     if not vim.bo[buf].modifiable then
@@ -732,6 +437,7 @@ function Creator:attach_prompt_context(buf)
     end, { buffer = buf, silent = true, expr = true })
 end
 
+-- Save draft
 function Creator:save_current_draft()
     if not self.layout or not self.layout.get_draft then
         return
@@ -745,15 +451,20 @@ function Creator:save_current_draft()
         draft.preview_text = self.state.preview_text
     end
     self:update_field_cache(self.layout.draft_fields and self.layout:draft_fields() or {}, draft)
-    self.drafts:set(self.state.kind, self.state.variant, vim.tbl_extend("force", draft, {
-        image_path = self.state.image_path,
-        preview_text = self.state.preview_text,
-    }))
+    self.drafts:set(
+        self.state.kind,
+        self.state.variant,
+        vim.tbl_extend("force", draft, {
+            image_path = self.state.image_path,
+            preview_text = self.state.preview_text,
+        })
+    )
 end
 
+-- Clipboard text
 ---@return string?
 function Creator:read_clipboard_message()
-    return read_clipboard_message_register()
+    return Helpers.read_clipboard_message_register()
 end
 
 ---@return integer, integer
@@ -766,7 +477,10 @@ end
 function Creator:total_width()
     local width = self:editor_size()
     local base_width = self.state.image_path and LAYOUT.base_width_with_image or LAYOUT.base_width_without_image
-    return math.min(width - LAYOUT.creator_screen_margin_cols, base_width + self:project_panel_width() + LAYOUT.creator_panel_gap_cols)
+    return math.min(
+        width - LAYOUT.creator_screen_margin_cols,
+        base_width + self:project_panel_width() + LAYOUT.creator_panel_gap_cols
+    )
 end
 
 ---@return integer
@@ -803,7 +517,11 @@ function Creator:preview_width()
     if not self.state.image_path then
         return 0
     end
-    return clamp(math.floor(self:total_width() * LAYOUT.preview_width_ratio), LAYOUT.preview_min_width, LAYOUT.preview_max_width)
+    return Helpers.clamp(
+        math.floor(self:total_width() * LAYOUT.preview_width_ratio),
+        LAYOUT.preview_min_width,
+        LAYOUT.preview_max_width
+    )
 end
 
 ---@return integer
@@ -817,7 +535,7 @@ end
 function Creator:project_list_width()
     local width = LAYOUT.project_list_min_width
     for _, project in ipairs(self.projects) do
-        local details = project_details(self.app, project)
+        local details = Helpers.project_details(self.app, project)
         local icon = details and details.project_icon and (details.project_icon .. " ") or ""
         width = math.max(width, vim.fn.strdisplaywidth(icon .. project.name) + LAYOUT.project_name_padding)
     end
@@ -826,7 +544,10 @@ end
 
 ---@return integer
 function Creator:content_width()
-    return math.max(self:left_width() - self:project_panel_width() - LAYOUT.creator_panel_gap_cols, LAYOUT.content_min_width)
+    return math.max(
+        self:left_width() - self:project_panel_width() - LAYOUT.creator_panel_gap_cols,
+        LAYOUT.content_min_width
+    )
 end
 
 ---@return integer
@@ -858,7 +579,8 @@ end
 
 ---@return integer
 function Creator:title_row()
-    return #self:variants() > 0 and self:variant_row() + LAYOUT.title_gap_rows or self:kind_row() + LAYOUT.title_gap_rows
+    return #self:variants() > 0 and self:variant_row() + LAYOUT.title_gap_rows
+        or self:kind_row() + LAYOUT.title_gap_rows
 end
 
 ---@return integer
@@ -878,7 +600,11 @@ end
 
 ---@return integer
 function Creator:clipboard_note_height()
-    return clamp(self:body_height() - LAYOUT.clipboard_note_reserved_rows, LAYOUT.clipboard_note_min_height, LAYOUT.clipboard_note_max_height)
+    return Helpers.clamp(
+        self:body_height() - LAYOUT.clipboard_note_reserved_rows,
+        LAYOUT.clipboard_note_min_height,
+        LAYOUT.clipboard_note_max_height
+    )
 end
 
 ---@return integer
@@ -888,7 +614,10 @@ end
 
 ---@return integer
 function Creator:clipboard_preview_height()
-    return math.max(self:footer_row() - self:clipboard_preview_row() - LAYOUT.footer_gap_rows, LAYOUT.clipboard_preview_min_height)
+    return math.max(
+        self:footer_row() - self:clipboard_preview_row() - LAYOUT.footer_gap_rows,
+        LAYOUT.clipboard_preview_min_height
+    )
 end
 
 ---@return integer
@@ -941,7 +670,7 @@ function Creator:creator_frame_bounds()
     for _, win in ipairs(windows) do
         if win and win:valid() then
             local config = vim.api.nvim_win_get_config(win.win)
-            local border = window_border_padding(win)
+            local border = Helpers.window_border_padding(win)
             local frame_left = config.col - border
             local frame_top = config.row - border
             local frame_right = config.col + config.width + border
@@ -1002,7 +731,8 @@ function Creator:render_tab_line(buf, labels, active_index, total_width)
         local start_col = col
         local end_col = start_col + #text
         parts[#parts + 1] = text
-        marks[#marks + 1] = Extmark.inline(0, start_col, end_col, index == active_index and entry.active_hl_group or entry.hl_group)
+        marks[#marks + 1] =
+            Extmark.inline(0, start_col, end_col, index == active_index and entry.active_hl_group or entry.hl_group)
         spans[#spans + 1] = { start_col = start_col, end_col = end_col, index = index }
         col = end_col
     end
@@ -1084,6 +814,7 @@ function Creator:restore_focus_context(context)
     return true
 end
 
+-- Default focus
 function Creator:focus_default()
     if self.layout and self.layout.focus_default then
         self.layout:focus_default()
@@ -1095,6 +826,7 @@ function Creator:without_close_watchers(fn)
     return self.panel:without_close_watchers(fn)
 end
 
+-- Focus projects
 function Creator:focus_project_list()
     if not self.project_win or not self.project_win:valid() then
         return
@@ -1109,6 +841,7 @@ function Creator:focus_project_list()
     end)
 end
 
+-- Focus creator
 function Creator:focus_creator_default()
     if self:in_insert_mode() then
         vim.cmd.stopinsert()
@@ -1118,6 +851,7 @@ function Creator:focus_creator_default()
     end)
 end
 
+-- Focus last
 function Creator:focus_creator_last_slot()
     if self:in_insert_mode() then
         vim.cmd.stopinsert()
@@ -1131,6 +865,7 @@ function Creator:focus_creator_last_slot()
     end)
 end
 
+-- Reset inputs
 function Creator:reset_inputs()
     self.field_cache = {}
     self.field_history = {}
@@ -1216,7 +951,7 @@ function Creator:set_project_index(index)
     end
     self.project_index = index
     self.project = project
-    self.context = project_context(self.context, project)
+    self.context = Helpers.project_context(self.context, project)
     self.state.project = project
     self.state.context = self.context
     self:render_project_list()
@@ -1230,17 +965,23 @@ function Creator:move_project(delta)
     end
 end
 
+-- Render projects
 function Creator:render_project_list()
     local lines = {} ---@type string[]
     local marks = {} ---@type Clodex.Extmark[]
     self.project_line_map = {}
     for index, project in ipairs(self.projects) do
-        local details = project_details(self.app, project)
+        local details = Helpers.project_details(self.app, project)
         local icon = details and details.project_icon and (details.project_icon .. " ") or ""
         local line = " " .. icon .. project.name
         lines[#lines + 1] = line
         self.project_line_map[#lines] = index
-        marks[#marks + 1] = Extmark.inline(#lines - 1, 0, #line, index == self.project_index and "ClodexPromptSourceTabActive" or "ClodexPromptSourceTab")
+        marks[#marks + 1] = Extmark.inline(
+            #lines - 1,
+            0,
+            #line,
+            index == self.project_index and "ClodexPromptSourceTabActive" or "ClodexPromptSourceTab"
+        )
     end
 
     vim.bo[self.project_buf].modifiable = true
@@ -1255,6 +996,7 @@ function Creator:render_project_list()
     end
 end
 
+-- Render background
 function Creator:render_project_background()
     local lines = {}
     local line = string.rep(" ", self:project_background_width())
@@ -1266,6 +1008,7 @@ function Creator:render_project_background()
     vim.bo[self.project_bg_buf].modifiable = false
 end
 
+-- Project keymaps
 function Creator:apply_project_keymaps()
     self:apply_mouse_keymap(self.project_buf)
     vim.keymap.set({ "n", "i" }, "<Right>", function()
@@ -1297,7 +1040,7 @@ function Creator:apply_project_keymaps()
         self:move_project(-1)
     end, { buffer = self.project_buf, silent = true })
     for _, action in ipairs(self.submit_actions) do
-        apply_action_keymaps(self, self.project_buf, action)
+        Helpers.apply_action_keymaps(self, self.project_buf, action, RESET_AFTER_SUBMIT_ACTIONS)
     end
     vim.keymap.set("n", "q", function()
         self:close()
@@ -1324,6 +1067,7 @@ function Creator:apply_first_slot_keymaps(buf)
     end, { buffer = buf, silent = true, expr = true })
 end
 
+-- Render kinds
 function Creator:render_kind_tabs()
     local labels = {}
     for _, kind in ipairs(self.kinds) do
@@ -1336,6 +1080,7 @@ function Creator:render_kind_tabs()
     self.kind_tab_spans = self:render_tab_line(self.kind_buf, labels, self.kind_index, self:content_width())
 end
 
+-- Render variants
 function Creator:render_variant_tabs()
     local variants = self:variants()
     if #variants == 0 then
@@ -1347,9 +1092,9 @@ function Creator:render_variant_tabs()
         return
     end
 
-    self.variant_buf = self.variant_buf or prompt_buffer("scratch")
+    self.variant_buf = self.variant_buf or Helpers.prompt_buffer("scratch")
     if not vim.b[self.variant_buf].clodex_prompt_keymaps_applied then
-        self:apply_shell_keymaps(self.variant_buf)
+        self:apply_common_keymaps(self.variant_buf)
         vim.b[self.variant_buf].clodex_prompt_keymaps_applied = true
     end
     local labels = {}
@@ -1385,15 +1130,9 @@ function Creator:render_footer(insert_mode)
     insert_mode = insert_mode == nil and self:in_insert_mode() or insert_mode
     local has_variants = #self:variants() > 0
     local has_multiple_projects = #self.projects > 1
-    local lines = footer_lines(insert_mode, has_variants, has_multiple_projects)
-    local marks = {} ---@type Clodex.Extmark[]
     local key_hl = Prompt.title_group(self.state.kind)
-    for _, key in ipairs(footer_key_labels(insert_mode, has_variants, has_multiple_projects)) do
-        local start_col = lines[key.row + 1]:find(key.match_text or key.text, 1, true)
-        if start_col then
-            marks[#marks + 1] = Extmark.inline(key.row, start_col - 1, start_col - 1 + #key.text, key_hl)
-        end
-    end
+    local lines, marks =
+        Helpers.render_footer_rows(Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects), key_hl)
 
     vim.bo[self.footer_buf].modifiable = true
     vim.api.nvim_buf_set_lines(self.footer_buf, 0, -1, false, lines)
@@ -1404,6 +1143,7 @@ function Creator:render_footer(insert_mode)
     end
 end
 
+-- Apply theme
 function Creator:apply_prompt_theme()
     local prompt_hl = Prompt.title_group(self.state.kind)
     self.panel:set_accent(prompt_hl)
@@ -1419,14 +1159,14 @@ function Creator:apply_prompt_theme()
     }
     for _, win in ipairs(windows) do
         if win and win.valid and win:valid() then
-            update_winhl(win.win, { FloatBorder = prompt_hl, FloatTitle = prompt_hl })
+            Helpers.update_winhl(win.win, { FloatBorder = prompt_hl, FloatTitle = prompt_hl })
         end
     end
 end
 
 ---@param column integer
 function Creator:activate_kind_tab_at(column)
-    local index = tab_index_at_column(self.kind_tab_spans, column)
+    local index = Helpers.tab_index_at_column(self.kind_tab_spans, column)
     if index and index ~= self.kind_index then
         self:switch_kind(index - self.kind_index)
     end
@@ -1434,21 +1174,13 @@ end
 
 ---@param column integer
 function Creator:activate_variant_tab_at(column)
-    local index = tab_index_at_column(self.variant_tab_spans, column)
+    local index = Helpers.tab_index_at_column(self.variant_tab_spans, column)
     if index and index ~= self.variant_index then
         self:switch_variant(index - self.variant_index)
     end
 end
 
-function Creator:watch_window(win)
-    self.panel:watch_window(win)
-end
-
-
-function Creator:clear_window_watchers()
-    self.panel:clear_window_watchers()
-end
-
+-- Ensure windows
 function Creator:ensure_shell_windows()
     self:render_project_background()
     self.project_bg_win = self.panel.background and self.panel.background:open() or nil
@@ -1480,7 +1212,7 @@ function Creator:ensure_shell_windows()
     end
     if self.project_win and self.project_win:valid() then
         vim.wo[self.project_win.win].cursorline = true
-        hide_window_cursor(self.project_win.win, "ClodexPromptEditorNormal")
+        Helpers.hide_window_cursor(self.project_win.win, "ClodexPromptEditorNormal")
     end
     self.kind_win = self:open_block(self, "kind_block", "kind_win", "kind_tabs", self.kind_buf, {
         enter = false,
@@ -1500,7 +1232,7 @@ function Creator:ensure_shell_windows()
         theme = "prompt_footer",
     })
     if not vim.b[self.kind_buf].clodex_prompt_keymaps_applied then
-        self:apply_shell_keymaps(self.kind_buf)
+        self:apply_common_keymaps(self.kind_buf)
         vim.b[self.kind_buf].clodex_prompt_keymaps_applied = true
     end
     self.footer_win = self:open_block(self, "footer_block", "footer_win", "footer", self.footer_buf, {
@@ -1528,6 +1260,18 @@ function Creator:ensure_shell_windows()
     end
 end
 
+-- Preview fallback
+function Creator:render_preview_fallback()
+    if not self.preview_buf or not vim.api.nvim_buf_is_valid(self.preview_buf) then
+        return
+    end
+    vim.bo[self.preview_buf].modifiable = true
+    vim.bo[self.preview_buf].filetype = "markdown"
+    vim.api.nvim_buf_set_lines(self.preview_buf, 0, -1, false, Helpers.preview_fallback_lines(self.state.image_path))
+    vim.bo[self.preview_buf].modifiable = false
+end
+
+-- Render preview
 function Creator:render_preview()
     if self.preview_placement and self.preview_placement.close then
         self.preview_placement:close()
@@ -1541,7 +1285,7 @@ function Creator:render_preview()
         return
     end
 
-    self.preview_buf = self.preview_buf or prompt_buffer("scratch")
+    self.preview_buf = self.preview_buf or Helpers.prompt_buffer("scratch")
     if self.preview_block and self.preview_block:is_valid() then
         self.preview_win = self.preview_block.win
     else
@@ -1572,23 +1316,23 @@ function Creator:render_preview()
         vim.b[self.preview_buf].clodex_prompt_keymaps_applied = true
     end
 
-    local function render_fallback()
-        if not self.preview_buf or not vim.api.nvim_buf_is_valid(self.preview_buf) then
-            return
-        end
-        vim.bo[self.preview_buf].modifiable = true
-        vim.bo[self.preview_buf].filetype = "markdown"
-        vim.api.nvim_buf_set_lines(self.preview_buf, 0, -1, false, preview_fallback_lines(self.state.image_path))
-        vim.bo[self.preview_buf].modifiable = false
-    end
-
     local ok, Snacks = pcall(require, "snacks")
-    if ok and Snacks.image and Snacks.image.supports and Snacks.image.supports(self.state.image_path)
-        and Snacks.image.placement and Snacks.image.placement.new then
+    if
+        ok
+        and Snacks.image
+        and Snacks.image.supports
+        and Snacks.image.supports(self.state.image_path)
+        and Snacks.image.placement
+        and Snacks.image.placement.new
+    then
         local placement = Snacks.image.placement.new(self.preview_buf, self.state.image_path, self:preview_image_opts())
         self.preview_placement = placement
         vim.defer_fn(function()
-            if self.preview_placement ~= placement or not self.preview_buf or not vim.api.nvim_buf_is_valid(self.preview_buf) then
+            if
+                self.preview_placement ~= placement
+                or not self.preview_buf
+                or not vim.api.nvim_buf_is_valid(self.preview_buf)
+            then
                 return
             end
             if placement.ready and placement:ready() then
@@ -1600,11 +1344,11 @@ function Creator:render_preview()
             if self.preview_placement == placement then
                 self.preview_placement = nil
             end
-            render_fallback()
+            self:render_preview_fallback()
         end, 1500)
         return
     end
-    render_fallback()
+    self:render_preview_fallback()
 end
 
 ---@param focus_context? { area: string, slot?: string, insert: boolean }
@@ -1618,17 +1362,23 @@ function Creator:activate_layout(focus_context)
     local builder = LAYOUT_BUILDERS[layout_id] or LAYOUT_BUILDERS.composer
     self.layout = builder.new(self)
     self.layout:open()
-    self.layout:set_draft(vim.tbl_extend("force", self:merge_cached_fields(
-        self.state.kind,
-        self.state.variant,
-        self.drafts:get(self.state.kind, self.state.variant, self.state),
-        KindRegistry.default_draft(self.state.kind, self.state.variant)
-    ), {
-        title = self.state.title,
-        details = self.state.details,
-        image_path = self.state.image_path,
-        preview_text = self.state.preview_text,
-    }))
+    self.layout:set_draft(
+        vim.tbl_extend(
+            "force",
+            self:merge_cached_fields(
+                self.state.kind,
+                self.state.variant,
+                self.drafts:get(self.state.kind, self.state.variant, self.state),
+                KindRegistry.default_draft(self.state.kind, self.state.variant)
+            ),
+            {
+                title = self.state.title,
+                details = self.state.details,
+                image_path = self.state.image_path,
+                preview_text = self.state.preview_text,
+            }
+        )
+    )
     self:refresh_layout_prompt_contexts()
     self:render_preview()
     if not self:restore_focus_context(focus_context) then
@@ -1636,6 +1386,7 @@ function Creator:activate_layout(focus_context)
     end
 end
 
+-- Refresh creator
 function Creator:refresh()
     self:ensure_shell_windows()
     self:render_project_list()
@@ -1704,11 +1455,6 @@ function Creator:switch_variant(delta)
 end
 
 ---@param buf integer
-function Creator:apply_shell_keymaps(buf)
-    self:apply_common_keymaps(buf)
-end
-
----@param buf integer
 function Creator:apply_common_keymaps(buf)
     self:apply_mouse_keymap(buf)
     vim.keymap.set("n", "<Right>", function()
@@ -1736,7 +1482,7 @@ function Creator:apply_common_keymaps(buf)
         self:switch_variant(-1)
     end, { buffer = buf, silent = true })
     for _, action in ipairs(self.submit_actions) do
-        apply_action_keymaps(self, buf, action)
+        Helpers.apply_action_keymaps(self, buf, action, RESET_AFTER_SUBMIT_ACTIONS)
     end
     vim.keymap.set({ "n", "i" }, "<C-v>", function()
         self:replace_clipboard_image(false)
@@ -1798,7 +1544,7 @@ function Creator:close(clear_layout)
         closed_layout:close()
     end
     self.panel:destroy()
-    close_buffer_windows(lingering_buffers)
+    Helpers.close_buffer_windows(lingering_buffers)
     self.project_bg_win = nil
     self.project_win = nil
     self.kind_win = nil

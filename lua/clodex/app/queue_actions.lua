@@ -132,18 +132,13 @@ end
 ---@param item_id string
 ---@return Clodex.QueueItem?
 function QueueActions:refresh_queue_item_instructions(project, item_id)
-    local queue_name, _, item = self.app.queue:find_item(project, item_id)
+    local _, _, item = self.app.queue:find_item(project, item_id)
     if not item then
         return
     end
 
-    local instructions = false
-    if queue_name == "queued" then
-        instructions = self.app.execution:queue_item_instructions(item)
-    end
-
     return self.app.queue:update_item(project, item_id, {
-        execution_instructions = instructions,
+        execution_instructions = false,
     })
 end
 
@@ -180,38 +175,6 @@ end
 
 ---@param project Clodex.Project
 ---@param item_id string
----@return Clodex.QueueItem?
-local function move_item_to_implemented(app, project, item_id)
-    if app.queue:advance(project, item_id) ~= "implemented" then
-        return
-    end
-
-    local queue_name, _, implemented_item = app.queue:find_item(project, item_id)
-    if queue_name ~= "implemented" or not implemented_item then
-        return
-    end
-
-    return implemented_item
-end
-
----@param app Clodex.App
----@param project Clodex.Project
----@param item_id string
-local function move_item_back_to_queued(app, project, item_id)
-    local queue_name, _, implemented_item = app.queue:find_item(project, item_id)
-    if queue_name ~= "implemented" or not implemented_item then
-        return
-    end
-
-    app.queue:take_item(project, item_id, "implemented")
-    app.queue:put_item(project, "queued", implemented_item, {
-        clear_history = true,
-        execution_instructions = app.execution:queue_item_instructions(implemented_item),
-    })
-end
-
----@param project Clodex.Project
----@param item_id string
 ---@param mode "interactive"|"exec"
 ---@return boolean
 function QueueActions:start_queued_item(project, item_id, mode)
@@ -222,18 +185,7 @@ function QueueActions:start_queued_item(project, item_id, mode)
     end
 
     if mode == "exec" then
-        local implemented_item = move_item_to_implemented(self.app, project, item_id)
-        if not implemented_item then
-            notify.warn("Could not move the queued item to implemented")
-            return false
-        end
-
-        local started = self:dispatch_item_direct(project, implemented_item)
-        if not started then
-            move_item_back_to_queued(self.app, project, item_id)
-            return false
-        end
-        return true
+        return self:dispatch_item_direct(project, queued_item)
     end
 
     local started = self:dispatch_item(project, queued_item)
@@ -243,8 +195,8 @@ function QueueActions:start_queued_item(project, item_id, mode)
     return false
 end
 
---- Checks project-local queue files for external updates.
---- This keeps the editor in sync when queued prompts complete by mutating `.clodex` JSON files directly.
+--- Checks configured queue workspace files for external updates.
+--- This keeps the editor in sync when queued prompts complete through the MCP helper.
 function QueueActions:poll_workspace_updates()
     local changed = false
     for _, project in ipairs(self.app.registry:list()) do

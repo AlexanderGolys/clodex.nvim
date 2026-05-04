@@ -1,4 +1,3 @@
-local Prompt = require("clodex.prompt")
 local fs = require("clodex.util.fs")
 
 --- Generates and persists prompt-instruction payloads used by the Codex execution pipeline.
@@ -78,48 +77,12 @@ end
 ---@field image_path? string
 
 ---@param item Clodex.Workspace.ExecutionItem
----@param _config Clodex.Config.Values
----@return string[]
-local function completion_instruction_lines(item, _config)
-    local plan_only = Prompt.categories.get(item.kind).id == "idea"
-    local lines = {
-        "Use the clodex MCP task loop for queued work in this repository.",
-        "Start by calling `get_task` for this repository root to claim or resume the active queued task. The returned task id and `work_prompt` are authoritative; if another item is already active, they may differ from the item that launched this prompt.",
-        plan_only
-                and "Implement the returned `work_prompt` by generating follow-up prompts only. Do not change code or create a git commit for this kind; then call `close_task` with `success`, `comment`, and `commit_id = \"\"`."
-            or "Implement the returned `work_prompt`, create the required git commit for a successful result, then call `close_task` with `success`, `comment`, and `commit_id`.",
-        "If the task is blocked or unfinished, call `close_task` with `success = false` and use `comment` as the failure note that should be appended before retrying.",
-        "Keep using the same loop until `get_task` or `close_task` returns `status = done`.",
-    }
-    if item.completion_target == "history" then
-        lines[#lines + 1] = "This task should close directly to `history` when completed successfully."
-    end
-    return lines
-end
-
----@param item Clodex.Workspace.ExecutionItem
----@return string[]
-local function prompt_prefix_lines(item)
-    local lines = {} ---@type string[]
-    if item.image_path and fs.is_file(item.image_path) then
-        lines[#lines + 1] = ("Attached clipboard image: `%s`"):format(item.image_path)
-        lines[#lines + 1] = "Use that local image file as part of the implementation context."
-        lines[#lines + 1] = ""
-    end
-    lines[#lines + 1] = ""
-    return lines
-end
-
----@param item Clodex.Workspace.ExecutionItem
 ---@return string
 function Execution:queue_item_instructions(item)
-    local lines = completion_instruction_lines(item, self.config)
     if self:uses_prompt_skill() then
-        lines[#lines + 1] = ("$%s"):format(skill_name(self.config))
-    else
-        table.insert(lines, 1, "$prompt")
+        return ("$%s"):format(skill_name(self.config))
     end
-    return table.concat(lines, "\n")
+    return item.prompt or ""
 end
 
 ---@param config Clodex.Config.Values
@@ -167,32 +130,19 @@ end
 ---@param project Clodex.Project
 ---@return string
 function Execution:project_execution_dir(project)
-    return fs.join(project.root, ".clodex", "prompt-executions")
+    return execution_dir(self.config, project.root)
 end
 
 ---@param _project Clodex.Project
 ---@param item Clodex.Workspace.ExecutionItem
 ---@return string
 function Execution:dispatch_prompt(_project, item)
-    if not item.prompt or vim.trim(item.prompt) == "" then
-        return ""
-    end
-
     if self:uses_prompt_skill() then
         self:sync_prompt_skill()
+        return ("$%s"):format(skill_name(self.config))
     end
 
-    local prompt_lines = prompt_prefix_lines(item)
-    prompt_lines[#prompt_lines + 1] = item.prompt
-    local execution_instructions = trim(item.execution_instructions)
-    if execution_instructions == "" then
-        execution_instructions = self:queue_item_instructions(item)
-    end
-
-    local lines = vim.deepcopy(prompt_lines)
-    lines[#lines + 1] = ""
-    vim.list_extend(lines, vim.split(execution_instructions, "\n", { plain = true }))
-    return table.concat(lines, "\n")
+    return vim.trim(item.prompt or "")
 end
 
 return Execution

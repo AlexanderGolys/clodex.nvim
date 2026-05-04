@@ -44,6 +44,16 @@ end
 
 local ORDER = { "planned", "queued", "implemented", "history" }
 
+---@param project_root string
+---@return string
+local function workspace_id(project_root)
+    local hash = 5381
+    for index = 1, #project_root do
+        hash = (hash * 33 + project_root:byte(index)) % 4294967296
+    end
+    return ("%08x"):format(hash)
+end
+
 ---@param root_dir? string
 ---@return Clodex.Workspace.Queue
 function Queue.new(root_dir)
@@ -72,12 +82,42 @@ local function insert_queue_item(items, queue_name, item)
     table.insert(items, 1, item)
 end
 
+---@param root_dir string
+---@param project_root string
+---@return string
+local function workspace_dir(root_dir, project_root)
+    root_dir = fs.normalize(root_dir or ".clodex")
+    if vim.startswith(root_dir, "/") or root_dir:match("^%a:[/\\]") ~= nil then
+        return fs.join(root_dir, workspace_id(fs.normalize(project_root)))
+    end
+    return fs.join(project_root, root_dir)
+end
+
+---@param root_dir string
+---@return boolean
+local function uses_legacy_project_workspace(root_dir)
+    return fs.normalize(root_dir or ".clodex") == ".clodex"
+end
+
+---@param root_dir string
+---@param project_root string
+---@return boolean
+local function has_workspace_queue(root_dir, project_root)
+    for _, queue_name in ipairs(ORDER) do
+        if fs.is_file(fs.join(workspace_dir(root_dir, project_root), queue_name .. ".json")) then
+            return true
+        end
+    end
+    return false
+end
+
 --- Returns the path to a queue file for a project.
+---@param root_dir string
 ---@param project_root string
 ---@param queue_name string
 ---@return string
-local function queue_file_path(project_root, queue_name)
-    return fs.join(project_root, ".clodex", queue_name .. ".json")
+local function queue_file_path(root_dir, project_root, queue_name)
+    return fs.join(workspace_dir(root_dir, project_root), queue_name .. ".json")
 end
 
 --- Returns the old (legacy) workspace file path.
@@ -86,6 +126,13 @@ end
 local function legacy_workspace_path(project_root)
     local id = vim.fn.sha256(fs.normalize(project_root)):sub(1, 16)
     return fs.join(project_root, ".clodex", "workspaces", id .. ".json")
+end
+
+---@param project_root string
+---@param queue_name string
+---@return string
+local function legacy_queue_file_path(project_root, queue_name)
+    return fs.join(project_root, ".clodex", queue_name .. ".json")
 end
 
 ---@param item any
@@ -149,8 +196,8 @@ end
 ---@param project_root string
 ---@param queue_name string
 ---@return Clodex.QueueItem[]
-local function load_queue_file(project_root, queue_name)
-    local path = queue_file_path(project_root, queue_name)
+local function load_queue_file(root_dir, project_root, queue_name)
+    local path = queue_file_path(root_dir, project_root, queue_name)
     local data = fs.read_json(path, nil)
     if type(data) ~= "table" then
         return {}
@@ -169,14 +216,15 @@ end
 ---@param project_root string
 ---@param queue_name string
 ---@param items Clodex.QueueItem[]
-local function save_queue_file(project_root, queue_name, items)
-    local path = queue_file_path(project_root, queue_name)
+local function save_queue_file(root_dir, project_root, queue_name, items)
+    local path = queue_file_path(root_dir, project_root, queue_name)
     fs.write_json(path, items)
 end
 
 --- Migrates from old workspace format to new separate files.
+---@param root_dir string
 ---@param project_root string
-local function migrate_from_legacy(project_root)
+local function migrate_from_legacy(root_dir, project_root)
     local legacy_path = legacy_workspace_path(project_root)
     if not fs.is_file(legacy_path) then
         return
@@ -194,11 +242,42 @@ local function migrate_from_legacy(project_root)
             for _, item in ipairs(items) do
                 normalized[#normalized + 1] = normalize_item(item)
             end
-            save_queue_file(project_root, queue_name, normalized)
+            save_queue_file(root_dir, project_root, queue_name, normalized)
         end
     end
 
     fs.remove(legacy_path)
+end
+
+---@param root_dir string
+---@param project_root string
+local function migrate_project_local_queue_files(root_dir, project_root)
+    if uses_legacy_project_workspace(root_dir) or has_workspace_queue(root_dir, project_root) then
+        return
+    end
+
+    local migrated = false
+    for _, queue_name in ipairs(ORDER) do
+        local path = legacy_queue_file_path(project_root, queue_name)
+        if fs.is_file(path) then
+            local items = load_queue_file(".clodex", project_root, queue_name)
+            save_queue_file(root_dir, project_root, queue_name, items)
+            migrated = true
+        end
+    end
+
+    if migrated then
+        for _, queue_name in ipairs(ORDER) do
+            fs.remove(legacy_queue_file_path(project_root, queue_name))
+        end
+    end
+end
+
+---@param self Clodex.Workspace.Queue
+---@param project_root string
+local function migrate_workspace(self, project_root)
+    migrate_project_local_queue_files(self.root_dir, project_root)
+    migrate_from_legacy(self.root_dir, project_root)
 end
 
 --- Returns a summary of all queues for a project.
@@ -235,13 +314,13 @@ end
 ---@param project Clodex.Project
 ---@return table<Clodex.QueueName, Clodex.QueueItem[]>
 function Queue:queues(project)
-    migrate_from_legacy(project.root)
+    migrate_workspace(self, project.root)
 
     return {
-        planned = load_queue_file(project.root, "planned"),
-        queued = load_queue_file(project.root, "queued"),
-        implemented = load_queue_file(project.root, "implemented"),
-        history = load_queue_file(project.root, "history"),
+        planned = load_queue_file(self.root_dir, project.root, "planned"),
+        queued = load_queue_file(self.root_dir, project.root, "queued"),
+        implemented = load_queue_file(self.root_dir, project.root, "implemented"),
+        history = load_queue_file(self.root_dir, project.root, "history"),
     }
 end
 
@@ -252,14 +331,14 @@ function Queue:queue(project, queue_name)
     if not KNOWN_QUEUES[queue_name] then
         return {}
     end
-    migrate_from_legacy(project.root)
-    return load_queue_file(project.root, queue_name)
+    migrate_workspace(self, project.root)
+    return load_queue_file(self.root_dir, project.root, queue_name)
 end
 
 ---@param project Clodex.Project
 ---@return string
 function Queue:workspace_path(project)
-    return fs.join(project.root, ".clodex")
+    return workspace_dir(self.root_dir, project.root)
 end
 
 ---@param project Clodex.Project
@@ -267,7 +346,7 @@ end
 function Queue:workspace_revision(project)
     local latest ---@type integer?
     for _, queue_name in ipairs(ORDER) do
-        local path = queue_file_path(project.root, queue_name)
+        local path = queue_file_path(self.root_dir, project.root, queue_name)
         local stat = fs.stat(path)
         if stat and stat.mtime and stat.mtime.sec then
             if not latest or stat.mtime.sec > latest then
@@ -317,7 +396,7 @@ function Queue:add_todo(project, spec)
 
     local items = self:queue(project, queue_name)
     insert_queue_item(items, queue_name, item)
-    save_queue_file(project.root, queue_name, items)
+    save_queue_file(self.root_dir, project.root, queue_name, items)
     return item
 end
 
@@ -332,7 +411,7 @@ function Queue:take_item(project, item_id, expected_queue)
         for index, item in ipairs(items) do
             if item.id == item_id then
                 table.remove(items, index)
-                save_queue_file(project.root, queue_name, items)
+                save_queue_file(self.root_dir, project.root, queue_name, items)
                 return item, queue_name
             end
         end
@@ -375,7 +454,7 @@ function Queue:put_item(project, queue_name, item, opts)
     sanitize_history_metadata(moved)
 
     insert_queue_item(items, queue_name, moved)
-    save_queue_file(project.root, queue_name, items)
+    save_queue_file(self.root_dir, project.root, queue_name, items)
     return moved
 end
 
@@ -442,7 +521,7 @@ function Queue:update_item(project, item_id, attrs)
                 end
                 sanitize_history_metadata(item)
                 item.updated_at = iso_utc_now()
-                save_queue_file(project.root, queue_name, items)
+                save_queue_file(self.root_dir, project.root, queue_name, items)
                 return vim.deepcopy(item)
             end
         end
@@ -458,7 +537,7 @@ function Queue:delete_item(project, item_id)
         for index, item in ipairs(items) do
             if item.id == item_id then
                 table.remove(items, index)
-                save_queue_file(project.root, queue_name, items)
+                save_queue_file(self.root_dir, project.root, queue_name, items)
                 return true
             end
         end

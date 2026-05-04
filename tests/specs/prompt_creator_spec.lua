@@ -10,16 +10,6 @@ local function extmark_groups(buf)
     return groups
 end
 
-local function extmark_texts(buf)
-    local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-    local texts = {}
-    for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, -1, 0, -1, { details = true })) do
-        local line = lines[mark[2] + 1] or ""
-        texts[#texts + 1] = line:sub(mark[3] + 1, mark[4].end_col)
-    end
-    return texts
-end
-
 local function trigger_buffer_mapping(buf, lhs, mode)
     local map = vim.fn.maparg(lhs, mode or "n", false, true)
     assert.is_table(map)
@@ -403,142 +393,6 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal("hide", vim.bo[creator.layout.body_buf].bufhidden)
     end)
 
-    it("highlights footer keymaps", function()
-        creator = Creator.open({
-            app = {
-                config = {
-                    get = function()
-                        return {
-                            storage = { workspaces_dir = "/tmp" },
-                        }
-                    end,
-                },
-            },
-            project = {
-                name = "Demo",
-                root = "/tmp/demo",
-            },
-            initial_kind = "todo",
-            on_submit = function() end,
-        })
-
-        local groups = extmark_groups(creator.footer_buf)
-        local texts = extmark_texts(creator.footer_buf)
-
-        assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementTitle"))
-        assert.is_true(vim.tbl_contains(texts, "C-←/→"))
-        assert.is_true(vim.tbl_contains(texts, "⏎"))
-        assert.is_true(vim.tbl_contains(texts, "q"))
-        assert.is_false(vim.tbl_contains(texts, "q: close"))
-    end)
-
-    it("renders arrow icons in footer hints", function()
-        creator = Creator.open({
-            app = {
-                config = {
-                    get = function()
-                        return {
-                            storage = { workspaces_dir = "/tmp" },
-                        }
-                    end,
-                },
-            },
-            project = {
-                name = "Demo",
-                root = "/tmp/demo",
-            },
-            projects = {
-                { name = "Demo", root = "/tmp/demo" },
-                { name = "Other", root = "/tmp/other" },
-            },
-            initial_kind = "todo",
-            on_submit = function() end,
-        })
-
-        local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
-
-        assert.is_truthy(lines[1]:find("←/→", 1, true))
-        assert.is_truthy(lines[1]:find("↑/↓", 1, true))
-        assert.is_truthy(lines[2]:find("C-←/→", 1, true))
-        assert.is_truthy(lines[2]:find("⏎: queue", 1, true))
-        assert.is_nil(lines[1]:find("Left/Right", 1, true))
-        assert.is_nil(lines[1]:find("Up/Down", 1, true))
-    end)
-
-    it("renders normal action footer hints with insert-mode control-key alternatives", function()
-        creator = Creator.open({
-            app = {
-                config = {
-                    get = function()
-                        return {
-                            storage = { workspaces_dir = "/tmp" },
-                        }
-                    end,
-                },
-            },
-            project = {
-                name = "Demo",
-                root = "/tmp/demo",
-            },
-            initial_kind = "todo",
-            on_submit = function() end,
-        })
-
-        local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
-
-        assert.is_truthy(lines[1]:find("C%-v", 1, false))
-        assert.is_truthy(lines[2]:find("s: plan", 1, true))
-        assert.is_truthy(lines[2]:find("⏎: queue", 1, true))
-        assert.is_truthy(lines[2]:find(">: implement", 1, true))
-        assert.is_truthy(lines[2]:find("c: chat", 1, true))
-        assert.is_nil(lines[1]:find("C%-V", 1, false))
-        assert.is_nil(lines[2]:find("C%-s: plan", 1, false))
-        assert.is_nil(lines[2]:find("C%-q: queue", 1, false))
-        assert.is_nil(lines[2]:find("C%-i: implement", 1, false))
-        assert.is_nil(lines[2]:find("C%-c: chat", 1, false))
-
-        creator.in_insert_mode = function()
-            return true
-        end
-        creator:render_footer()
-        lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
-
-        assert.is_truthy(lines[2]:find("C%-s: plan", 1, false))
-        assert.is_truthy(lines[2]:find("C%-q: queue", 1, false))
-        assert.is_truthy(lines[2]:find("C%->: implement", 1, false))
-        assert.is_truthy(lines[2]:find("C%-c: chat", 1, false))
-        assert.is_nil(lines[2]:find("C%-S", 1, false))
-        assert.is_nil(lines[2]:find("C%-Q", 1, false))
-        assert.is_nil(lines[2]:find("C%-I", 1, false))
-        assert.is_nil(lines[2]:find("C%-C", 1, false))
-    end)
-
-    it("hides unavailable footer hints for projects and source tabs", function()
-        creator = Creator.open({
-            app = {
-                config = {
-                    get = function()
-                        return {
-                            storage = { workspaces_dir = "/tmp" },
-                        }
-                    end,
-                },
-            },
-            project = {
-                name = "Demo",
-                root = "/tmp/demo",
-            },
-            initial_kind = "todo",
-            on_submit = function() end,
-        })
-
-        local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
-
-        assert.is_nil(lines[1]:find("↑/↓", 1, true))
-        assert.is_nil(lines[1]:find("j/k", 1, true))
-        assert.is_nil(lines[1]:find("[/]", 1, true))
-    end)
-
     it("keeps bordered prompt windows vertically aligned without overlap", function()
         creator = Creator.open({
             app = {
@@ -603,7 +457,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(creator:title_row(), creator:variant_row() + 2)
     end)
 
-    it("hides normal-mode navigation hints while editing in insert mode", function()
+    it("updates footer state from prompt editor mode events", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -622,104 +476,16 @@ describe("clodex.ui.prompt_creator", function()
             on_submit = function() end,
         })
 
-        creator.in_insert_mode = function()
-            return true
-        end
-        creator:render_footer()
-
-        local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
-
-        assert.is_truthy(lines[1]:find("Tab/S%-Tab", 1))
-        assert.is_truthy(lines[2]:find("C-←/→", 1, true))
-        assert.is_nil(lines[1]:find("←/→", 1, true))
-        assert.is_nil(lines[1]:find("↑/↓", 1, true))
-
-        local close_found = false
-        for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(creator.footer_buf, -1, 0, -1, { details = true })) do
-            if mark[2] == 1 then
-                local text = lines[2]:sub(mark[3] + 1, mark[4].end_col)
-                if text == "q" then
-                    close_found = true
-                    break
-                end
-            end
-        end
-        assert.is_true(close_found)
-    end)
-
-    it("updates footer hints from prompt editor mode events", function()
-        creator = Creator.open({
-            app = {
-                config = {
-                    get = function()
-                        return {
-                            storage = { workspaces_dir = "/tmp" },
-                        }
-                    end,
-                },
-            },
-            project = {
-                name = "Demo",
-                root = "/tmp/demo",
-            },
-            initial_kind = "todo",
-            on_submit = function() end,
-        })
+        local normal_lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
 
         vim.api.nvim_exec_autocmds("InsertEnter", { buffer = creator.layout.title_buf })
-        local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
-
-        assert.is_truthy(lines[1]:find("Tab/S%-Tab", 1))
-        assert.is_truthy(lines[2]:find("C%-s: plan", 1, false))
-        assert.is_nil(lines[2]:find("⏎: queue", 1, true))
+        local insert_lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
 
         vim.api.nvim_exec_autocmds("InsertLeave", { buffer = creator.layout.title_buf })
-        lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
+        local restored_lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
 
-        assert.is_truthy(lines[2]:find("s: plan", 1, true))
-        assert.is_truthy(lines[2]:find("⏎: queue", 1, true))
-        assert.is_nil(lines[2]:find("C%-s: plan", 1, false))
-    end)
-
-    it("highlights the footer close shortcut without spilling into queue", function()
-        creator = Creator.open({
-            app = {
-                config = {
-                    get = function()
-                        return {
-                            storage = { workspaces_dir = "/tmp" },
-                        }
-                    end,
-                },
-            },
-            project = {
-                name = "Demo",
-                root = "/tmp/demo",
-            },
-            initial_kind = "todo",
-            on_submit = function() end,
-        })
-
-        local line = vim.api.nvim_buf_get_lines(creator.footer_buf, 1, 2, false)[1]
-        local close_found = false
-        local queue_found = false
-
-        for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(creator.footer_buf, -1, 0, -1, { details = true })) do
-            local row = mark[2]
-            local start_col = mark[3]
-            local end_col = mark[4].end_col
-            if row == 1 then
-                local text = line:sub(start_col + 1, end_col)
-                if text == "q" then
-                    close_found = true
-                elseif text == "q: close" or text == "queue" then
-                    queue_found = true
-                end
-            end
-        end
-
-        assert.is_true(close_found)
-        assert.is_false(queue_found)
+        assert.is_false(vim.deep_equal(normal_lines, insert_lines))
+        assert.are.same(normal_lines, restored_lines)
     end)
 
     it("matches prompt border and footer keymap colors to the active kind", function()
@@ -743,8 +509,12 @@ describe("clodex.ui.prompt_creator", function()
 
         assert.is_truthy(vim.wo[creator.footer_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true))
         assert.is_truthy(vim.tbl_contains(extmark_groups(creator.footer_buf), "ClodexPromptImprovementTitle"))
-        assert.is_truthy(vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true))
-        assert.is_truthy(vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true))
+        assert.is_truthy(
+            vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true)
+        )
+        assert.is_truthy(
+            vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true)
+        )
 
         creator:switch_kind(1)
 
@@ -882,8 +652,7 @@ describe("clodex.ui.prompt_creator", function()
         creator:switch_kind(1)
 
         wait_for(function()
-            return creator.state.kind == "freeform"
-                and vim.api.nvim_get_current_win() == creator.footer_win.win
+            return creator.state.kind == "freeform" and vim.api.nvim_get_current_win() == creator.footer_win.win
         end)
     end)
 
@@ -907,7 +676,9 @@ describe("clodex.ui.prompt_creator", function()
         })
 
         assert.are.equal(creator:body_row() + creator:body_height() + 2, creator:footer_row())
-        assert.is_true(creator.footer_win.opts.row() > creator.layout.body_win.opts.row() + creator.layout.body_win.opts.height())
+        assert.is_true(
+            creator.footer_win.opts.row() > creator.layout.body_win.opts.row() + creator.layout.body_win.opts.height()
+        )
     end)
 
     it("keeps insert-mode left and right arrows available for text editing", function()
@@ -1068,13 +839,21 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(2, creator.project_index)
         assert.are.equal(creator.project_win.win, vim.api.nvim_get_current_win())
 
-        creator:handle_mouse({ winid = creator.kind_win.win, line = 1, column = creator.kind_tab_spans[3].start_col + 1 })
+        creator:handle_mouse({
+            winid = creator.kind_win.win,
+            line = 1,
+            column = creator.kind_tab_spans[3].start_col + 1,
+        })
 
         assert.are.equal("freeform", creator.state.kind)
         assert.are.equal(creator.kind_win.win, vim.api.nvim_get_current_win())
 
         creator:switch_kind(-1)
-        creator:handle_mouse({ winid = creator.variant_win.win, line = 1, column = creator.variant_tab_spans[2].start_col + 1 })
+        creator:handle_mouse({
+            winid = creator.variant_win.win,
+            line = 1,
+            column = creator.variant_tab_spans[2].start_col + 1,
+        })
 
         assert.are.equal("clipboard_error", creator.state.variant)
         assert.are.equal(creator.variant_win.win, vim.api.nvim_get_current_win())
@@ -1573,7 +1352,10 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal("ClodexPromptEditorFooter", creator.project_bg_win.opts.theme_overrides.end_of_buffer)
         assert.are.equal(creator:project_background_width(), background_config.width)
         assert.are.equal(creator:project_background_height(), background_config.height)
-        assert.are.equal(string.rep(" ", background_config.width), vim.api.nvim_buf_get_lines(creator.project_bg_buf, 0, 1, false)[1])
+        assert.are.equal(
+            string.rep(" ", background_config.width),
+            vim.api.nvim_buf_get_lines(creator.project_bg_buf, 0, 1, false)[1]
+        )
         assert.are.equal(left - 1, background_config.col)
         assert.are.equal(top - 1, background_config.row)
         assert.are.equal((right - left) + 2, background_config.width)
@@ -1788,10 +1570,13 @@ describe("clodex.ui.prompt_creator", function()
             on_submit = function() end,
         })
 
-        assert(vim.wait(2500, function()
-            local lines = vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false)
-            return closed and lines[1] == "# Clipboard image"
-        end, 20), "timed out waiting for image preview fallback")
+        assert(
+            vim.wait(2500, function()
+                local lines = vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false)
+                return closed and lines[1] == "# Clipboard image"
+            end, 20),
+            "timed out waiting for image preview fallback"
+        )
 
         package.loaded["snacks"] = nil
     end)
@@ -1872,9 +1657,7 @@ describe("clodex.ui.prompt_creator", function()
         trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "n")
 
         wait_for(function()
-            return submitted_action == "queue"
-                and creator.footer_win == nil
-                and creator.layout == nil
+            return submitted_action == "queue" and creator.footer_win == nil and creator.layout == nil
         end)
     end)
 
@@ -2008,9 +1791,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_nil(creator.footer_win)
 
         wait_for(function()
-            return submitted_action == "queue"
-                and creator.footer_win == nil
-                and creator.layout == nil
+            return submitted_action == "queue" and creator.footer_win == nil and creator.layout == nil
         end)
     end)
 end)

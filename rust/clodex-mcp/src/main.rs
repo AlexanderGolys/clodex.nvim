@@ -6,6 +6,7 @@ use std::fs;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process;
+use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const JSONRPC_VERSION: &str = "2.0";
@@ -26,6 +27,9 @@ const PROMPT_KINDS: [&str; 10] = [
     "library",
     "notworking",
 ];
+const WORKSPACE_DIR_ENV: &str = "CLODEX_WORKSPACES_DIR";
+
+static WORKSPACE_DIR_OVERRIDE: OnceLock<Option<PathBuf>> = OnceLock::new();
 
 #[derive(Debug)]
 struct AppError {
@@ -279,9 +283,34 @@ fn run_main() -> AppResult<()> {
         println!("{}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
+    let workspace_dir = parse_workspace_dir_arg(&args)?;
+    let _ = WORKSPACE_DIR_OVERRIDE.set(workspace_dir);
 
     let mut server = Server::new();
     server.run()
+}
+
+fn parse_workspace_dir_arg(args: &[String]) -> AppResult<Option<PathBuf>> {
+    let mut workspace_dir = None;
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--workspace-dir" => {
+                let value = args
+                    .get(index + 1)
+                    .ok_or_else(|| AppError::new("Missing --workspace-dir value"))?;
+                workspace_dir = normalize_optional_string(Some(value.clone())).map(PathBuf::from);
+                index += 2;
+            }
+            "--version" => {
+                index += 1;
+            }
+            other => {
+                return Err(AppError::new(format!("Unknown argument: {other}")));
+            }
+        }
+    }
+    Ok(workspace_dir)
 }
 
 fn encode_response_payload(
@@ -880,12 +909,39 @@ fn queue_status_value(project_root: &str) -> AppResult<Value> {
     }))
 }
 
+fn configured_workspace_dir() -> Option<PathBuf> {
+    if let Some(value) = WORKSPACE_DIR_OVERRIDE.get() {
+        return value.clone();
+    }
+    env::var(WORKSPACE_DIR_ENV)
+        .ok()
+        .and_then(|value| normalize_optional_string(Some(value)).map(PathBuf::from))
+}
+
+fn workspace_id(project_root: &str) -> String {
+    let mut hash: u32 = 5381;
+    for byte in project_root.as_bytes() {
+        hash = hash.wrapping_mul(33).wrapping_add(u32::from(*byte));
+    }
+    format!("{hash:08x}")
+}
+
 fn workspace_dir(project_root: &str) -> PathBuf {
-    Path::new(project_root).join(".clodex")
+    match configured_workspace_dir() {
+        Some(dir) if dir.is_absolute() => dir.join(workspace_id(project_root)),
+        Some(dir) => Path::new(project_root).join(dir),
+        None => Path::new(project_root).join(".clodex"),
+    }
 }
 
 fn queue_file_path(project_root: &str, queue_name: &str) -> PathBuf {
     workspace_dir(project_root).join(format!("{queue_name}.json"))
+}
+
+fn legacy_queue_file_path(project_root: &str, queue_name: &str) -> PathBuf {
+    Path::new(project_root)
+        .join(".clodex")
+        .join(format!("{queue_name}.json"))
 }
 
 fn runtime_dir(project_root: &str) -> PathBuf {
@@ -903,6 +959,18 @@ fn events_file_path(project_root: &str) -> PathBuf {
 fn load_queue(project_root: &str, queue_name: &str) -> AppResult<Vec<QueueItem>> {
     let path = queue_file_path(project_root, queue_name);
     if !path.is_file() {
+        let legacy_path = legacy_queue_file_path(project_root, queue_name);
+        if legacy_path != path && legacy_path.is_file() {
+            let content = fs::read_to_string(&legacy_path)?;
+            let items = if content.trim().is_empty() {
+                Vec::new()
+            } else {
+                serde_json::from_str(&content)?
+            };
+            save_queue(project_root, queue_name, &items)?;
+            fs::remove_file(legacy_path)?;
+            return Ok(items);
+        }
         return Ok(Vec::new());
     }
     let content = fs::read_to_string(path)?;
