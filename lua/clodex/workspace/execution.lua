@@ -124,7 +124,7 @@ end
 ---@return string
 function Execution:queue_item_instructions(item)
     if self:uses_prompt_skill() then
-        return ("$%s"):format(skill_name(self.config))
+        return ("$%s\r"):format(skill_name(self.config))
     end
     return item.prompt or ""
 end
@@ -186,7 +186,7 @@ end
 function Execution:dispatch_prompt(_project, item)
     if self:uses_prompt_skill() then
         self:sync_prompt_skill(_project)
-        return ("$%s"):format(skill_name(self.config))
+        return ("$%s\r"):format(skill_name(self.config))
     end
 
     return vim.trim(item.prompt or "")

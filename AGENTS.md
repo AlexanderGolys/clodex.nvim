@@ -27,7 +27,6 @@
 - Use 4-space indentation.
 - Prefer short functions, early returns, and small focused locals.
 - Use trailing commas in multiline tables.
-- Prefer `string.format` or `:format` over manual concatenation when it improves clarity.
 - Export one focused table per file.
 - Use class-like tables with `__index` and explicit `.new(...)` constructors for stateful modules.
 - Add LuaLS annotations for public classes, config shapes, params, and returns.
