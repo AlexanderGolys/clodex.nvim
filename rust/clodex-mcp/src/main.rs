@@ -253,6 +253,7 @@ impl Server {
             "close_task" => tool_result(close_task(parse_args(arguments)?)?),
             "create_prompt" => tool_result(create_prompt(parse_args(arguments)?)?),
             "queue_status" => tool_result(queue_status(parse_args(arguments)?)?),
+            "local_data_dir" => tool_result(local_data_dir(parse_args(arguments)?)?),
             _ => tool_error(format!("Unknown tool: {name}")),
         };
         Ok(Some(result))
@@ -468,6 +469,18 @@ fn tool_definitions() -> Vec<Value> {
                 "additionalProperties": false,
             },
         }),
+        json!({
+            "name": "local_data_dir",
+            "description": "Report the local Clodex queue data directory used for a project by this MCP server.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "project_root": { "type": "string" }
+                },
+                "required": ["project_root"],
+                "additionalProperties": false,
+            },
+        }),
     ]
 }
 
@@ -477,6 +490,28 @@ fn queue_status(args: ProjectRootArgs) -> AppResult<Value> {
     Ok(json!({
         "project_root": project_root,
         "status": status,
+    }))
+}
+
+fn local_data_dir(args: ProjectRootArgs) -> AppResult<Value> {
+    let project_root = normalize_project_root(&args.project_root)?;
+    let workspace = workspace_dir(&project_root);
+    let mut queue_files = Map::new();
+    for queue_name in QUEUE_NAMES {
+        queue_files.insert(
+            queue_name.to_string(),
+            json!(queue_file_path(&project_root, queue_name).to_string_lossy()),
+        );
+    }
+
+    Ok(json!({
+        "project_root": project_root,
+        "workspace_id": workspace_id(&project_root),
+        "queue_data_dir": workspace.to_string_lossy(),
+        "workspaces_dir": configured_workspace_dir().map(|dir| dir.to_string_lossy().into_owned()),
+        "legacy_project_dir": Path::new(&project_root).join(".clodex").to_string_lossy(),
+        "queue_files": queue_files,
+        "runtime_dir": runtime_dir(&project_root).to_string_lossy(),
     }))
 }
 
@@ -1202,9 +1237,40 @@ mod tests {
         assert!(names.contains(&"close_task".to_string()));
         assert!(names.contains(&"create_prompt".to_string()));
         assert!(names.contains(&"queue_status".to_string()));
+        assert!(names.contains(&"local_data_dir".to_string()));
         assert!(!names.contains(&"queue_claim_next".to_string()));
         assert!(!names.contains(&"queue_complete_current".to_string()));
         assert!(!names.contains(&"queue_fail_current".to_string()));
+    }
+
+    #[test]
+    fn local_data_dir_reports_the_project_queue_destination() {
+        let (_dir, root) = project_root();
+
+        let response = local_data_dir(ProjectRootArgs {
+            project_root: root.clone(),
+        })
+        .expect("local data dir");
+
+        assert_eq!(response["project_root"], root);
+        assert_eq!(response["workspace_id"], workspace_id(&root));
+        assert_eq!(
+            response["queue_data_dir"],
+            workspace_dir(&root).to_string_lossy().to_string()
+        );
+        assert_eq!(
+            response["queue_files"]["queued"],
+            queue_file_path(&root, "queued")
+                .to_string_lossy()
+                .to_string()
+        );
+        assert_eq!(
+            response["legacy_project_dir"],
+            Path::new(&root)
+                .join(".clodex")
+                .to_string_lossy()
+                .to_string()
+        );
     }
 
     #[test]

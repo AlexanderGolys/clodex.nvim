@@ -1,0 +1,57 @@
+---
+name: clodex-debug
+description: Diagnose and repair known clodex.nvim legacy state issues, especially local queue data left in older project-local locations.
+---
+
+Use this skill when a user reports that clodex.nvim queue, MCP, project state, prompt execution, or shipped skill behavior looks stale, missing, or inconsistent.
+
+Start with the least invasive checks and only apply a fix when the matching cause is present. Do not edit MCP-managed queue JSON by hand unless the fix below explicitly says to move whole files. Prefer the Clodex MCP tools for queue inspection and for discovering the authoritative local data directory.
+
+# Checks
+
+1. Confirm the current project root.
+   - Use the repository root or the user-provided project root.
+   - Do not assume that the shell cwd and the registered Clodex project root are the same.
+
+2. Ask the MCP helper where it stores this project's queue data.
+   - Call `local_data_dir` with `project_root`.
+   - Treat `queue_data_dir` and `queue_files` from the response as authoritative.
+   - Do not reconstruct the hash directory manually unless the tool is unavailable and the user explicitly asks for a manual diagnosis.
+
+3. Check for legacy project-local queue files.
+   - Look for these files directly under `<project_root>/.clodex/`:
+     `planned.json`, `queued.json`, `implemented.json`, `history.json`.
+   - If any are present, create the `queue_data_dir` from `local_data_dir`, move those files to the matching paths reported in `queue_files`, and leave non-queue project context files in `.clodex/` in place.
+   - If a destination queue file already exists and is non-empty, stop and ask the user before merging or overwriting. Do not guess.
+   - After moving files, call `queue_status` or `get_task` to confirm the queue is visible through MCP.
+
+4. Check for legacy MCP runtime state.
+   - Look for `<project_root>/.clodex/mcp/active.json` and `<project_root>/.clodex/mcp/events.jsonl`.
+   - If the queue files were moved and these runtime files refer to the same active queue item, move them to `runtime_dir` from `local_data_dir`.
+   - If the destination runtime files already exist, stop and ask before merging or overwriting.
+
+5. Check that bundled skills are installed locally.
+   - Verify that `<project_root>/.clodex/skills/prompt-nvim-clodex/SKILL.md` exists.
+   - Verify that `<project_root>/.clodex/skills/clodex-debug/SKILL.md` exists.
+   - If either is missing or stale in a clodex.nvim repository, run the plugin's normal skill sync path or copy the checked-in `.codex/skills/<name>/SKILL.md` file into the project-local skills directory.
+
+6. Check MCP runtime configuration when agents cannot see the expected tools.
+   - Confirm that Codex/OpenCode runtime config points to the current clodex MCP helper.
+   - Confirm that any configured `--workspace-dir` and `CLODEX_WORKSPACES_DIR` values match the plugin's current `storage.workspaces_dir`.
+   - Restart the affected backend session after changing runtime config.
+
+7. Check for stale queue-work assumptions in prompts or docs.
+   - Agents should use `get_task`, `close_task`, `create_prompt`, `queue_status`, and `local_data_dir`.
+   - Do not use removed internal queue mutators or edit queue storage directly.
+
+# Legacy Queue Migration Fix
+
+When `<project_root>/.clodex/` contains legacy queue JSON and `local_data_dir` reports a different `queue_data_dir`:
+
+1. Create `queue_data_dir` if it does not exist.
+2. Move each present legacy queue file to the exact path reported in `queue_files`.
+3. Create `runtime_dir` if moving legacy MCP runtime files.
+4. Move legacy runtime files only when they are needed to preserve an active claim and the destination does not already exist.
+5. Confirm with `queue_status`.
+6. Report exactly what moved and any files intentionally left in `.clodex/`.
+

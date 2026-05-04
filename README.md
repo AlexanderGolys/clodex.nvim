@@ -182,7 +182,7 @@ The debug state panel uses the same shared Clodex UI panel API as the prompt cre
 - `implemented`: claimed by the MCP loop and then finished, waiting for review unless completion goes straight to history
 - `history`: verified or directly completed work with summary and commit metadata
 
-Queued execution uses project-local skills under `.clodex/skills/` together with the checked-in `prompt-nvim-clodex` workflow in `.codex/skills/prompt-nvim-clodex/SKILL.md`. Queue JSON lives under `storage.workspaces_dir` by default, and the MCP helper receives that path through its runtime config so agents use `get_task`, `close_task`, and `create_prompt` instead of editing queue files directly. `storage.workspaces_dir` stays authoritative even when `mcp.cmd` is customized; Clodex replaces any embedded `--workspace-dir` helper argument with the configured storage path. The task returned by `get_task` is authoritative; when a prompt is queued while another item is already active, the returned task can intentionally differ from the item that launched the agent.
+Queued execution uses project-local skills under `.clodex/skills/` together with the checked-in `prompt-nvim-clodex` workflow in `.codex/skills/prompt-nvim-clodex/SKILL.md` and the checked-in `clodex-debug` repair workflow in `.codex/skills/clodex-debug/SKILL.md`. Queue JSON lives under `storage.workspaces_dir` by default, and the MCP helper receives that path through its runtime config so agents use `get_task`, `close_task`, and `create_prompt` instead of editing queue files directly. `storage.workspaces_dir` stays authoritative even when `mcp.cmd` is customized; Clodex replaces any embedded `--workspace-dir` helper argument with the configured storage path. The task returned by `get_task` is authoritative; when a prompt is queued while another item is already active, the returned task can intentionally differ from the item that launched the agent.
 
 ### MCP tools
 
@@ -190,6 +190,7 @@ Queued execution uses project-local skills under `.clodex/skills/` together with
 - `close_task`: high-level queued-work closer; records success or failure and advances the loop when another queued item exists
 - `create_prompt`: creates a follow-up prompt item, usually when an `ask` or planning task turns into actionable work
 - `queue_status`: read-only queue inspection for UI/debug surfaces that need queue counts or active-state visibility, not for normal prompt-by-prompt task execution
+- `local_data_dir`: debug/repair helper that reports the MCP server's current project queue directory, runtime directory, and per-queue file paths so legacy project-local queue files can be moved without guessing
 
 Typical patterns:
 
@@ -215,7 +216,7 @@ Clodex keeps durable project data inside each repository:
 - `.clodex/notes/`
 - `.clodex/bookmarks.json`
 
-Queue state stays under `storage.workspaces_dir`, which defaults to `stdpath("data")/clodex/workspaces`, with legacy project-local queue files migrated there on first access. Global plugin state stays under `stdpath("data")/clodex/`, including the project registry, session snapshots, MCP runtime config, and the optional history markdown log.
+Queue state stays under `storage.workspaces_dir`, which defaults to `stdpath("data")/clodex/workspaces`, with legacy project-local queue files migrated there on first access. Agents can use the `clodex-debug` skill and `local_data_dir` MCP tool to repair older roots that still contain queue JSON directly under `.clodex/`. Global plugin state stays under `stdpath("data")/clodex/`, including the project registry, session snapshots, MCP runtime config, and the optional history markdown log.
 
 ## Public API
 

@@ -41,6 +41,15 @@ describe("clodex.workspace.execution", function()
         assert.matches("Do not edit queue JSON files directly", content)
         assert.matches("%$prompt%-nvim%-clodex", content)
 
+        local debug_file = assert(io.open(
+            fs.join(root, "skills", "clodex-debug", "SKILL.md"),
+            "rb"
+        ))
+        local debug_content = debug_file:read("*a")
+        debug_file:close()
+        assert.matches("local_data_dir", debug_content)
+        assert.matches("Legacy Queue Migration Fix", debug_content)
+
         fs.remove(root)
     end)
 
@@ -111,11 +120,19 @@ describe("clodex.workspace.execution", function()
         file:close()
 
         assert.are.equal(
-            fs.normalize(".clodex/skills/prompt-nvim-clodex/SKILL.md"),
+            fs.join(project.root, ".clodex/skills/prompt-nvim-clodex/SKILL.md"),
             skill_file
         )
         assert.matches("Manual History", content)
         assert.matches("%$prompt%-nvim%-clodex", content)
+
+        local debug_file = assert(io.open(
+            fs.join(project.root, ".clodex/skills/clodex-debug/SKILL.md"),
+            "rb"
+        ))
+        local debug_content = debug_file:read("*a")
+        debug_file:close()
+        assert.matches("known clodex.nvim legacy state issues", debug_content)
 
         fs.remove(root)
     end)

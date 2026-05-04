@@ -5,7 +5,7 @@
 - Bootstrap stays in `plugin/clodex.lua`.
 - Core module groups are `app/`, `execution/`, `project/`, `prompt/`, `session/`, `tab/`, `terminal/`, `ui/`, `util/`, and `workspace/`.
 - The bundled MCP helper lives in `rust/clodex-mcp/`.
-- Checked-in workflow skill content lives in `.codex/skills/prompt-nvim-clodex/` and is synced into project-local `.clodex/skills/` at runtime.
+- Checked-in workflow skill content lives in `.codex/skills/` and is synced into project-local `.clodex/skills/` at runtime, including the main prompt workflow and debug/repair workflow.
 - Durable per-project user files may include root `README.md` and `TODO.md` plus `.clodex/` skills, notes, bookmarks, and project context files. Queue JSON is MCP-managed local data under `storage.workspaces_dir`.
 - Tests live in `tests/specs/` and use `tests/minimal_init.lua`.
 - Keep project-local agent context under each repository's `.clodex/` directory, but keep queue state under the configured local workspace directory so agents do not directly edit queue JSON.
@@ -17,7 +17,7 @@
 - Project sessions always start with `cwd = project.root`; the free session always starts with `cwd = session.free_root`.
 - Keep queue and workspace summaries focused on durable repository facts plus queue contents; do not reintroduce inferred live task tracking.
 - Keep queued workflow behavior centered on the local MCP helper and its configured local queue workspace.
-- Treat the public queued MCP contract as loop-based: use `get_task`, `close_task`, and `create_prompt`; keep queue mutation internals out of the exposed agent workflow.
+- Treat the public queued MCP contract as loop-based: use `get_task`, `close_task`, and `create_prompt`; use `local_data_dir` only for debug/repair workflows that need the authoritative queue data destination; keep queue mutation internals out of the exposed agent workflow.
 - Treat the task returned by `get_task` as authoritative; it may differ from the queued prompt that launched the agent when another item is already active.
 - Default queued git workflow stays commit-based unless a task explicitly needs branch-and-PR behavior.
 - Keep the debug state panel on the shared UI panel API used by the prompt creator, and keep its keymap section tied to the global keymaps Clodex actually registered.
@@ -42,6 +42,7 @@
 - Keep `README.md` aligned with the real command set, config defaults, queue workflow, and shipped files.
 - Keep `AGENTS.md` aligned with the current module layout, project files, and maintenance rules.
 - When queued workflow behavior changes, update both `README.md` and `.codex/skills/prompt-nvim-clodex/SKILL.md`.
+- When debug or repair workflow behavior changes, update `README.md` and `.codex/skills/clodex-debug/SKILL.md`.
 - Keep MCP tool documentation aligned with the actually exposed helper API; do not document removed internal helpers as supported workflow steps.
 - Remove stale docs and obsolete private workflow references instead of documenting dead paths.
 

@@ -26,6 +26,7 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
 10. When a conversation in planning mode should produce a new follow-up prompt instead of immediate code changes, prefer the `create_prompt` MCP tool to add the new prompt directly to the project queue.
 11. Do not rely on internal queue-mutating helpers as part of the public workflow; the MCP loop itself owns task claiming, requeueing, completion, and exhaustion.
 12. Do not edit queue JSON files directly. Queue storage is MCP-managed local data and may live outside the project root.
+13. If queue state appears missing or stale, switch to the separate `clodex-debug` skill and use `local_data_dir` to inspect the MCP helper's current queue destination before moving or repairing any legacy files.
 
 # Manual History
 
