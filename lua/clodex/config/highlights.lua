@@ -231,6 +231,12 @@ ClodexPromptSourceTabActive = {
       bg = { from = { "Comment", "Normal" }, attr = "fg" },
       bold = true,
     },
+-- &&&ClodexPromptFocusActive&&&Lorem Ipsum&&&
+ClodexPromptFocusActive = {
+      fg = { from = { "NormalFloat", "Normal" } },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
+      blend = 0,
+    },
 -- &&&ClodexPromptPreviewText&&&Lorem Ipsum&&&
 ClodexPromptPreviewText = {
       fg = { from = "Directory" },

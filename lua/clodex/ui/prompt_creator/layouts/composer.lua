@@ -71,44 +71,37 @@ end
 function ComposerLayout:apply_keymaps()
     if not vim.b[self.title_buf].clodex_prompt_keymaps_applied then
         self.creator:apply_first_slot_keymaps(self.title_buf)
-        vim.keymap.set({ "n", "i" }, "<Tab>", function()
-            self:focus_body()
+        vim.keymap.set("n", "<Tab>", function()
+            self:focus_body(false)
         end, { buffer = self.title_buf, silent = true })
         vim.keymap.set("n", "<Down>", function()
-            self:focus_body()
+            self:focus_body(false)
         end, { buffer = self.title_buf, silent = true })
-        vim.keymap.set("i", "<Down>", function()
-            vim.schedule(function()
-                self:focus_body()
-            end)
-            return ""
-        end, { buffer = self.title_buf, silent = true, expr = true })
-        vim.keymap.set("i", "<CR>", function()
-            vim.schedule(function()
-                self:focus_body()
-            end)
-            return ""
+        vim.keymap.set("n", "<Up>", function()
+            self:focus_body(false)
+        end, { buffer = self.title_buf, silent = true })
+        vim.keymap.set("i", "<S-Tab>", function()
+            self:focus_body(true)
+            return vim.keycode("<Ignore>")
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.b[self.title_buf].clodex_prompt_keymaps_applied = true
     end
 
     if not vim.b[self.body_buf].clodex_prompt_keymaps_applied then
         self.creator:apply_common_keymaps(self.body_buf)
-        vim.keymap.set({ "n", "i" }, "<Tab>", function()
-            self:focus_title()
+        vim.keymap.set("n", "<Tab>", function()
+            self:focus_title(false)
         end, { buffer = self.body_buf, silent = true })
-        vim.keymap.set({ "n", "i" }, "<S-Tab>", function()
-            self:focus_title()
-        end, { buffer = self.body_buf, silent = true })
-        vim.keymap.set({ "n", "i" }, "<Up>", function()
-            if self:should_focus_title_from_body() then
-                vim.schedule(function()
-                    self:focus_title()
-                end)
-                return ""
-            end
-            return "<Up>"
+        vim.keymap.set("i", "<S-Tab>", function()
+            self:focus_title(true)
+            return vim.keycode("<Ignore>")
         end, { buffer = self.body_buf, silent = true, expr = true })
+        vim.keymap.set("n", "<Down>", function()
+            self:focus_title(false)
+        end, { buffer = self.body_buf, silent = true })
+        vim.keymap.set("n", "<Up>", function()
+            self:focus_title(false)
+        end, { buffer = self.body_buf, silent = true })
         vim.b[self.body_buf].clodex_prompt_keymaps_applied = true
     end
 end
@@ -155,24 +148,30 @@ function ComposerLayout:buffers()
     return { self.title_buf, self.body_buf }
 end
 
-function ComposerLayout:focus_title()
+---@param insert_mode? boolean
+function ComposerLayout:focus_title(insert_mode)
     if self.title_block then
-        self.title_block:focus({ insert = true })
+        self.title_block:focus({ insert = insert_mode == true })
+        self.creator:update_focus_highlights()
     end
 end
 
-function ComposerLayout:focus_body()
+---@param insert_mode? boolean
+function ComposerLayout:focus_body(insert_mode)
     if self.body_block then
-        self.body_block:focus({ insert = true })
+        self.body_block:focus({ insert = insert_mode == true })
+        self.creator:update_focus_highlights()
     end
 end
 
-function ComposerLayout:focus_default()
-    self:focus_title()
+---@param insert_mode? boolean
+function ComposerLayout:focus_default(insert_mode)
+    self:focus_title(insert_mode == true)
 end
 
-function ComposerLayout:focus_last()
-    self:focus_body()
+---@param insert_mode? boolean
+function ComposerLayout:focus_last(insert_mode)
+    self:focus_body(insert_mode == true)
 end
 
 ---@param winid? integer
@@ -192,9 +191,14 @@ end
 ---@return boolean
 function ComposerLayout:focus_slot(slot, insert_mode)
     if slot == "body" and self.body_block and self.body_block:focus({ insert = insert_mode == true }) then
+        self.creator:update_focus_highlights()
         return true
     end
-    return self.title_block and self.title_block:focus({ insert = insert_mode == true }) or false
+    local focused = self.title_block and self.title_block:focus({ insert = insert_mode == true }) or false
+    if focused then
+        self.creator:update_focus_highlights()
+    end
+    return focused
 end
 
 function ComposerLayout:close()

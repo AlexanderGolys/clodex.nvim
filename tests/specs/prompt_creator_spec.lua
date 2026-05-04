@@ -368,6 +368,44 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_false(creator:in_insert_mode())
     end)
 
+    it("highlights the focused prompt panel", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        assert.is_truthy(
+            vim.wo[creator.layout.title_win.win].winhl:find("NormalFloat:ClodexPromptFocusActive", 1, true)
+        )
+        assert.is_truthy(
+            vim.wo[creator.layout.body_win.win].winhl:find("NormalFloat:ClodexPromptEditorNormal", 1, true)
+        )
+
+        trigger_buffer_mapping(creator.layout.title_buf, "<Tab>")
+
+        wait_for(function()
+            return vim.wo[creator.layout.body_win.win].winhl:find("NormalFloat:ClodexPromptFocusActive", 1, true)
+                and vim.wo[creator.layout.title_win.win].winhl:find(
+                    "NormalFloat:ClodexPromptEditorNormal",
+                    1,
+                    true
+                )
+        end)
+    end)
+
     it("keeps prompt creator buffers hidden instead of wiping them", function()
         creator = Creator.open({
             app = {
@@ -514,6 +552,10 @@ describe("clodex.ui.prompt_creator", function()
 
         assert.is_false(vim.deep_equal(normal_lines, insert_lines))
         assert.are.same(normal_lines, restored_lines)
+        assert.is_truthy(table.concat(normal_lines, "\n"):find("Tab", 1, true))
+        assert.is_nil(table.concat(normal_lines, "\n"):find("S-Tab", 1, true))
+        assert.is_truthy(table.concat(insert_lines, "\n"):find("S-Tab", 1, true))
+        assert.is_nil(table.concat(insert_lines, "\n"):find("Tab/S-Tab", 1, true))
     end)
 
     it("matches prompt border and footer keymap colors to the active kind", function()
@@ -822,7 +864,7 @@ describe("clodex.ui.prompt_creator", function()
         end
     end)
 
-    it("uses insert-mode vertical arrows to move between title and details", function()
+    it("uses mode-specific keys to move focus between title and details", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -846,38 +888,40 @@ describe("clodex.ui.prompt_creator", function()
         })
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
-        vim.cmd.startinsert()
-        local down_key = trigger_buffer_mapping(creator.layout.title_buf, "<Down>", "i")
-
-        assert.are.equal("", down_key)
+        vim.cmd.stopinsert()
+        trigger_buffer_mapping(creator.layout.title_buf, "<Down>")
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+                and vim.api.nvim_get_mode().mode == "n"
         end)
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
-        vim.cmd.startinsert()
-        local enter_key = trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "i")
-
-        assert.are.equal("", enter_key)
+        trigger_buffer_mapping(creator.layout.title_buf, "<Tab>")
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+                and vim.api.nvim_get_mode().mode == "n"
         end)
 
-        vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 2, 0 })
-        local up_key = trigger_buffer_mapping(creator.layout.body_buf, "<Up>", "i")
-
-        assert.are.equal("<Up>", up_key)
-        assert.are.equal(creator.layout.body_win.win, vim.api.nvim_get_current_win())
-
-        vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 1, 0 })
-        local consumed_up_key = trigger_buffer_mapping(creator.layout.body_buf, "<Up>", "i")
-
-        assert.are.equal("", consumed_up_key)
+        trigger_buffer_mapping(creator.layout.body_buf, "<Up>")
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.title_win.win
+                and vim.api.nvim_get_mode().mode == "n"
+        end)
+
+        local title_insert_maps = vim.api.nvim_buf_get_keymap(creator.layout.title_buf, "i")
+        for _, map in ipairs(title_insert_maps) do
+            assert.are_not.equal("<Tab>", map.lhs)
+            assert.are_not.equal("<Down>", map.lhs)
+            assert.are_not.equal("<CR>", map.lhs)
+        end
+
+        trigger_buffer_mapping(creator.layout.title_buf, "<S-Tab>", "i")
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
         end)
     end)
 
@@ -1324,7 +1368,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
     end)
 
-    it("keeps the project list out of the insert-mode tab cycle", function()
+    it("keeps the project list out of the insert-mode focus cycle", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -1343,13 +1387,22 @@ describe("clodex.ui.prompt_creator", function()
             on_submit = function() end,
         })
 
-        trigger_buffer_mapping(creator.layout.title_buf, "<Tab>", "i")
+        local title_insert_maps = vim.api.nvim_buf_get_keymap(creator.layout.title_buf, "i")
+        local body_insert_maps = vim.api.nvim_buf_get_keymap(creator.layout.body_buf, "i")
+        for _, map in ipairs(title_insert_maps) do
+            assert.are_not.equal("<Tab>", map.lhs)
+        end
+        for _, map in ipairs(body_insert_maps) do
+            assert.are_not.equal("<Tab>", map.lhs)
+        end
+
+        trigger_buffer_mapping(creator.layout.title_buf, "<S-Tab>", "i")
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
         end)
 
-        trigger_buffer_mapping(creator.layout.body_buf, "<Tab>", "i")
+        trigger_buffer_mapping(creator.layout.body_buf, "<S-Tab>", "i")
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.title_win.win

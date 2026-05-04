@@ -71,17 +71,18 @@ end
 function ClipboardPreviewLayout:apply_keymaps()
     if not vim.b[self.title_buf].clodex_prompt_keymaps_applied then
         self.creator:apply_first_slot_keymaps(self.title_buf)
-        vim.keymap.set({ "n", "i" }, "<Tab>", function()
+        vim.keymap.set("n", "<Tab>", function()
             self:focus_preview()
         end, { buffer = self.title_buf, silent = true })
         vim.keymap.set("n", "<Down>", function()
             self:focus_preview()
         end, { buffer = self.title_buf, silent = true })
-        vim.keymap.set("i", "<Down>", function()
-            vim.schedule(function()
-                self:focus_preview()
-            end)
-            return ""
+        vim.keymap.set("n", "<Up>", function()
+            self:focus_preview()
+        end, { buffer = self.title_buf, silent = true })
+        vim.keymap.set("i", "<S-Tab>", function()
+            self:focus_preview()
+            return vim.keycode("<Ignore>")
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.b[self.title_buf].clodex_prompt_keymaps_applied = true
     end
@@ -90,7 +91,10 @@ function ClipboardPreviewLayout:apply_keymaps()
         vim.keymap.set("n", "<Tab>", function()
             self:focus_title()
         end, { buffer = self.preview_buf, silent = true })
-        vim.keymap.set("n", "<S-Tab>", function()
+        vim.keymap.set("n", "<Down>", function()
+            self:focus_title()
+        end, { buffer = self.preview_buf, silent = true })
+        vim.keymap.set("n", "<Up>", function()
             self:focus_title()
         end, { buffer = self.preview_buf, silent = true })
         vim.b[self.preview_buf].clodex_prompt_keymaps_applied = true
@@ -136,19 +140,23 @@ function ClipboardPreviewLayout:buffers()
     return { self.title_buf, self.preview_buf }
 end
 
-function ClipboardPreviewLayout:focus_default()
+---@param insert_mode? boolean
+function ClipboardPreviewLayout:focus_default(insert_mode)
     if self.title_block then
-        self.title_block:focus({ insert = true })
+        self.title_block:focus({ insert = insert_mode == true })
+        self.creator:update_focus_highlights()
     end
 end
 
-function ClipboardPreviewLayout:focus_title()
-    self:focus_default()
+---@param insert_mode? boolean
+function ClipboardPreviewLayout:focus_title(insert_mode)
+    self:focus_default(insert_mode == true)
 end
 
 function ClipboardPreviewLayout:focus_preview()
     if self.preview_block then
         self.preview_block:focus()
+        self.creator:update_focus_highlights()
     end
 end
 
@@ -173,9 +181,14 @@ end
 ---@return boolean
 function ClipboardPreviewLayout:focus_slot(slot, insert_mode)
     if slot == "preview" and self.preview_block and self.preview_block:focus() then
+        self.creator:update_focus_highlights()
         return true
     end
-    return self.title_block and self.title_block:focus({ insert = insert_mode == true }) or false
+    local focused = self.title_block and self.title_block:focus({ insert = insert_mode == true }) or false
+    if focused then
+        self.creator:update_focus_highlights()
+    end
+    return focused
 end
 
 function ClipboardPreviewLayout:close()

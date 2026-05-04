@@ -35,6 +35,9 @@ local RESET_AFTER_SUBMIT_ACTIONS = {}
 
 local TAB_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-tabs")
 local FOOTER_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-footer")
+local PROMPT_ACTIVE_NORMAL = "ClodexPromptFocusActive"
+local PROMPT_EDITOR_NORMAL = "ClodexPromptEditorNormal"
+local PROMPT_FOOTER_NORMAL = "ClodexPromptEditorFooter"
 
 ---@class Clodex.PromptCreator
 ---@field app Clodex.App
@@ -816,6 +819,7 @@ function Creator:focus_default()
     if self.layout and self.layout.focus_default then
         self.layout:focus_default()
     end
+    self:update_focus_highlights()
 end
 
 ---@param fn fun()
@@ -829,26 +833,34 @@ function Creator:focus_project_list()
 end
 
 -- Focus creator
-function Creator:focus_creator_default()
+---@param insert_mode? boolean
+function Creator:focus_creator_default(insert_mode)
     if self:in_insert_mode() then
         vim.cmd.stopinsert()
     end
     vim.schedule(function()
-        self:focus_default()
+        if self.layout and self.layout.focus_default then
+            self.layout:focus_default(insert_mode == true)
+        else
+            self:focus_default()
+        end
+        self:update_focus_highlights()
     end)
 end
 
 -- Focus last
-function Creator:focus_creator_last_slot()
+---@param insert_mode? boolean
+function Creator:focus_creator_last_slot(insert_mode)
     if self:in_insert_mode() then
         vim.cmd.stopinsert()
     end
     vim.schedule(function()
         if self.layout and self.layout.focus_last then
-            self.layout:focus_last()
+            self.layout:focus_last(insert_mode == true)
         else
             self:focus_default()
         end
+        self:update_focus_highlights()
     end)
 end
 
@@ -877,6 +889,7 @@ function Creator:focus_mouse_win(win, text_field)
         vim.cmd.stopinsert()
     end
     vim.api.nvim_set_current_win(win.win)
+    self:update_focus_highlights()
 end
 
 ---@param mouse table
@@ -1005,12 +1018,12 @@ function Creator:apply_project_keymaps()
         self:focus_creator_default()
         return vim.keycode("<Ignore>")
     end, { buffer = self.project_buf, silent = true, expr = true })
-    vim.keymap.set({ "n", "i" }, "<Tab>", function()
-        self:focus_creator_default()
+    vim.keymap.set("n", "<Tab>", function()
+        self:focus_creator_default(false)
         return vim.keycode("<Ignore>")
     end, { buffer = self.project_buf, silent = true, expr = true })
-    vim.keymap.set({ "n", "i" }, "<S-Tab>", function()
-        self:focus_creator_last_slot()
+    vim.keymap.set("i", "<S-Tab>", function()
+        self:focus_creator_last_slot(true)
         return vim.keycode("<Ignore>")
     end, { buffer = self.project_buf, silent = true, expr = true })
     vim.keymap.set("n", "<Down>", function()
@@ -1045,10 +1058,6 @@ end
 ---@param buf integer
 function Creator:apply_first_slot_keymaps(buf)
     self:apply_common_keymaps(buf)
-    vim.keymap.set({ "n", "i" }, "<S-Tab>", function()
-        self:focus_creator_last_slot()
-        return vim.keycode("<Ignore>")
-    end, { buffer = buf, silent = true, expr = true })
 end
 
 -- Render kinds
@@ -1160,6 +1169,32 @@ function Creator:apply_prompt_theme()
             Helpers.hide_window_cursor(win.win, "ClodexPromptEditorFooter")
         end
     end
+    self:update_focus_highlights()
+end
+
+---@param win snacks.win?
+---@param inactive_hl string
+function Creator:apply_focus_highlight(win, inactive_hl)
+    if not win or not win.valid or not win:valid() then
+        return
+    end
+    local normal_hl = vim.api.nvim_get_current_win() == win.win and PROMPT_ACTIVE_NORMAL or inactive_hl
+    Helpers.update_winhl(win.win, {
+        Normal = normal_hl,
+        NormalFloat = normal_hl,
+        NormalNC = normal_hl,
+    })
+end
+
+function Creator:update_focus_highlights()
+    self:apply_focus_highlight(self.project_win, PROMPT_FOOTER_NORMAL)
+    self:apply_focus_highlight(self.kind_win, PROMPT_FOOTER_NORMAL)
+    self:apply_focus_highlight(self.footer_win, PROMPT_FOOTER_NORMAL)
+    self:apply_focus_highlight(self.variant_win, PROMPT_FOOTER_NORMAL)
+    self:apply_focus_highlight(self.preview_win, PROMPT_FOOTER_NORMAL)
+    self:apply_focus_highlight(self.layout and self.layout.title_win or nil, PROMPT_EDITOR_NORMAL)
+    self:apply_focus_highlight(self.layout and self.layout.body_win or nil, PROMPT_EDITOR_NORMAL)
+    self:apply_focus_highlight(self.layout and self.layout.preview_win or nil, PROMPT_FOOTER_NORMAL)
 end
 
 ---@param column integer
@@ -1454,6 +1489,20 @@ end
 ---@param buf integer
 function Creator:apply_common_keymaps(buf)
     self:apply_mouse_keymap(buf)
+    vim.keymap.set("n", "<Tab>", function()
+        self:focus_creator_default(false)
+        return vim.keycode("<Ignore>")
+    end, { buffer = buf, silent = true, expr = true })
+    vim.keymap.set("i", "<S-Tab>", function()
+        self:focus_creator_default(true)
+        return vim.keycode("<Ignore>")
+    end, { buffer = buf, silent = true, expr = true })
+    vim.keymap.set("n", "<Down>", function()
+        self:focus_creator_default(false)
+    end, { buffer = buf, silent = true })
+    vim.keymap.set("n", "<Up>", function()
+        self:focus_creator_last_slot(false)
+    end, { buffer = buf, silent = true })
     vim.keymap.set("n", "<Right>", function()
         self:switch_kind(1)
     end, { buffer = buf, silent = true })

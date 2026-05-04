@@ -231,26 +231,35 @@ end
 ---@return Clodex.PromptCreator.FooterItem[][]
 function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
     if insert_mode then
+        local actions = {
+            Helpers.footer_item("C-←/→", "kind"),
+        }
+        if has_multiple_projects then
+            actions[#actions + 1] = Helpers.footer_item("C-↑/↓", "project")
+        end
+        vim.list_extend(actions, {
+            Helpers.footer_item("C-s", "plan"),
+            Helpers.footer_item("C-q", "queue"),
+            Helpers.footer_item("C-.", "implement"),
+            Helpers.footer_item("C-S-.", "implement+reset"),
+            Helpers.footer_item("C-c", "chat"),
+            Helpers.footer_item("q", "close"),
+        })
         return {
             {
-                Helpers.footer_item("Tab/S-Tab", "move focus"),
+                Helpers.footer_item("S-Tab", "move focus"),
                 Helpers.footer_item("C-v", "image"),
             },
-            {
-                Helpers.footer_item("C-←/→", "kind"),
-                Helpers.footer_item("C-s", "plan"),
-                Helpers.footer_item("C-q", "queue"),
-                Helpers.footer_item("C-.", "implement"),
-                Helpers.footer_item("C-S-.", "implement+reset"),
-                Helpers.footer_item("C-c", "chat"),
-                Helpers.footer_item("q", "close"),
-            },
+            actions,
         }
     end
 
-    local row_one = { Helpers.footer_item({ "←/→", "h/l" }, "kind", " or ") }
+    local row_one = {
+        Helpers.footer_item({ "Tab", "↑/↓" }, "move focus", " or "),
+        Helpers.footer_item({ "←/→", "h/l" }, "kind", " or "),
+    }
     if has_multiple_projects then
-        row_one[#row_one + 1] = Helpers.footer_item({ "↑/↓", "j/k" }, "project", " or ")
+        row_one[#row_one + 1] = Helpers.footer_item("C-↑/↓", "project")
     end
     if has_variants then
         row_one[#row_one + 1] = Helpers.footer_item("[/]", "source")
