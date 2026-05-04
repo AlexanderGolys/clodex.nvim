@@ -147,7 +147,7 @@ function Creator.new(opts)
     local project_index = 1
     local active_project_root = opts.active_project_root or opts.project.root
     for index, item in ipairs(projects) do
-        if item.root == active_project_root then
+        if item.root == opts.project.root then
             project = item
             project_index = index
             break

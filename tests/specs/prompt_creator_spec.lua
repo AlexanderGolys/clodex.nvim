@@ -1385,7 +1385,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
     end)
 
-    it("defaults the target project picker to the active project", function()
+    it("defaults the target project picker to the requested project", function()
         local alpha = { name = "Alpha", root = "/tmp/alpha" }
         local beta = { name = "Beta", root = "/tmp/beta" }
 
@@ -1410,10 +1410,10 @@ describe("clodex.ui.prompt_creator", function()
             on_submit = function() end,
         })
 
-        assert.are.equal(beta.root, creator.project.root)
-        assert.are.equal(beta.root, creator.state.project.root)
-        assert.are.equal(beta.root, creator.state.context.project_root)
-        assert.are.equal(2, creator.project_index)
+        assert.are.equal(alpha.root, creator.project.root)
+        assert.are.equal(alpha.root, creator.state.project.root)
+        assert.are.equal(alpha.root, creator.state.context.project_root)
+        assert.are.equal(1, creator.project_index)
         assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
     end)
 
