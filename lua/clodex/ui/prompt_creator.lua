@@ -619,13 +619,12 @@ end
 
 ---@return integer
 function Creator:variant_row()
-    return self:kind_row() + LAYOUT.tab_row_height
+    return self:footer_row() - LAYOUT.footer_gap_rows
 end
 
 ---@return integer
 function Creator:title_row()
-    return #self:variants() > 0 and self:variant_row() + LAYOUT.title_gap_rows
-        or self:kind_row() + LAYOUT.title_gap_rows
+    return self:kind_row() + LAYOUT.title_gap_rows
 end
 
 ---@return integer
@@ -640,7 +639,8 @@ end
 
 ---@return integer
 function Creator:body_height()
-    return math.max(self:footer_row() - self:body_row() - LAYOUT.footer_gap_rows, LAYOUT.body_min_height)
+    local next_row = #self:variants() > 0 and self:variant_row() or self:footer_row()
+    return math.max(next_row - self:body_row() - LAYOUT.footer_gap_rows, LAYOUT.body_min_height)
 end
 
 ---@return integer

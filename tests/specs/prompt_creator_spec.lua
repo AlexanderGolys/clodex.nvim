@@ -581,7 +581,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(title_cfg.zindex, footer_cfg.zindex)
     end)
 
-    it("places the title row directly below the visible tab rows", function()
+    it("places secondary tabs between the body and footer", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -608,8 +608,10 @@ describe("clodex.ui.prompt_creator", function()
             return creator.state.kind == "bug"
         end)
 
-        assert.are.equal(creator:variant_row(), creator:kind_row() + 2)
-        assert.are.equal(creator:title_row(), creator:variant_row() + 2)
+        assert.are.equal(creator:kind_row() + 2, creator:title_row())
+        assert.is_true(creator:variant_row() > creator:body_row())
+        assert.are.equal(creator:body_row() + creator:body_height() + 2, creator:variant_row())
+        assert.is_true(creator:variant_row() < creator:footer_row())
     end)
 
     it("updates footer state from prompt editor mode events", function()
