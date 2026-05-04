@@ -400,10 +400,14 @@ describe("clodex.terminal.session", function()
 
         local active_name = vim.wo[win].winhl:match("StatusLine:([^,]+)")
         local inactive_name = vim.wo[win].winhl:match("StatusLineNC:([^,]+)")
+        local winbar_name = vim.wo[win].winhl:match("WinBar:([^,]+)")
+        local inactive_winbar_name = vim.wo[win].winhl:match("WinBarNC:([^,]+)")
         local normal_name = vim.wo[win].winhl:match("Normal:([^,]+)")
 
         assert.matches("ClodexTerminalStatuslineDynActive_445566_DDEEFF", active_name)
         assert.matches("ClodexTerminalStatuslineDynInactive_445566_DDEEFF", inactive_name)
+        assert.are.equal(active_name, winbar_name)
+        assert.are.equal(inactive_name, inactive_winbar_name)
         assert.matches("ClodexTerminalWindowDyn_445566_DDEEFF", normal_name)
 
         local active = vim.api.nvim_get_hl(0, { name = active_name, link = false })
@@ -461,7 +465,11 @@ describe("clodex.terminal.session", function()
         vim.api.nvim_win_set_buf(win, buf)
         vim.api.nvim_set_option_value("statusline", "%!v:lua.require('clodex.terminal.ui').statusline()", { scope = "local", win = win })
         vim.api.nvim_set_option_value("winbar", "%!v:lua.require('clodex.terminal.ui').winbar()", { scope = "local", win = win })
-        vim.wo[win].winhl = "StatusLine:ClodexTerminalStatuslineDynActive_445566_DDEEFF,Normal:ClodexTerminalWindowDyn_445566_DDEEFF"
+        vim.wo[win].winhl = table.concat({
+            "StatusLine:ClodexTerminalStatuslineDynActive_445566_DDEEFF",
+            "WinBar:ClodexTerminalStatuslineDynActive_445566_DDEEFF",
+            "Normal:ClodexTerminalWindowDyn_445566_DDEEFF",
+        }, ",")
 
         TerminalUi.apply_window(win)
 

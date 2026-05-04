@@ -176,6 +176,8 @@ local function apply_terminal_window_highlights(win)
     local highlights = {
         "StatusLine:" .. active,
         "StatusLineNC:" .. inactive,
+        "WinBar:" .. active,
+        "WinBarNC:" .. inactive,
     }
     if window then
         highlights[#highlights + 1] = "Normal:" .. window
