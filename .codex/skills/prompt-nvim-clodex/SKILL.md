@@ -13,6 +13,7 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
 1. Use the `clodex` MCP server as the primary queue interface.
 2. Call `get_task` for the current repository root to claim or resume the active queued task.
    - Treat the returned task id and `work_prompt` as authoritative. They may differ from a queued item id shown in the prompt text when another item was already active.
+   - A prompt creator implement action may arrive through direct `codex exec` or through the interactive terminal fallback; the MCP task response is authoritative in both cases.
 3. If `get_task` returns `status = done`, stop; the queue is exhausted.
 4. Before interpreting, planning, or implementing the task, send a user-visible chat message that shows the original returned `work_prompt` text as-is so the user can see exactly what the agent is working on.
 5. Otherwise, implement the returned `work_prompt`.

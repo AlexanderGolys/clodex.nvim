@@ -187,7 +187,10 @@ function QueueActions:start_queued_item(project, item_id, mode)
     end
 
     if mode == "exec" then
-        return self:dispatch_item_direct(project, queued_item)
+        if self:dispatch_item_direct(project, queued_item) then
+            return true
+        end
+        return self:dispatch_item(project, queued_item)
     end
 
     local started = self:dispatch_item(project, queued_item)

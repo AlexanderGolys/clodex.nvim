@@ -497,6 +497,9 @@ describe("clodex.app.queue_actions", function()
                 return false
             end,
         }
+        actions.dispatch_item = function()
+            return false
+        end
 
         local ok = actions:start_queued_item(project, item.id, "exec")
         local queue_name, _, current_item = queue:find_item(project, item.id)
@@ -507,6 +510,36 @@ describe("clodex.app.queue_actions", function()
         assert.are.equal(nil, current_item.history_summary)
         assert.are.equal(nil, current_item.execution_instructions)
         assert.are.equal(0, refresh_count)
+    end)
+
+    it("falls back to interactive dispatch when exec dispatch fails", function()
+        local item = queue:add_todo(project, {
+            title = "fallback to chat",
+            queue = "queued",
+            kind = "todo",
+        })
+        local dispatched_project
+        local dispatched_item
+
+        actions.app.exec_runner = {
+            start = function()
+                return false
+            end,
+        }
+        actions.dispatch_item = function(_, queued_project, queued_item)
+            dispatched_project = queued_project
+            dispatched_item = queued_item
+            return true
+        end
+
+        local ok = actions:start_queued_item(project, item.id, "exec")
+        local queue_name, _, current_item = queue:find_item(project, item.id)
+
+        assert.is_true(ok)
+        assert.are.same(project, dispatched_project)
+        assert.are.same(item.id, dispatched_item.id)
+        assert.are.equal("queued", queue_name)
+        assert.are.equal(item.id, current_item.id)
     end)
 
     it("keeps a queued item in queued when interactive dispatch fails", function()
