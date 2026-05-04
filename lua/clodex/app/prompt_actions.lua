@@ -189,12 +189,14 @@ function PromptActions:open_creator(project, opts)
     local category = Prompt.categories.is_valid(opts.category) and Prompt.categories.get(opts.category).id or "todo"
     local draft = opts.initial_draft or selection_default_draft(category, opts.context)
     local current_tab = self.app.current_tab and self.app:current_tab() or nil
-    local projects = self.app.registry and self.app.registry.list and self.app.registry:list() or nil
+    local active_project_root = opts.active_project_root or current_tab and current_tab.active_project_root or nil
+    local projects = self.app.projects_for_queue_workspace and self.app:projects_for_queue_workspace(active_project_root)
+        or (self.app.registry and self.app.registry.list and self.app.registry:list() or nil)
     return PromptCreator.open({
         app = self.app,
         project = project,
         projects = projects,
-        active_project_root = opts.active_project_root or current_tab and current_tab.active_project_root or nil,
+        active_project_root = active_project_root,
         context = opts.context,
         initial_kind = category,
         initial_draft = draft,

@@ -103,6 +103,38 @@ describe("clodex.app.prompt_actions", function()
         assert.are.equal("bug", creator_calls[1].initial_kind)
     end)
 
+    it("opens the creator with queue workspace project ordering", function()
+        local alpha = {
+            name = "Alpha",
+            root = "/tmp/alpha",
+        }
+        local beta = {
+            name = "Beta",
+            root = "/tmp/beta",
+        }
+        local active_root
+        local actions = PromptActions.new({
+            current_tab = function()
+                return {
+                    active_project_root = beta.root,
+                }
+            end,
+            projects_for_queue_workspace = function(_, root)
+                active_root = root
+                return { beta, alpha }
+            end,
+            queue_actions = {
+                add_project_todo = function() end,
+            },
+        })
+
+        actions:open_creator(alpha)
+
+        assert.are.equal(beta.root, active_root)
+        assert.are.same({ beta, alpha }, creator_calls[1].projects)
+        assert.are.equal(beta.root, creator_calls[1].active_project_root)
+    end)
+
     it("offers direct chat submit without queue persistence", function()
         local queued = false
         local dispatched_body
