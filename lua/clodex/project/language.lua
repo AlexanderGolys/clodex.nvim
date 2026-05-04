@@ -10,6 +10,7 @@ local LanguageProfile = {}
 LanguageProfile.__index = LanguageProfile
 
 local DOMINANT_LANGUAGE_COVERAGE_PERCENT = 85
+local DOMINANT_LANGUAGE_MIN_FILES = 2
 local DOMINANT_LANGUAGE_MIN_PERCENT = 10
 local OTHER_LANGUAGE_NAME = "other"
 
@@ -138,6 +139,7 @@ function LanguageProfile:dominant_languages(language_totals)
     for index, language in ipairs(languages) do
         if index > 1
             and language.percent < DOMINANT_LANGUAGE_MIN_PERCENT
+            and language.files < DOMINANT_LANGUAGE_MIN_FILES
             and coverage >= DOMINANT_LANGUAGE_COVERAGE_PERCENT
         then
             omitted_files = omitted_files + language.files
@@ -166,7 +168,7 @@ function LanguageProfile:format_label(language)
     if not icon then
         return language
     end
-    return ("%s %s"):format(icon, language)
+    return ("%s %s"):format(vim.trim(icon), language)
 end
 
 LanguageProfile.ICONS = LANGUAGE_ICONS

@@ -31,8 +31,33 @@ describe("clodex.project.language", function()
             return language.name
         end, languages))
         assert.are.same({
+            86,
+            14,
+        }, vim.tbl_map(function(language)
+            return language.percent
+        end, languages))
+    end)
+
+    it("keeps multi-file secondary languages even when their share is small", function()
+        local language_totals = {
+            rs = 60,
+            lua = 4,
+            sh = 1,
+        }
+
+        local languages = profile:dominant_languages(language_totals)
+
+        assert.are.same({
+            "rs",
+            "lua",
+            "other",
+        }, vim.tbl_map(function(language)
+            return language.name
+        end, languages))
+        assert.are.same({
             92,
-            8,
+            6,
+            2,
         }, vim.tbl_map(function(language)
             return language.percent
         end, languages))

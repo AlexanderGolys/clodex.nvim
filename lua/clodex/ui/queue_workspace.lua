@@ -789,7 +789,7 @@ local function format_languages(languages)
     for _, language in ipairs(languages) do
         local icon = language_profile.ICONS[language.name]
         if icon then
-            icons[#icons + 1] = icon
+            icons[#icons + 1] = vim.trim(icon)
         end
     end
 
