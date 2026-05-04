@@ -731,12 +731,12 @@ end
 
 ---@return integer
 function Creator:project_row()
-    return self:top_row()
+    return self:title_row()
 end
 
 ---@return integer
 function Creator:project_height()
-    return math.max(self:total_height() + LAYOUT.footer_gap_rows, LAYOUT.min_window_offset)
+    return math.max(self:footer_row() - self:project_row() + LAYOUT.footer_gap_rows, LAYOUT.min_window_offset)
 end
 
 ---@return integer
