@@ -14,19 +14,20 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
 2. Call `get_task` for the current repository root to claim or resume the active queued task.
    - Treat the returned task id and `work_prompt` as authoritative. They may differ from a queued item id shown in the prompt text when another item was already active.
 3. If `get_task` returns `status = done`, stop; the queue is exhausted.
-4. Otherwise, implement the returned `work_prompt`.
-5. Before any successful close, update relevant `README.md` content and agent/context files so they describe the current behavior, workflow, and user-facing changes introduced by the work.
-6. For the current commit-based workflow, a successful close usually requires a focused git commit and a closure payload with `success`, `comment`, and `commit_id`.
+4. Before interpreting, planning, or implementing the task, send a user-visible chat message that shows the original returned `work_prompt` text as-is so the user can see exactly what the agent is working on.
+5. Otherwise, implement the returned `work_prompt`.
+6. Before any successful close, update relevant `README.md` content and agent/context files so they describe the current behavior, workflow, and user-facing changes introduced by the work.
+7. For the current commit-based workflow, a successful close usually requires a focused git commit and a closure payload with `success`, `comment`, and `commit_id`.
    - Exception: `idea` prompts are planning-only. They should generate follow-up prompts or plans without changing code and should close with an empty `commit_id`.
-7. Call `close_task` after the work is finished:
+8. Call `close_task` after the work is finished:
    - on success, use `success = true`, a short completion comment, and the new `commit_id`
    - on failure or blocker, use `success = false` and provide the blocker note in `comment`
-8. If `close_task` returns another task, continue with that task in the same loop.
-9. If `close_task` returns `status = done`, stop; queued work is finished.
-10. When a conversation in planning mode should produce a new follow-up prompt instead of immediate code changes, prefer the `create_prompt` MCP tool to add the new prompt directly to the project queue.
-11. Do not rely on internal queue-mutating helpers as part of the public workflow; the MCP loop itself owns task claiming, requeueing, completion, and exhaustion.
-12. Do not edit queue JSON files directly. Queue storage is MCP-managed local data and may live outside the project root.
-13. If queue state appears missing or stale, switch to the separate `clodex-debug` skill and use `local_data_dir` to inspect the MCP helper's current queue destination before moving or repairing any legacy files.
+9. If `close_task` returns another task, continue with that task in the same loop.
+10. If `close_task` returns `status = done`, stop; queued work is finished.
+11. When a conversation in planning mode should produce a new follow-up prompt instead of immediate code changes, prefer the `create_prompt` MCP tool to add the new prompt directly to the project queue.
+12. Do not rely on internal queue-mutating helpers as part of the public workflow; the MCP loop itself owns task claiming, requeueing, completion, and exhaustion.
+13. Do not edit queue JSON files directly. Queue storage is MCP-managed local data and may live outside the project root.
+14. If queue state appears missing or stale, switch to the separate `clodex-debug` skill and use `local_data_dir` to inspect the MCP helper's current queue destination before moving or repairing any legacy files.
 
 # Manual History
 
