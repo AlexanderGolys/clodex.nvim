@@ -981,8 +981,8 @@ function Creator:render_project_list()
         if padding > 0 then
             line = line .. string.rep(" ", padding)
         end
-        local highlight = project.root == self.active_project_root and active_project_hl
-            or (index == self.project_index and "ClodexPromptSourceTabActive" or "ClodexPromptSourceTab")
+        local highlight = index == self.project_index and "ClodexPromptSourceTabActive"
+            or (project.root == self.active_project_root and active_project_hl or "ClodexPromptSourceTab")
         lines[#lines + 1] = line
         self.project_line_map[#lines] = index
         marks[#marks + 1] = Extmark.inline(#lines - 1, 0, #line, highlight)

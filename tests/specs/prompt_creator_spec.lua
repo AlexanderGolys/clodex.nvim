@@ -1551,7 +1551,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(vim.fn.strdisplaywidth(lines[1]), vim.fn.strdisplaywidth(lines[2]))
     end)
 
-    it("keeps the current project on the active prompt accent in the project picker", function()
+    it("highlights the selected target project in the project picker", function()
         local alpha = { name = "Alpha", root = "/tmp/alpha" }
         local beta = { name = "Beta", root = "/tmp/beta" }
 
@@ -1572,7 +1572,9 @@ describe("clodex.ui.prompt_creator", function()
             on_submit = function() end,
         })
 
-        assert.is_true(vim.tbl_contains(extmark_groups(creator.project_buf), "ClodexPromptBugTitle"))
+        local initial_groups = extmark_groups(creator.project_buf)
+        assert.is_true(vim.tbl_contains(initial_groups, "ClodexPromptSourceTabActive"))
+        assert.is_false(vim.tbl_contains(initial_groups, "ClodexPromptBugTitle"))
 
         trigger_buffer_mapping(creator.layout.title_buf, "<C-Down>")
 
