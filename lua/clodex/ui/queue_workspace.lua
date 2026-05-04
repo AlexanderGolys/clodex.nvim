@@ -78,6 +78,7 @@ local QUEUE_LABELS = {
     implemented = "Implemented",
     history = "History",
 }
+local PROMPT_TEXT_TAB_COLS = 4
 local PROMPT_KIND_PREFIX_WIDTH = (function()
     local width = 0
     for _, kind in ipairs(Prompt.categories.list()) do
@@ -89,7 +90,7 @@ local PROJECT_SEARCH_FIELDS = {
     "name",
     "root",
 }
-local ITEM_TITLE_PREFIX_WIDTH = 2
+local ITEM_TITLE_PREFIX_WIDTH = 0
 local FILE_ICON = " "
 local TIMESTAMP_ICON = " " 
 local PROJECT_DETAIL_LABELS = {
@@ -567,11 +568,12 @@ local function prompt_kind_prefix(kind)
 end
 
 ---@param item Clodex.QueueItem
----@param opts? { max_lines?: integer, fold?: boolean }
+---@param opts? { max_lines?: integer, fold?: boolean, indent?: string }
 ---@return string[]
 local function prompt_preview_lines(item, opts)
     opts = opts or {}
     local preview = {} ---@type string[]
+    local indent = type(opts.indent) == "string" and opts.indent or ""
     local lines = vim.split(item.prompt or "", "\n", { plain = true })
     local max_lines = math.max(tonumber(opts.max_lines) or 3, 1)
     local folded = opts.fold ~= false
@@ -585,16 +587,16 @@ local function prompt_preview_lines(item, opts)
             elseif #preview >= max_lines then
                 remaining = remaining + 1
             else
-                preview[#preview + 1] = "    " .. line
+                preview[#preview + 1] = indent .. line
             end
         end
     end
 
     if folded and remaining > 0 then
         if #preview >= max_lines then
-            preview[#preview] = ("    ... (+%d more lines)"):format(remaining + 1)
+            preview[#preview] = ("%s%s (+%d more lines)"):format(indent, ELLIPSIS, remaining + 1)
         else
-            preview[#preview + 1] = ("    ... (+%d more line%s)"):format(remaining, remaining == 1 and "" or "s")
+            preview[#preview + 1] = ("%s%s (+%d more line%s)"):format(indent, ELLIPSIS, remaining, remaining == 1 and "" or "s")
         end
     else
         while #preview > max_lines do
@@ -659,17 +661,17 @@ end
 ---@param title string
 ---@param suffix string
 ---@param opts? { selected?: boolean, suffix_spans?: { start_col: integer, end_col: integer }[] }
----@return string, Clodex.Extmark[]
+---@return string, Clodex.Extmark[], integer
 local function queue_item_title_line(item, title, suffix, opts)
     opts = opts or {}
     local kind = Prompt.categories.get(item.kind)
     local prefix, prefix_label_start, prefix_label_end = prompt_kind_prefix(kind)
-    local text = ("  %s%s%s"):format(prefix, title, suffix)
-    local title_start = 2 + #prefix
+    local text = ("%s%s%s"):format(prefix, title, suffix)
+    local title_start = #prefix
     local title_end = title_start + #title
     local marks = {
-        Extmark.inline(0, 2, 2 + #prefix, "ClodexQueueItem"),
-        Extmark.inline(0, 2 + prefix_label_start, 2 + prefix_label_end, Prompt.kind_name_group(kind.id)),
+        Extmark.inline(0, 0, #prefix, "ClodexQueueItem"),
+        Extmark.inline(0, prefix_label_start, prefix_label_end, Prompt.kind_name_group(kind.id)),
         Extmark.inline(0, title_start, title_end, Prompt.title_group(kind.id)),
     }
     if #suffix > 0 then
@@ -683,7 +685,7 @@ local function queue_item_title_line(item, title, suffix, opts)
             marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted")
         end
     end
-    return text, marks
+    return text, marks, title_start
 end
 
 ---@param queue_name Clodex.QueueName
@@ -1947,10 +1949,11 @@ function Workspace:render_queue()
                         suffix, suffix_spans = history_commit_suffix(item)
                     end
                     local selected = #self.queue_item_rows + 1 == self.queue_index
-                    local item_text, item_extmarks = queue_item_title_line(item, item.title or "", suffix, {
+                    local item_text, item_extmarks, title_start = queue_item_title_line(item, item.title or "", suffix, {
                         selected = selected,
                         suffix_spans = suffix_spans,
                     })
+                    local prompt_text_indent = string.rep(" ", title_start + PROMPT_TEXT_TAB_COLS)
                     self.queue_rows[#self.queue_rows + 1] = {
                         kind = "item",
                         text = item_text,
@@ -1961,7 +1964,7 @@ function Workspace:render_queue()
                     block:append_line(item_text, item_extmarks)
 
                     if comment then
-                        local original = "    " .. comment
+                        local original = prompt_text_indent .. comment
                         self.queue_rows[#self.queue_rows + 1] = {
                             kind = "preview",
                             text = original,
@@ -1977,6 +1980,7 @@ function Workspace:render_queue()
                     ipairs(prompt_preview_lines(item, {
                         max_lines = self.config.queue_workspace.preview_max_lines,
                         fold = self.config.queue_workspace.fold_preview,
+                        indent = prompt_text_indent,
                     }))
                     do
                         self.queue_rows[#self.queue_rows + 1] = {
