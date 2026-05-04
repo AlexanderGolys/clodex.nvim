@@ -1034,6 +1034,75 @@ describe("clodex.ui.queue_workspace", function()
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
 
+    it("does not force project detail refreshes when rendering the selected project", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local refreshed = 0
+        local workspace = Workspace.new({
+            current_tab = function()
+                return {
+                    active_project_root = project.root,
+                }
+            end,
+            queue_summary = function()
+                return {
+                    project = project,
+                    session_running = false,
+                    counts = {
+                        planned = 0,
+                        queued = 0,
+                        implemented = 0,
+                        history = 0,
+                    },
+                    queues = {
+                        planned = {},
+                        queued = {},
+                        implemented = {},
+                        history = {},
+                    },
+                }
+            end,
+            project_details_store = {
+                get_cached = function()
+                    return {
+                        file_count = 1,
+                        remote_name = "origin",
+                        languages = {},
+                        last_file_modified_at = 123,
+                    }
+                end,
+                get = function()
+                    refreshed = refreshed + 1
+                end,
+            },
+        }, {
+            queue_workspace = {
+                preview_max_lines = 3,
+                fold_preview = true,
+            },
+        })
+        workspace.projects = { project }
+        workspace.project_index = 1
+        workspace.focus = "projects"
+        workspace.project_buf = vim.api.nvim_create_buf(false, true)
+        workspace.project_win = vim.api.nvim_open_win(workspace.project_buf, false, {
+            relative = "editor",
+            row = 1,
+            col = 1,
+            width = 40,
+            height = 12,
+            style = "minimal",
+        })
+
+        workspace:render_projects()
+
+        assert.are.equal(0, refreshed)
+
+        vim.api.nvim_win_close(workspace.project_win, true)
+    end)
+
     it("uses darker selection highlights for the focused picker", function()
         local project = {
             name = "Test Project",

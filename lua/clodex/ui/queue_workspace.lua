@@ -379,15 +379,11 @@ end
 
 ---@param app Clodex.AppQueueWorkspace.Host
 ---@param project Clodex.Project
----@param force_load? boolean
 ---@return Clodex.ProjectDetails.Snapshot?
-local function project_details(app, project, force_load)
+local function project_details(app, project)
     local store = app.project_details_store
     if not store then
         return nil
-    end
-    if force_load and store.get then
-        return store:get(project)
     end
     return store:get_cached(project) or (store.get and store:get(project)) or nil
 end
@@ -1812,7 +1808,7 @@ function Workspace:render_projects()
 
     for _, project in ipairs(self.projects) do
         local summary = self.app:queue_summary(project)
-        local details = project_details(self.app, project, project.root == selected_root)
+        local details = project_details(self.app, project)
         local title, count_spans = project_title_text(project, summary, details, max_width)
         local count_suffix = project_count_suffix(summary)
         self.project_rows[#self.project_rows + 1] = {
