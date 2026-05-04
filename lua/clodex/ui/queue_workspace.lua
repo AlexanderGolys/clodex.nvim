@@ -218,6 +218,12 @@ local function workspace_is_open(self)
     return type(self.is_open) == "function" and self:is_open()
 end
 
+local function leave_insert_mode()
+    if vim.api.nvim_get_mode().mode:sub(1, 1) == "i" then
+        vim.cmd.stopinsert()
+    end
+end
+
 ---@param self Clodex.QueueWorkspace
 ---@param opts Clodex.UiSelect.InputOpts
 ---@param on_confirm fun(value?: string)
@@ -1081,6 +1087,8 @@ end
 --- Opens or activates the selected ui queue workspace target in the workspace.
 --- This is used by navigation flows that need to display the most recent selection.
 function Workspace:open()
+    leave_insert_mode()
+
     if self:is_open() then
         self:refresh()
         return

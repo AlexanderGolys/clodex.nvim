@@ -389,6 +389,42 @@ describe("clodex.ui.queue_workspace", function()
         end
     end)
 
+    it("leaves insert mode when the workspace opens", function()
+        local original_get_mode = vim.api.nvim_get_mode
+        local original_stopinsert = vim.cmd.stopinsert
+        local stopinsert_count = 0
+        local workspace = {
+            is_open = function()
+                return false
+            end,
+            ensure_buffers = function() end,
+            layout = function()
+                return 0, 0, 24, 48, 18, 2
+            end,
+            open_block = function() end,
+            configure_windows = function() end,
+            attach_keymaps = function() end,
+            attach_focus_tracking = function() end,
+            refresh = function() end,
+        }
+
+        vim.api.nvim_get_mode = function()
+            return { mode = "i" }
+        end
+        vim.cmd.stopinsert = function()
+            stopinsert_count = stopinsert_count + 1
+        end
+
+        local ok, err = pcall(function()
+            Workspace.open(workspace)
+        end)
+        vim.api.nvim_get_mode = original_get_mode
+        vim.cmd.stopinsert = original_stopinsert
+
+        assert.is_true(ok, err)
+        assert.are.equal(1, stopinsert_count)
+    end)
+
     it("keeps the workspace open while queue deletion confirmation is shown", function()
         local project = {
             name = "Test Project",

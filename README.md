@@ -171,7 +171,7 @@ Legacy queue items and command aliases using `todo`, `freeform`, `adjustment`, `
 
 Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the selected range.
 
-The main queue workspace panel uses the shared Clodex UI panel shell, with project, queue, and footer panes owned as one panel. Its panel cursor highlights match the pane backgrounds so the text cursor stays hidden while selection highlights show the active row.
+The main queue workspace panel uses the shared Clodex UI panel shell, with project, queue, and footer panes owned as one panel. Opening the panel from insert mode returns Neovim to normal mode automatically. Its panel cursor highlights match the pane backgrounds so the text cursor stays hidden while selection highlights show the active row.
 
 The debug state panel uses the same shared Clodex UI panel API as the prompt creator, with panel-owned command and state blocks. The state pane includes backend, focus, session, project, tab, queued workflow, prompt skill, and the global keymaps currently registered by Clodex.
 
