@@ -45,6 +45,7 @@ local PROMPT_FOOTER_NORMAL = "ClodexPromptEditorFooter"
 ---@field projects Clodex.Project[]
 ---@field project Clodex.Project
 ---@field project_index integer
+---@field active_project_root string
 ---@field context? Clodex.PromptContext.Capture
 ---@field submit_actions Clodex.UiSelect.MultilineAction[]
 ---@field mode "new"|"edit"
@@ -166,6 +167,7 @@ function Creator.new(opts)
         projects = projects,
         project = project,
         project_index = project_index,
+        active_project_root = active_project_root,
         context = Helpers.project_context(opts.context, project),
         submit_actions = vim.deepcopy(opts.submit_actions or DEFAULT_SUBMIT_ACTIONS),
         mode = opts.mode or "new",
@@ -969,18 +971,16 @@ function Creator:render_project_list()
     local lines = {} ---@type string[]
     local marks = {} ---@type Clodex.Extmark[]
     self.project_line_map = {}
+    local active_project_hl = Prompt.title_group(self.state.kind)
     for index, project in ipairs(self.projects) do
         local details = Helpers.project_details(self.app, project)
         local icon = details and details.project_icon and (details.project_icon .. " ") or ""
         local line = " " .. icon .. project.name
+        local highlight = project.root == self.active_project_root and active_project_hl
+            or (index == self.project_index and "ClodexPromptSourceTabActive" or "ClodexPromptSourceTab")
         lines[#lines + 1] = line
         self.project_line_map[#lines] = index
-        marks[#marks + 1] = Extmark.inline(
-            #lines - 1,
-            0,
-            #line,
-            index == self.project_index and "ClodexPromptSourceTabActive" or "ClodexPromptSourceTab"
-        )
+        marks[#marks + 1] = Extmark.inline(#lines - 1, 0, #line, highlight)
     end
 
     vim.bo[self.project_buf].modifiable = true

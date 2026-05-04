@@ -1443,6 +1443,40 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(" Beta", lines[2])
     end)
 
+    it("keeps the current project on the active prompt accent in the project picker", function()
+        local alpha = { name = "Alpha", root = "/tmp/alpha" }
+        local beta = { name = "Beta", root = "/tmp/beta" }
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = alpha,
+            projects = { alpha, beta },
+            active_project_root = alpha.root,
+            initial_kind = "bug",
+            on_submit = function() end,
+        })
+
+        assert.is_true(vim.tbl_contains(extmark_groups(creator.project_buf), "ClodexPromptBugTitle"))
+
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-Down>")
+
+        wait_for(function()
+            return creator.project.root == beta.root
+        end)
+
+        local groups = extmark_groups(creator.project_buf)
+        assert.is_true(vim.tbl_contains(groups, "ClodexPromptBugTitle"))
+        assert.is_true(vim.tbl_contains(groups, "ClodexPromptSourceTabActive"))
+    end)
+
     it("loads project icons when they are not already cached", function()
         creator = Creator.open({
             app = {
