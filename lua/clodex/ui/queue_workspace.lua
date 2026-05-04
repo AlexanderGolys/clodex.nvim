@@ -1060,6 +1060,14 @@ function Workspace:ensure_panel()
     })
 end
 
+---@param fn fun()
+function Workspace:without_close_watchers(fn)
+    if self.panel then
+        return self.panel:without_close_watchers(fn)
+    end
+    return fn()
+end
+
 ---@param block_field "project_block"|"queue_block"|"footer_block"
 ---@param win_field "project_win"|"queue_win"|"footer_win"
 ---@param id string
@@ -2194,45 +2202,53 @@ function Workspace:edit_queue_item()
         return
     end
 
-    self.app.prompt_actions:open_creator(project, {
-        category = Prompt.categories.is_valid(item.kind) and Prompt.categories.get(item.kind).id or "todo",
-        context = PromptContext.capture({ project = project }),
-        active_project_root = project.root,
-        mode = "edit",
-        lock_kind = true,
-        submit_actions = {
-            { value = "save", label = "save", key = "<C-s>" },
-        },
-        initial_draft = {
-            title = item.title,
-            details = item.details,
-            prompt = item.prompt,
-            image_path = item.image_path,
-        },
-        on_submit = function(spec, action, selected_project)
-            local target_project = selected_project or project
-            if target_project.root ~= project.root then
-                local edited = self.app.queue_actions:edit_queue_item(project, item.id, {
+    local function open_editor()
+        self.app.prompt_actions:open_creator(project, {
+            category = Prompt.categories.is_valid(item.kind) and Prompt.categories.get(item.kind).id or "todo",
+            context = PromptContext.capture({ project = project }),
+            active_project_root = project.root,
+            mode = "edit",
+            lock_kind = true,
+            submit_actions = {
+                { value = "save", label = "save", key = "<C-s>" },
+            },
+            initial_draft = {
+                title = item.title,
+                details = item.details,
+                prompt = item.prompt,
+                image_path = item.image_path,
+            },
+            on_submit = function(spec, action, selected_project)
+                local target_project = selected_project or project
+                if target_project.root ~= project.root then
+                    local edited = self.app.queue_actions:edit_queue_item(project, item.id, {
+                        title = spec.title,
+                        details = spec.details,
+                        image_path = spec.image_path,
+                    })
+                    if edited == false then
+                        return false
+                    end
+                    self.app.queue_actions:move_queue_item_to_project(project, item.id, target_project)
+                    self:refresh()
+                    return
+                end
+
+                self.app.queue_actions:edit_queue_item(project, item.id, {
                     title = spec.title,
                     details = spec.details,
                     image_path = spec.image_path,
                 })
-                if edited == false then
-                    return false
-                end
-                self.app.queue_actions:move_queue_item_to_project(project, item.id, target_project)
                 self:refresh()
-                return
-            end
+            end,
+        })
+    end
 
-            self.app.queue_actions:edit_queue_item(project, item.id, {
-                title = spec.title,
-                details = spec.details,
-                image_path = spec.image_path,
-            })
-            self:refresh()
-        end,
-    })
+    if self.without_close_watchers then
+        self:without_close_watchers(open_editor)
+        return
+    end
+    open_editor()
 end
 
 function Workspace:implement_queue_item()

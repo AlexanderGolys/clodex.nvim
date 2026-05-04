@@ -745,6 +745,7 @@ describe("clodex.ui.queue_workspace", function()
         local submitted
         local deleted
         local refresh_count = 0
+        local suppressed_close_watchers = false
         local workspace = {
             app = {
                 prompt_actions = {
@@ -781,6 +782,10 @@ describe("clodex.ui.queue_workspace", function()
             refresh = function()
                 refresh_count = refresh_count + 1
             end,
+            without_close_watchers = function(_, fn)
+                suppressed_close_watchers = true
+                fn()
+            end,
         }
 
         Workspace.edit_queue_item(workspace)
@@ -790,6 +795,7 @@ describe("clodex.ui.queue_workspace", function()
         assert.are.equal("todo", open_creator_calls[1].opts.category)
         assert.is_true(open_creator_calls[1].opts.lock_kind)
         assert.are.equal("edit", open_creator_calls[1].opts.mode)
+        assert.is_true(suppressed_close_watchers)
         assert.are.same({
             title = "Old title",
             details = "Old details",
