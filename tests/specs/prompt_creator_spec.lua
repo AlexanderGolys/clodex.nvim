@@ -528,7 +528,29 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_truthy(vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptBugTitle", 1, true))
     end)
 
-    it("supports context token highlighting and completion in the composer body", function()
+    it("supports context token highlighting, completion, and expansion in composer fields", function()
+        local diagnostic_ns = vim.api.nvim_create_namespace("clodex-prompt-creator-context-test")
+        local source_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(source_buf, "/tmp/demo/lua/demo.lua")
+        vim.api.nvim_buf_set_lines(source_buf, 0, -1, false, {
+            "local token = 1",
+            "local second = token",
+            "local third = token",
+            "local fourth = token",
+            "local fifth = token",
+            "local sixth = token",
+            "return token",
+        })
+        vim.diagnostic.set(diagnostic_ns, source_buf, {
+            {
+                lnum = 6,
+                col = 0,
+                message = "context failure",
+                severity = vim.diagnostic.severity.ERROR,
+            },
+        })
+
+        local submitted
         creator = Creator.open({
             app = {
                 config = {
@@ -544,34 +566,92 @@ describe("clodex.ui.prompt_creator", function()
                 root = "/tmp/demo",
             },
             context = {
+                buf = source_buf,
                 file_path = "/tmp/demo/lua/demo.lua",
                 project_root = "/tmp/demo",
                 relative_path = "lua/demo.lua",
                 cursor_row = 7,
                 current_word = "token",
+                visible_start = 1,
+                visible_end = 7,
+                selection_start_row = 1,
+                selection_end_row = 2,
+                selection_text = "local token = 1\nlocal second = token",
             },
             initial_kind = "todo",
             initial_draft = {
-                title = "",
-                details = "Explain &file",
+                title = "Explain &line",
+                details = table.concat({
+                    "&file",
+                    "&selection",
+                    "&visible_buff",
+                    "&word",
+                    "&diagnostic",
+                    "&buff_diagnostics",
+                    "&all_diagnostics",
+                }, "\n"),
             },
-            on_submit = function() end,
+            on_submit = function(spec)
+                submitted = spec
+                return { id = "queued-item" }
+            end,
         })
 
+        local title_buf = creator.layout.title_buf
         local body_buf = creator.layout.body_buf
-        local groups = extmark_groups(body_buf)
+        local title_groups = extmark_groups(title_buf)
+        local body_groups = extmark_groups(body_buf)
 
-        assert.is_true(vim.tbl_contains(groups, "ClodexPromptEditorContext"))
+        assert.is_true(vim.tbl_contains(title_groups, "ClodexPromptEditorContext"))
+        assert.are.equal(7, vim.tbl_count(vim.tbl_filter(function(group)
+            return group == "ClodexPromptEditorContext"
+        end, body_groups)))
+
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        vim.api.nvim_win_set_cursor(creator.layout.title_win.win, { 1, 11 })
+
+        local title_items = require("clodex.ui.select").prompt_context_complete(0, "&l")
+        assert.is_true(#title_items > 0)
+        assert.are.equal("&line", title_items[1].word)
 
         vim.api.nvim_set_current_win(creator.layout.body_win.win)
-        vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 1, 13 })
+        vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 7, 16 })
 
-        local items = require("clodex.ui.select").prompt_context_complete(0, "&f")
-        assert.is_true(#items > 0)
-        assert.are.equal("&file", items[1].word)
+        local items = require("clodex.ui.select").prompt_context_complete(0, "&")
+        local words = vim.tbl_map(function(item)
+            return item.word
+        end, items)
 
-        local diagnostic_items = require("clodex.ui.select").prompt_context_complete(0, "&d")
-        assert.are.same({}, diagnostic_items)
+        for _, token in ipairs({
+            "&file",
+            "&line",
+            "&selection",
+            "&visible_buff",
+            "&word",
+            "&diagnostic",
+            "&buff_diagnostics",
+            "&all_diagnostics",
+        }) do
+            assert.is_true(vim.tbl_contains(words, token), token)
+        end
+
+        creator:submit("queue")
+
+        wait_for(function()
+            return submitted ~= nil
+        end)
+
+        assert.matches("Inserted context from &line", submitted.title)
+        assert.matches("Inserted context from &file", submitted.details)
+        assert.matches("Inserted context from &selection", submitted.details)
+        assert.matches("Inserted context from &visible_buff", submitted.details)
+        assert.matches("Inserted context from &word", submitted.details)
+        assert.matches("Inserted context from &diagnostic", submitted.details)
+        assert.matches("Inserted context from &buff_diagnostics", submitted.details)
+        assert.matches("Inserted context from &all_diagnostics", submitted.details)
+        assert.matches("context failure", submitted.details)
+
+        vim.diagnostic.reset(diagnostic_ns, source_buf)
     end)
 
     it("changes kind tabs from the footer and keeps normal-mode focus in the editor", function()

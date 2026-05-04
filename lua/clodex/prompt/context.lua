@@ -113,19 +113,29 @@ local function token_available(token, context)
         return context.relative_path ~= nil and context.relative_path ~= "" and context.cursor_row ~= nil
     end
     if token == "&selection" then
-        return context.selection_text ~= nil and vim.trim(context.selection_text) ~= ""
+        return context.relative_path ~= nil
+            and context.relative_path ~= ""
+            and context.selection_text ~= nil
+            and vim.trim(context.selection_text) ~= ""
     end
     if token == "&visible_buff" then
-        return context.relative_path ~= nil and context.relative_path ~= "" and context.visible_start ~= nil and context.visible_end ~= nil
+        return context.relative_path ~= nil
+            and context.relative_path ~= ""
+            and context.visible_start ~= nil
+            and context.visible_end ~= nil
     end
     if token == "&word" then
-        return context.relative_path ~= nil and context.relative_path ~= "" and context.cursor_row ~= nil and context.current_word ~= ""
+        return context.relative_path ~= nil
+            and context.relative_path ~= ""
+            and context.cursor_row ~= nil
+            and type(context.current_word) == "string"
+            and vim.trim(context.current_word) ~= ""
     end
     if token == "&diagnostic" then
-        return #current_line_diags(context) > 0
+        return context.buf ~= nil and context.cursor_row ~= nil and #current_line_diags(context) > 0
     end
     if token == "&buff_diagnostics" then
-        return #current_buffer_diags(context) > 0
+        return context.buf ~= nil and #current_buffer_diags(context) > 0
     end
     if token == "&all_diagnostics" then
         return context.project_root ~= nil and #project_diagnostics(context) > 0
@@ -415,7 +425,7 @@ function M.expand_token(token, context)
         )
     end
 
-    if token == "&word" and context.current_word ~= "" then
+    if token == "&word" and type(context.current_word) == "string" and vim.trim(context.current_word) ~= "" then
         if context.relative_path == nil or context.cursor_row == nil then
             return nil
         end
