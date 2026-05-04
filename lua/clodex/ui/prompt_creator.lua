@@ -972,10 +972,15 @@ function Creator:render_project_list()
     local marks = {} ---@type Clodex.Extmark[]
     self.project_line_map = {}
     local active_project_hl = Prompt.title_group(self.state.kind)
+    local target_width = self:project_list_width()
     for index, project in ipairs(self.projects) do
         local details = Helpers.project_details(self.app, project)
         local icon = details and details.project_icon and (details.project_icon .. " ") or ""
         local line = " " .. icon .. project.name
+        local padding = math.max(target_width - vim.fn.strdisplaywidth(line), 0)
+        if padding > 0 then
+            line = line .. string.rep(" ", padding)
+        end
         local highlight = project.root == self.active_project_root and active_project_hl
             or (index == self.project_index and "ClodexPromptSourceTabActive" or "ClodexPromptSourceTab")
         lines[#lines + 1] = line

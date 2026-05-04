@@ -1513,8 +1513,9 @@ describe("clodex.ui.prompt_creator", function()
 
         local lines = vim.api.nvim_buf_get_lines(creator.project_buf, 0, -1, false)
 
-        assert.are.equal(" ★ Alpha", lines[1])
-        assert.are.equal(" Beta", lines[2])
+        assert.is_truthy(lines[1]:find("^ ★ Alpha%s+$"))
+        assert.is_truthy(lines[2]:find("^ Beta%s+$"))
+        assert.are.equal(vim.fn.strdisplaywidth(lines[1]), vim.fn.strdisplaywidth(lines[2]))
     end)
 
     it("keeps the current project on the active prompt accent in the project picker", function()
@@ -1551,6 +1552,35 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(vim.tbl_contains(groups, "ClodexPromptSourceTabActive"))
     end)
 
+    it("pads project picker rows to the same visual width", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = { name = "Short", root = "/tmp/short" },
+            projects = {
+                { name = "Short", root = "/tmp/short" },
+                { name = "A much longer project", root = "/tmp/long" },
+            },
+            active_project_root = "/tmp/short",
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        local lines = vim.api.nvim_buf_get_lines(creator.project_buf, 0, -1, false)
+        local target_width = creator:project_list_width()
+
+        assert.are.equal(target_width, vim.fn.strdisplaywidth(lines[1]))
+        assert.are.equal(target_width, vim.fn.strdisplaywidth(lines[2]))
+        assert.is_truthy(lines[1]:find("^ Short%s+$"))
+    end)
+
     it("loads project icons when they are not already cached", function()
         creator = Creator.open({
             app = {
@@ -1584,8 +1614,9 @@ describe("clodex.ui.prompt_creator", function()
 
         local lines = vim.api.nvim_buf_get_lines(creator.project_buf, 0, -1, false)
 
-        assert.are.equal(" ★ Alpha", lines[1])
-        assert.are.equal(" Beta", lines[2])
+        assert.is_truthy(lines[1]:find("^ ★ Alpha%s+$"))
+        assert.is_truthy(lines[2]:find("^ Beta%s+$"))
+        assert.are.equal(vim.fn.strdisplaywidth(lines[1]), vim.fn.strdisplaywidth(lines[2]))
     end)
 
     it("adds a one-cell panel background margin around the creator", function()
