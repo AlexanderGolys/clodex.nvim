@@ -391,15 +391,42 @@ describe("clodex.ui.prompt_creator", function()
             vim.wo[creator.layout.title_win.win].winhl:find("NormalFloat:ClodexPromptFocusActive", 1, true)
         )
         assert.is_truthy(
+            vim.wo[creator.layout.title_win.win].winhl:find(
+                "FloatBorder:ClodexPromptImprovementTitleFocusBorder",
+                1,
+                true
+            )
+        )
+        assert.is_truthy(
+            vim.wo[creator.layout.title_win.win].winhl:find(
+                "FloatTitle:ClodexPromptImprovementTitleFocusBorder",
+                1,
+                true
+            )
+        )
+        assert.is_truthy(
             vim.wo[creator.layout.body_win.win].winhl:find("NormalFloat:ClodexPromptEditorNormal", 1, true)
+        )
+        assert.is_truthy(
+            vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true)
         )
 
         trigger_buffer_mapping(creator.layout.title_buf, "<Tab>")
 
         wait_for(function()
             return vim.wo[creator.layout.body_win.win].winhl:find("NormalFloat:ClodexPromptFocusActive", 1, true)
+                and vim.wo[creator.layout.body_win.win].winhl:find(
+                    "FloatBorder:ClodexPromptImprovementTitleFocusBorder",
+                    1,
+                    true
+                )
                 and vim.wo[creator.layout.title_win.win].winhl:find(
                     "NormalFloat:ClodexPromptEditorNormal",
+                    1,
+                    true
+                )
+                and vim.wo[creator.layout.title_win.win].winhl:find(
+                    "FloatBorder:ClodexPromptImprovementTitle",
                     1,
                     true
                 )
@@ -580,7 +607,11 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_truthy(vim.wo[creator.footer_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true))
         assert.is_truthy(vim.tbl_contains(extmark_groups(creator.footer_buf), "ClodexPromptImprovementTitle"))
         assert.is_truthy(
-            vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true)
+            vim.wo[creator.layout.title_win.win].winhl:find(
+                "FloatBorder:ClodexPromptImprovementTitleFocusBorder",
+                1,
+                true
+            )
         )
         assert.is_truthy(
             vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true)
@@ -594,7 +625,9 @@ describe("clodex.ui.prompt_creator", function()
 
         assert.is_truthy(vim.wo[creator.footer_win.win].winhl:find("FloatBorder:ClodexPromptBugTitle", 1, true))
         assert.is_truthy(vim.tbl_contains(extmark_groups(creator.footer_buf), "ClodexPromptBugTitle"))
-        assert.is_truthy(vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptBugTitle", 1, true))
+        assert.is_truthy(
+            vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptBugTitleFocusBorder", 1, true)
+        )
         assert.is_truthy(vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptBugTitle", 1, true))
     end)
 

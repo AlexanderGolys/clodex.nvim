@@ -1183,8 +1183,12 @@ function Creator:apply_focus_highlight(win, inactive_hl)
     if not win or not win.valid or not win:valid() then
         return
     end
-    local normal_hl = vim.api.nvim_get_current_win() == win.win and PROMPT_ACTIVE_NORMAL or inactive_hl
+    local active = vim.api.nvim_get_current_win() == win.win
+    local normal_hl = active and PROMPT_ACTIVE_NORMAL or inactive_hl
+    local border_hl = active and Prompt.focus_border_group(self.state.kind) or Prompt.title_group(self.state.kind)
     Helpers.update_winhl(win.win, {
+        FloatBorder = border_hl,
+        FloatTitle = border_hl,
         Normal = normal_hl,
         NormalFloat = normal_hl,
         NormalNC = normal_hl,

@@ -180,5 +180,23 @@ describe("clodex.config", function()
             assert.are.equal(active.bg, active.fg)
             assert.are.equal(inactive.bg, inactive.fg)
         end)
+
+        it("maps prompt focus border backgrounds to the active prompt panel background", function()
+            vim.api.nvim_set_hl(0, "Normal", { fg = "#dddddd", bg = "#20242c" })
+            vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#30343c" })
+            vim.api.nvim_set_hl(0, "Pmenu", { fg = "#dddddd", bg = "#30343c" })
+            vim.api.nvim_set_hl(0, "@constructor", { fg = "#88ccff" })
+
+            Config.apply_highlights({
+                highlights = require("clodex.config.highlights"),
+            })
+
+            local active = vim.api.nvim_get_hl(0, { name = "ClodexPromptFocusActive", link = false })
+            local border = vim.api.nvim_get_hl(0, { name = "ClodexPromptImprovementTitleFocusBorder", link = false })
+            local title = vim.api.nvim_get_hl(0, { name = "ClodexPromptImprovementTitle", link = false })
+
+            assert.are.equal(active.bg, border.bg)
+            assert.are.equal(title.fg, border.fg)
+        end)
     end)
 end)

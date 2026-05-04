@@ -132,6 +132,12 @@ function M.title_group(kind)
     return "ClodexPrompt" .. suffix
 end
 
+---@param kind? Clodex.PromptCategory|string
+---@return string
+function M.focus_border_group(kind)
+    return M.title_group(kind) .. "FocusBorder"
+end
+
 ---@return string
 function M.preview_group()
     return "ClodexPromptPreviewText"
