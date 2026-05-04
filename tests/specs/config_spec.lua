@@ -151,8 +151,9 @@ describe("clodex.config", function()
             assert.are_not.equal(bug.fg, notworking.fg)
         end)
 
-        it("maps terminal statusline highlights to the terminal background", function()
+        it("maps terminal statusline highlights to the StatusLine background", function()
             vim.api.nvim_set_hl(0, "Normal", { fg = "#dddddd", bg = "#1a1b26" })
+            vim.api.nvim_set_hl(0, "StatusLine", { fg = "#eeeeee", bg = "#445566" })
 
             Config.apply_highlights({
                 highlights = require("clodex.config.highlights"),
@@ -161,8 +162,8 @@ describe("clodex.config", function()
             local active = vim.api.nvim_get_hl(0, { name = "ClodexTerminalStatuslineActive", link = false })
             local inactive = vim.api.nvim_get_hl(0, { name = "ClodexTerminalStatusline", link = false })
 
-            assert.are.equal(0x1A1B26, active.bg)
-            assert.are.equal(0x1A1B26, inactive.bg)
+            assert.are.equal(0x445566, active.bg)
+            assert.are.equal(0x445566, inactive.bg)
         end)
 
         it("hides queue panel cursor highlights against their panel backgrounds", function()

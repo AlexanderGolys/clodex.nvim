@@ -293,6 +293,8 @@ describe("clodex.terminal.session", function()
     end)
 
     it("maps terminal statusline highlights onto terminal windows", function()
+        vim.api.nvim_set_hl(0, "StatusLine", { fg = "#eeeeee", bg = "#445566" })
+
         local buf = vim.api.nvim_create_buf(false, true)
         vim.bo[buf].filetype = "clodex_terminal"
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "Codex ready" })
@@ -336,18 +338,74 @@ describe("clodex.terminal.session", function()
 
         local active_name = vim.wo[win].winhl:match("StatusLine:([^,]+)")
         local inactive_name = vim.wo[win].winhl:match("StatusLineNC:([^,]+)")
+        local normal_name = vim.wo[win].winhl:match("Normal:([^,]+)")
 
-        assert.matches("ClodexTerminalStatuslineDynActive_112233_DDEEFF", active_name)
-        assert.matches("ClodexTerminalStatuslineDynInactive_112233_DDEEFF", inactive_name)
+        assert.matches("ClodexTerminalStatuslineDynActive_445566_DDEEFF", active_name)
+        assert.matches("ClodexTerminalStatuslineDynInactive_445566_DDEEFF", inactive_name)
+        assert.matches("ClodexTerminalWindowDyn_445566_DDEEFF", normal_name)
 
         local active = vim.api.nvim_get_hl(0, { name = active_name, link = false })
         local inactive = vim.api.nvim_get_hl(0, { name = inactive_name, link = false })
+        local normal = vim.api.nvim_get_hl(0, { name = normal_name, link = false })
 
-        assert.are.equal(0x112233, active.bg)
+        assert.are.equal(0x445566, active.bg)
         assert.are.equal(0xDDEEFF, active.fg)
         assert.is_true(active.bold)
-        assert.are.equal(0x112233, inactive.bg)
+        assert.are.equal(0x445566, inactive.bg)
         assert.are.equal(0xDDEEFF, inactive.fg)
+        assert.are.equal(0x445566, normal.bg)
+        assert.are.equal(0xDDEEFF, normal.fg)
+
+        vim.api.nvim_win_set_buf(win, original_buf)
+        package.loaded["clodex.app"] = app_module
+    end)
+
+    it("keeps OpenCode terminal windows on CLI-provided chrome", function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.bo[buf].filetype = "clodex_terminal"
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "opencode" })
+
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "opencode" },
+        })
+        session.buf = buf
+
+        local app_module = package.loaded["clodex.app"]
+        package.loaded["clodex.app"] = {
+            instance = function()
+                return {
+                    config = {
+                        get = function()
+                            return { backend = "opencode" }
+                        end,
+                    },
+                    terminals = {
+                        session_by_buf = function(_, target_buf)
+                            if target_buf == buf then
+                                return session
+                            end
+                        end,
+                    },
+                }
+            end,
+        }
+
+        local win = vim.api.nvim_get_current_win()
+        local original_buf = vim.api.nvim_win_get_buf(win)
+        vim.api.nvim_win_set_buf(win, buf)
+        vim.api.nvim_set_option_value("statusline", "%!v:lua.require('clodex.terminal.ui').statusline()", { scope = "local", win = win })
+        vim.api.nvim_set_option_value("winbar", "%!v:lua.require('clodex.terminal.ui').winbar()", { scope = "local", win = win })
+        vim.wo[win].winhl = "StatusLine:ClodexTerminalStatuslineDynActive_445566_DDEEFF,Normal:ClodexTerminalWindowDyn_445566_DDEEFF"
+
+        TerminalUi.apply_window(win)
+
+        assert.are.equal("", vim.api.nvim_get_option_value("statusline", { scope = "local", win = win }))
+        assert.are.equal("", vim.api.nvim_get_option_value("winbar", { scope = "local", win = win }))
+        assert.are.equal("", vim.api.nvim_get_option_value("winhl", { scope = "local", win = win }))
 
         vim.api.nvim_win_set_buf(win, original_buf)
         package.loaded["clodex.app"] = app_module

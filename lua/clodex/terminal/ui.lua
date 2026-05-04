@@ -5,6 +5,7 @@ local WINBAR_EXPR = "%!v:lua.require('clodex.terminal.ui').winbar()"
 local Backend = require("clodex.backend")
 
 local STATUSLINE_HL_PREFIX = "ClodexTerminalStatuslineDyn"
+local WINDOW_HL_PREFIX = "ClodexTerminalWindowDyn"
 
 ---@param buf integer
 ---@param name string
@@ -33,9 +34,26 @@ end
 ---@param buf integer
 ---@return string?
 local function terminal_statusline_bg(buf)
-    return buffer_color(buf, "terminal_color_background")
+    return highlight_hex("StatusLine", "bg")
+        or buffer_color(buf, "terminal_color_background")
         or buffer_color(buf, "terminal_color_0")
         or highlight_hex("Normal", "bg")
+end
+
+---@param buf integer
+---@return string?
+local function terminal_window_bg(buf)
+    return highlight_hex("StatusLine", "bg")
+        or buffer_color(buf, "terminal_color_background")
+        or buffer_color(buf, "terminal_color_0")
+        or highlight_hex("Normal", "bg")
+end
+
+---@param buf integer
+---@return string?
+local function terminal_window_fg(buf)
+    return buffer_color(buf, "terminal_color_foreground")
+        or highlight_hex("Normal", "fg")
 end
 
 ---@param buf integer
@@ -54,13 +72,13 @@ local function color_key(value)
 end
 
 ---@param win integer
----@return string, string
-local function ensure_terminal_statusline_highlights(win)
+---@return string, string, string?
+local function ensure_terminal_highlights(win)
     local buf = vim.api.nvim_win_get_buf(win)
     local bg = terminal_statusline_bg(buf)
     local fg = terminal_statusline_fg(buf)
     if not bg or not fg then
-        return ("ClodexTerminalStatuslineActive"), ("ClodexTerminalStatusline")
+        return ("ClodexTerminalStatuslineActive"), ("ClodexTerminalStatusline"), nil
     end
 
     local suffix = color_key(bg) .. "_" .. color_key(fg)
@@ -68,7 +86,15 @@ local function ensure_terminal_statusline_highlights(win)
     local inactive = STATUSLINE_HL_PREFIX .. "Inactive_" .. suffix
     vim.api.nvim_set_hl(0, inactive, { fg = fg, bg = bg })
     vim.api.nvim_set_hl(0, active, { fg = fg, bg = bg, bold = true })
-    return active, inactive
+
+    local window_bg = terminal_window_bg(buf)
+    local window_fg = terminal_window_fg(buf)
+    if not window_bg or not window_fg then
+        return active, inactive, nil
+    end
+    local window = WINDOW_HL_PREFIX .. "_" .. color_key(window_bg) .. "_" .. color_key(window_fg)
+    vim.api.nvim_set_hl(0, window, { fg = window_fg, bg = window_bg })
+    return active, inactive, window
 end
 
 ---@param win? integer
@@ -138,18 +164,25 @@ local function clear_window_chrome(win)
     if win_option(win, "winbar") == WINBAR_EXPR then
         set_win_option(win, "winbar", "")
     end
-    if win_option(win, "winhl"):find(STATUSLINE_HL_PREFIX, 1, true) ~= nil then
+    local winhl = win_option(win, "winhl")
+    if winhl:find(STATUSLINE_HL_PREFIX, 1, true) ~= nil or winhl:find(WINDOW_HL_PREFIX, 1, true) ~= nil then
         set_win_option(win, "winhl", "")
     end
 end
 
 ---@param win integer
 local function apply_terminal_window_highlights(win)
-    local active, inactive = ensure_terminal_statusline_highlights(win)
-    vim.wo[win].winhl = table.concat({
+    local active, inactive, window = ensure_terminal_highlights(win)
+    local highlights = {
         "StatusLine:" .. active,
         "StatusLineNC:" .. inactive,
-    }, ",")
+    }
+    if window then
+        highlights[#highlights + 1] = "Normal:" .. window
+        highlights[#highlights + 1] = "NormalFloat:" .. window
+        highlights[#highlights + 1] = "EndOfBuffer:" .. window
+    end
+    vim.wo[win].winhl = table.concat(highlights, ",")
 end
 
 ---@param win? integer

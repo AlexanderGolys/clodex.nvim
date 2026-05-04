@@ -375,12 +375,12 @@ ClodexPromptEditorContext = {
 -- &&&ClodexTerminalStatusline&&&Lorem Ipsum&&&
 ClodexTerminalStatusline = {
       fg = { from = { "Comment", "Normal" } },
-      bg = { from = { "Normal", "NormalFloat" }, attr = "bg" },
+      bg = { from = { "StatusLine", "Normal", "NormalFloat" }, attr = "bg" },
     },
 -- &&&ClodexTerminalStatuslineActive&&&Lorem Ipsum&&&
 ClodexTerminalStatuslineActive = {
       fg = { from = { "Normal", "Title" } },
-      bg = { from = { "Normal", "NormalFloat" }, attr = "bg" },
+      bg = { from = { "StatusLine", "Normal", "NormalFloat" }, attr = "bg" },
       bold = true,
     },
 -- &&&ClodexConfirmButton&&&Lorem Ipsum&&&
