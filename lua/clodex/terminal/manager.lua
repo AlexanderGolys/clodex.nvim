@@ -31,6 +31,13 @@ local notify = require("clodex.util.notify")
 local Manager = {}
 Manager.__index = Manager
 
+---@param root string
+---@return string
+local function project_name_from_root(root)
+    local name = fs.basename(root)
+    return name ~= "" and name or root
+end
+
 ---@param session Clodex.TerminalSession
 ---@param spec Clodex.TerminalSession.Spec
 ---@return boolean
@@ -285,6 +292,80 @@ function Manager:is_project_session_working(root)
     local normalized_root = fs.normalize(root)
     local session = self:project_session(normalized_root)
     return session ~= nil and session_running_for_project(session, normalized_root) and session:is_working()
+end
+
+---@param buf integer
+---@param projects_by_root table<string, Clodex.Project>
+---@return Clodex.TerminalSession?
+function Manager:adopt_buffer(buf, projects_by_root)
+    if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].filetype ~= "clodex_terminal" then
+        return nil
+    end
+    if self:session_by_buf(buf) then
+        return nil
+    end
+
+    local metadata = vim.b[buf].clodex
+    if type(metadata) ~= "table" then
+        return nil
+    end
+
+    local kind = metadata.kind
+    local cwd = type(metadata.cwd) == "string" and fs.normalize(metadata.cwd) or nil
+    if not cwd or not fs.is_dir(cwd) then
+        return nil
+    end
+
+    local session
+    if kind == "project" then
+        local project_root = type(metadata.project_root) == "string" and fs.normalize(metadata.project_root) or cwd
+        if not fs.is_dir(project_root) then
+            return nil
+        end
+        local project = projects_by_root[project_root] or {
+            name = project_name_from_root(project_root),
+            root = project_root,
+        }
+        local existing = self.project_sessions[project_root]
+        if existing and (existing:is_running() or existing:buf_valid()) then
+            return nil
+        end
+        session = Session.new(self:session_spec({
+            kind = "project",
+            project = project,
+        }))
+        session.buf = buf
+        self.project_sessions[project_root] = session
+    elseif kind == "free" then
+        if self.free_session and (self.free_session:is_running() or self.free_session:buf_valid()) then
+            return nil
+        end
+        session = Session.new(self:session_spec({
+            kind = "free",
+            cwd = cwd,
+        }))
+        session.buf = buf
+        self.free_session = session
+    else
+        return nil
+    end
+
+    session:update_buffer_state()
+    return session
+end
+
+---@param projects Clodex.Project[]
+function Manager:adopt_existing_buffers(projects)
+    local projects_by_root = {} ---@type table<string, Clodex.Project>
+    for _, project in ipairs(projects or {}) do
+        if type(project.root) == "string" and project.root ~= "" then
+            projects_by_root[fs.normalize(project.root)] = project
+        end
+    end
+
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        self:adopt_buffer(buf, projects_by_root)
+    end
 end
 
 ---@param project Clodex.Project

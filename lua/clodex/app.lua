@@ -830,6 +830,9 @@ function App:state_snapshot()
     local path = fs.current_path(context_buf)
     local state = self:current_tab()
     local current_tab = state:snapshot()
+    if type(self.terminals.adopt_existing_buffers) == "function" then
+        self.terminals:adopt_existing_buffers(self.registry:list())
+    end
     local sessions = self.terminals:snapshot()
     local tabs = self.tabs:snapshot()
     local session_by_key = {} ---@type table<string, Clodex.TerminalSession.Snapshot>
