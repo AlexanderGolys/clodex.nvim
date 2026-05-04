@@ -724,7 +724,7 @@ function Creator:project_background_col()
 end
 
 ---@param buf integer
----@param labels { label: string, hl_group: string, active_hl_group: string }[]
+---@param labels { label: string, hl_group: string, active_hl_group: string, active_overlay_hl_group?: string }[]
 ---@param active_index integer
 ---@param total_width integer
 ---@return { start_col: integer, end_col: integer, index: integer }[]
@@ -743,8 +743,12 @@ function Creator:render_tab_line(buf, labels, active_index, total_width)
         local start_col = col
         local end_col = start_col + #text
         parts[#parts + 1] = text
-        marks[#marks + 1] =
-            Extmark.inline(0, start_col, end_col, index == active_index and entry.active_hl_group or entry.hl_group)
+        local is_active = index == active_index
+        marks[#marks + 1] = Extmark.inline(0, start_col, end_col, is_active and entry.active_hl_group or entry.hl_group)
+        if is_active and entry.active_overlay_hl_group then
+            marks[#marks + 1] =
+                Extmark.inline(0, start_col, end_col, entry.active_overlay_hl_group, 110, { hl_mode = "combine" })
+        end
         spans[#spans + 1] = { start_col = start_col, end_col = end_col, index = index }
         col = end_col
     end
@@ -1131,7 +1135,8 @@ function Creator:render_kind_tabs()
         labels[#labels + 1] = {
             label = kind.label,
             hl_group = Prompt.kind_name_group(kind.id),
-            active_hl_group = Prompt.kind_name_group(kind.id),
+            active_hl_group = "ClodexPromptSourceTabActive",
+            active_overlay_hl_group = Prompt.kind_name_group(kind.id),
         }
     end
     self.kind_tab_spans = self:render_tab_line(self.kind_buf, labels, self.kind_index, self:content_frame_width())
