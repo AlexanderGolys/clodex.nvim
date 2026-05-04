@@ -1355,13 +1355,13 @@ function Workspace:attach_keymaps()
         if mouse.winid ~= self.project_win then
             return
         end
+        self:set_focus("projects")
         local index = row_index(mouse.line, self.project_item_rows)
         if not index then
             return
         end
         self.project_index = index
         self.queue_index = 1
-        self:set_focus("projects")
         self:refresh()
         if confirm then
             self:open_selected_project()
@@ -1373,12 +1373,12 @@ function Workspace:attach_keymaps()
         if mouse.winid ~= self.queue_win then
             return
         end
+        self:set_focus("queue")
         local index = row_index(mouse.line, self.queue_item_rows)
         if not index then
             return
         end
         self.queue_index = index
-        self:set_focus("queue")
         self:refresh()
         if confirm then
             self:open_selected_project()

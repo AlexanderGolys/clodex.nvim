@@ -2312,6 +2312,80 @@ describe("clodex.ui.queue_workspace", function()
         vim.api.nvim_win_close(workspace.project_win, true)
     end)
 
+    it("changes picker focus when clicking empty panel space", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local workspace = Workspace.new({
+            current_tab = function()
+                return {}
+            end,
+        }, {
+            queue_workspace = {
+                preview_max_lines = 3,
+                fold_preview = true,
+            },
+        })
+        workspace.projects = { project }
+        workspace.project_index = 1
+        workspace.queue_index = 2
+        workspace.focus = "queue"
+        workspace.project_item_rows = { 3 }
+        workspace.queue_item_rows = { 3 }
+        workspace.project_buf = vim.api.nvim_create_buf(false, true)
+        workspace.queue_buf = vim.api.nvim_create_buf(false, true)
+        workspace.footer_buf = vim.api.nvim_create_buf(false, true)
+        workspace.project_win = vim.api.nvim_open_win(workspace.project_buf, false, {
+            relative = "editor",
+            row = 1,
+            col = 1,
+            width = 30,
+            height = 8,
+            style = "minimal",
+        })
+        workspace.queue_win = vim.api.nvim_open_win(workspace.queue_buf, false, {
+            relative = "editor",
+            row = 1,
+            col = 32,
+            width = 50,
+            height = 8,
+            style = "minimal",
+        })
+        workspace:attach_keymaps()
+
+        local original_getmousepos = vim.fn.getmousepos
+        vim.fn.getmousepos = function()
+            return {
+                winid = workspace.project_win,
+                line = 1,
+            }
+        end
+        trigger_buffer_mapping(workspace.project_buf, "<LeftMouse>")
+
+        assert.are.equal("projects", workspace.focus)
+        assert.are.equal(1, workspace.project_index)
+        assert.are.equal(2, workspace.queue_index)
+        assert.are.equal(workspace.project_win, vim.api.nvim_get_current_win())
+
+        vim.fn.getmousepos = function()
+            return {
+                winid = workspace.queue_win,
+                line = 1,
+            }
+        end
+        trigger_buffer_mapping(workspace.queue_buf, "<LeftMouse>")
+
+        assert.are.equal("queue", workspace.focus)
+        assert.are.equal(1, workspace.project_index)
+        assert.are.equal(2, workspace.queue_index)
+        assert.are.equal(workspace.queue_win, vim.api.nvim_get_current_win())
+
+        vim.fn.getmousepos = original_getmousepos
+        vim.api.nvim_win_close(workspace.queue_win, true)
+        vim.api.nvim_win_close(workspace.project_win, true)
+    end)
+
     it("does not steal focus back from an active one-line input", function()
         local project = {
             name = "Test Project",
