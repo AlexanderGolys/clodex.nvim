@@ -543,12 +543,6 @@ local function prompt_item_kind(item)
     return Prompt.categories.get(item.kind).id
 end
 
----@param kind Clodex.PromptCategory|string
----@return string
-local function prompt_title_active_group(kind)
-    return Prompt.title_group(kind) .. "Active"
-end
-
 ---@param kind Clodex.PromptCategoryDef
 ---@return string
 local function prompt_kind_prefix(kind)
@@ -648,10 +642,9 @@ local function queue_item_title_line(item, title, suffix, opts)
     local text = ("  %s%s%s"):format(prefix, title, suffix)
     local title_start = 2 + #prefix
     local title_end = title_start + #title
-    local kind_hl = opts.selected and Prompt.title_group(kind.id) or prompt_title_active_group(kind.id)
     local marks = {
-        Extmark.inline(0, 2, 2 + #prefix, kind_hl),
-        Extmark.inline(0, title_start, title_end, Prompt.title_group(kind.id)),
+        Extmark.inline(0, 2, 2 + #prefix, Prompt.kind_name_group(kind.id)),
+        Extmark.inline(0, title_start, title_end, "ClodexQueueItem"),
     }
     if #suffix > 0 then
         marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted")

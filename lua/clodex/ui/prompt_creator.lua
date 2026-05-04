@@ -1121,8 +1121,8 @@ function Creator:render_kind_tabs()
     for _, kind in ipairs(self.kinds) do
         labels[#labels + 1] = {
             label = kind.label,
-            hl_group = Prompt.title_group(kind.id),
-            active_hl_group = Prompt.title_group(kind.id) .. "Active",
+            hl_group = Prompt.kind_name_group(kind.id),
+            active_hl_group = Prompt.kind_name_group(kind.id),
         }
     end
     self.kind_tab_spans = self:render_tab_line(self.kind_buf, labels, self.kind_index, self:content_frame_width())

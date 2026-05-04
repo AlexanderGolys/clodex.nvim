@@ -30,6 +30,20 @@ local TITLE_GROUP_SUFFIX = {
     explain = "ExplainTitle",
     notworking = "NotWorkingTitle",
 }
+local KIND_NAME_GROUP_SUFFIX = {
+    todo = "ImprovementKindName",
+    bug = "BugKindName",
+    freeform = "FixKindName",
+    adjustment = "FixKindName",
+    feature = "FeatureKindName",
+    refactor = "RestructureKindName",
+    idea = "VisionKindName",
+    cleanup = "CleanupKindName",
+    docs = "DocsKindName",
+    ask = "ExplainKindName",
+    explain = "ExplainKindName",
+    notworking = "NotWorkingKindName",
+}
 
 local function prepend_details(title, details)
     local parts = {} ---@type string[]
@@ -129,6 +143,13 @@ end
 ---@return string
 function M.title_group(kind)
     local suffix = TITLE_GROUP_SUFFIX[M.categories.get(kind).id] or TITLE_GROUP_SUFFIX.todo
+    return "ClodexPrompt" .. suffix
+end
+
+---@param kind? Clodex.PromptCategory|string
+---@return string
+function M.kind_name_group(kind)
+    local suffix = KIND_NAME_GROUP_SUFFIX[M.categories.get(kind).id] or KIND_NAME_GROUP_SUFFIX.todo
     return "ClodexPrompt" .. suffix
 end
 

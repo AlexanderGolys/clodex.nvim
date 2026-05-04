@@ -151,6 +151,26 @@ describe("clodex.config", function()
             assert.are_not.equal(bug.fg, notworking.fg)
         end)
 
+        it("keeps prompt titles plain and kind names colored without backgrounds", function()
+            vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222", bg = "#331111" })
+
+            Config.apply_highlights({
+                highlights = require("clodex.config.highlights"),
+            })
+
+            local title = vim.api.nvim_get_hl(0, { name = "ClodexPromptBugTitle", link = false })
+            local kind = vim.api.nvim_get_hl(0, { name = "ClodexPromptBugKindName", link = false })
+            local active = vim.api.nvim_get_hl(0, { name = "ClodexPromptBugTitleActive", link = false })
+
+            assert.is_nil(title.bold)
+            assert.are.equal(0xaa2222, kind.fg)
+            assert.is_true(kind.bold)
+            assert.is_nil(kind.bg)
+            assert.are.equal(kind.fg, active.fg)
+            assert.is_true(active.bold)
+            assert.is_nil(active.bg)
+        end)
+
         it("maps terminal statusline highlights to the StatusLine background", function()
             vim.api.nvim_set_hl(0, "Normal", { fg = "#dddddd", bg = "#1a1b26" })
             vim.api.nvim_set_hl(0, "StatusLine", { fg = "#eeeeee", bg = "#445566" })

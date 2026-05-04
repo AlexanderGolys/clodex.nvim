@@ -290,8 +290,8 @@ describe("clodex.ui.prompt_creator", function()
 
         local groups = extmark_groups(creator.kind_buf)
 
-        assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementTitleActive"))
-        assert.is_true(vim.tbl_contains(groups, "ClodexPromptBugTitle"))
+        assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementKindName"))
+        assert.is_true(vim.tbl_contains(groups, "ClodexPromptBugKindName"))
     end)
 
     it("centers tab rows and removes tab borders", function()

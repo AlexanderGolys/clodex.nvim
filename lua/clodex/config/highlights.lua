@@ -65,7 +65,6 @@ ClodexPickerRoot = {
 -- &&&ClodexPromptImprovementTitle&&&Lorem Ipsum&&&
 ClodexPromptImprovementTitle = {
       fg = { from = "@constructor" },
-      bold =true,
     },
 -- &&&ClodexPromptImprovementKindName&&&Lorem Ipsum&&&
 ClodexPromptImprovementKindName = {
@@ -75,25 +74,35 @@ ClodexPromptImprovementKindName = {
 -- &&&ClodexPromptTodoTitle&&&Lorem Ipsum&&&
 ClodexPromptTodoTitle = {
       link = "ClodexPromptImprovementTitle",
-      bold = true,
     },
 -- &&&ClodexPromptTodoKindName&&&Lorem Ipsum&&&
 ClodexPromptTodoKindName = {
       link = "ClodexPromptImprovementKindName",
-      bold = true,
     },
 -- &&&ClodexPromptBugTitle&&&Lorem Ipsum&&&
 ClodexPromptBugTitle = {
+      fg = { from = "DiagnosticError" },
+    },
+-- &&&ClodexPromptBugKindName&&&Lorem Ipsum&&&
+ClodexPromptBugKindName = {
       fg = { from = "DiagnosticError" },
       bold = true,
     },
 -- &&&ClodexPromptNotWorkingTitle&&&Lorem Ipsum&&&
 ClodexPromptNotWorkingTitle = {
       fg = { from = "DiagnosticError", adjust = 0.18 },
+    },
+-- &&&ClodexPromptNotWorkingKindName&&&Lorem Ipsum&&&
+ClodexPromptNotWorkingKindName = {
+      fg = { from = "DiagnosticError", adjust = 0.18 },
       bold = true,
     },
 -- &&&ClodexPromptFixTitle&&&Lorem Ipsum&&&
 ClodexPromptFixTitle = {
+      fg = { from = { "Normal", "NormalFloat" } },
+    },
+-- &&&ClodexPromptFixKindName&&&Lorem Ipsum&&&
+ClodexPromptFixKindName = {
       fg = { from = { "Normal", "NormalFloat" } },
       bold = true,
     },
@@ -101,17 +110,33 @@ ClodexPromptFixTitle = {
 ClodexPromptFreeformTitle = {
       link = "ClodexPromptFixTitle",
     },
+-- &&&ClodexPromptFreeformKindName&&&Lorem Ipsum&&&
+ClodexPromptFreeformKindName = {
+      link = "ClodexPromptFixKindName",
+    },
 -- &&&ClodexPromptAdjustmentTitle&&&Lorem Ipsum&&&
 ClodexPromptAdjustmentTitle = {
       link = "ClodexPromptFixTitle",
     },
+-- &&&ClodexPromptAdjustmentKindName&&&Lorem Ipsum&&&
+ClodexPromptAdjustmentKindName = {
+      link = "ClodexPromptFixKindName",
+    },
 -- &&&ClodexPromptFeatureTitle&&&Lorem Ipsum&&&
 ClodexPromptFeatureTitle = {
+      fg = { from = "Function" },
+    },
+-- &&&ClodexPromptFeatureKindName&&&Lorem Ipsum&&&
+ClodexPromptFeatureKindName = {
       fg = { from = "Function" },
       bold = true,
     },
 -- &&&ClodexPromptRestructureTitle&&&Lorem Ipsum&&&
 ClodexPromptRestructureTitle = {
+      fg = { from = "String" },
+    },
+-- &&&ClodexPromptRestructureKindName&&&Lorem Ipsum&&&
+ClodexPromptRestructureKindName = {
       fg = { from = "String" },
       bold = true,
     },
@@ -119,8 +144,16 @@ ClodexPromptRestructureTitle = {
 ClodexPromptRefactorTitle = {
       link = "ClodexPromptRestructureTitle",
     },
+-- &&&ClodexPromptRefactorKindName&&&Lorem Ipsum&&&
+ClodexPromptRefactorKindName = {
+      link = "ClodexPromptRestructureKindName",
+    },
 -- &&&ClodexPromptVisionTitle&&&Lorem Ipsum&&&
 ClodexPromptVisionTitle = {
+      fg = { from = "PreProc" },
+    },
+-- &&&ClodexPromptVisionKindName&&&Lorem Ipsum&&&
+ClodexPromptVisionKindName = {
       fg = { from = "PreProc" },
       bold = true,
     },
@@ -128,96 +161,92 @@ ClodexPromptVisionTitle = {
 ClodexPromptIdeaTitle = {
       link = "ClodexPromptVisionTitle",
     },
+-- &&&ClodexPromptIdeaKindName&&&Lorem Ipsum&&&
+ClodexPromptIdeaKindName = {
+      link = "ClodexPromptVisionKindName",
+    },
 -- &&&ClodexPromptCleanupTitle&&&Lorem Ipsum&&&
 ClodexPromptCleanupTitle = {
+      fg = { from = "Comment" },
+    },
+-- &&&ClodexPromptCleanupKindName&&&Lorem Ipsum&&&
+ClodexPromptCleanupKindName = {
       fg = { from = "Comment" },
       bold = true,
     },
 -- &&&ClodexPromptDocsTitle&&&Lorem Ipsum&&&
 ClodexPromptDocsTitle = {
       fg = { from = "Special" },
+    },
+-- &&&ClodexPromptDocsKindName&&&Lorem Ipsum&&&
+ClodexPromptDocsKindName = {
+      fg = { from = "Special" },
       bold = true,
     },
 -- &&&ClodexPromptExplainTitle&&&Lorem Ipsum&&&
 ClodexPromptExplainTitle = {
       fg = { from = "Type" },
+    },
+-- &&&ClodexPromptExplainKindName&&&Lorem Ipsum&&&
+ClodexPromptExplainKindName = {
+      fg = { from = "Type" },
       bold = true,
     },
 -- &&&ClodexPromptImprovementTitleActive&&&Lorem Ipsum&&&
 ClodexPromptImprovementTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptImprovementTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptImprovementKindName",
     },
 -- &&&ClodexPromptTodoTitleActive&&&Lorem Ipsum&&&
 ClodexPromptTodoTitleActive = {
-      link = "ClodexPromptImprovementTitleActive",
+      link = "ClodexPromptImprovementKindName",
     },
 -- &&&ClodexPromptBugTitleActive&&&Lorem Ipsum&&&
 ClodexPromptBugTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptBugTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptBugKindName",
     },
 -- &&&ClodexPromptNotWorkingTitleActive&&&Lorem Ipsum&&&
 ClodexPromptNotWorkingTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptNotWorkingTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptNotWorkingKindName",
     },
 -- &&&ClodexPromptFixTitleActive&&&Lorem Ipsum&&&
 ClodexPromptFixTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptFixTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptFixKindName",
     },
 -- &&&ClodexPromptFreeformTitleActive&&&Lorem Ipsum&&&
 ClodexPromptFreeformTitleActive = {
-      link = "ClodexPromptFixTitleActive",
+      link = "ClodexPromptFixKindName",
     },
 -- &&&ClodexPromptFeatureTitleActive&&&Lorem Ipsum&&&
 ClodexPromptFeatureTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptFeatureTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptFeatureKindName",
     },
 -- &&&ClodexPromptRestructureTitleActive&&&Lorem Ipsum&&&
 ClodexPromptRestructureTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptRestructureTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptRestructureKindName",
     },
 -- &&&ClodexPromptRefactorTitleActive&&&Lorem Ipsum&&&
 ClodexPromptRefactorTitleActive = {
-      link = "ClodexPromptRestructureTitleActive",
+      link = "ClodexPromptRestructureKindName",
     },
 -- &&&ClodexPromptVisionTitleActive&&&Lorem Ipsum&&&
 ClodexPromptVisionTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptVisionTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptVisionKindName",
     },
 -- &&&ClodexPromptIdeaTitleActive&&&Lorem Ipsum&&&
 ClodexPromptIdeaTitleActive = {
-      link = "ClodexPromptVisionTitleActive",
+      link = "ClodexPromptVisionKindName",
     },
 -- &&&ClodexPromptCleanupTitleActive&&&Lorem Ipsum&&&
 ClodexPromptCleanupTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptCleanupTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptCleanupKindName",
     },
 -- &&&ClodexPromptDocsTitleActive&&&Lorem Ipsum&&&
 ClodexPromptDocsTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptDocsTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptDocsKindName",
     },
 -- &&&ClodexPromptExplainTitleActive&&&Lorem Ipsum&&&
 ClodexPromptExplainTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "ClodexPromptExplainTitle", attr = "fg" },
-      bold = true,
+      link = "ClodexPromptExplainKindName",
     },
 -- &&&ClodexPromptImprovementTitleFocusBorder&&&Lorem Ipsum&&&
 ClodexPromptImprovementTitleFocusBorder = {
@@ -411,7 +440,6 @@ ClodexPromptEditorBorder = {
 -- &&&ClodexPromptEditorTitle&&&Lorem Ipsum&&&
 ClodexPromptEditorTitle = {
       fg = { from = { "Title", "Identifier" } },
-      bold = true,
     },
 -- &&&ClodexPromptEditorSubtitle&&&Lorem Ipsum&&&
 ClodexPromptEditorSubtitle = {
