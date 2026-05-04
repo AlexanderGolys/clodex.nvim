@@ -137,16 +137,18 @@ local function current_session(win)
 end
 
 ---@return boolean
-local function is_opencode_backend()
+local function use_clodex_terminal_chrome()
     local ok, app = pcall(require, "clodex.app")
     if not ok then
-        return false
+        return true
     end
     local instance = app.instance and app.instance() or nil
     if not instance or not instance.config then
-        return false
+        return true
     end
-    return Backend.normalize(instance.config:get().backend) == "opencode"
+    local config = instance.config:get()
+    return Backend.normalize(config.backend) == "codex"
+        and (not config.terminal or config.terminal.prefer_native_statusline ~= false)
 end
 
 local function current_window()
@@ -227,7 +229,7 @@ function M.apply_window(win)
         clear_window_chrome(target)
         return
     end
-    if is_opencode_backend() then
+    if not use_clodex_terminal_chrome() then
         clear_window_chrome(target)
         return
     end

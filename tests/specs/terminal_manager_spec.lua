@@ -338,4 +338,46 @@ describe("clodex.terminal.manager", function()
         package.loaded["clodex.terminal.manager"] = nil
         package.loaded["clodex.terminal.session"] = original_session
     end)
+
+    it("does not force local Codex statusline options when native chrome is disabled", function()
+        local snacks_module = package.loaded["snacks"]
+        local opened_opts
+        package.loaded["snacks"] = {
+            win = setmetatable({
+                resolve = function(_, _, defaults)
+                    return vim.deepcopy(defaults)
+                end,
+            }, {
+                __call = function(_, opts)
+                    opened_opts = opts
+                    return {
+                        win = vim.api.nvim_get_current_win(),
+                        on = function() end,
+                        hide = function() end,
+                    }
+                end,
+            }),
+        }
+
+        local manager = Manager.new({
+            backend = "codex",
+            terminal = {
+                provider = "term",
+                start_insert = false,
+                prefer_native_statusline = false,
+                win = {},
+            },
+        })
+        local session = {
+            buf = vim.api.nvim_create_buf(false, true),
+            title = "Clodex: Demo",
+        }
+
+        manager:open_window(session)
+
+        assert.is_nil(opened_opts.wo)
+
+        vim.api.nvim_buf_delete(session.buf, { force = true })
+        package.loaded["snacks"] = snacks_module
+    end)
 end)

@@ -130,6 +130,13 @@ local function session_terminal_provider(config)
 end
 
 ---@param config Clodex.Config.Values
+---@return boolean
+local function use_clodex_terminal_chrome(config)
+    return Backend.normalize(config.backend) == "codex"
+        and (not config.terminal or config.terminal.prefer_native_statusline ~= false)
+end
+
+---@param config Clodex.Config.Values
 ---@param execution? Clodex.Workspace.Execution
 ---@return Clodex.TerminalManager
 function Manager.new(config, execution)
@@ -463,8 +470,9 @@ end
 function Manager:open_window(session, parent_win, overrides)
     local Snacks = require("snacks")
     local is_opencode = Backend.normalize(self.config.backend) == "opencode"
+    local use_clodex_chrome = use_clodex_terminal_chrome(self.config)
     local wo
-    if not is_opencode then
+    if use_clodex_chrome then
         wo = {
             statusline = "%!v:lua.require('clodex.terminal.ui').statusline()",
             winbar = "%!v:lua.require('clodex.terminal.ui').winbar()",
@@ -490,7 +498,7 @@ function Manager:open_window(session, parent_win, overrides)
         },
         wo = wo,
         on_win = function()
-            if not is_opencode then
+            if use_clodex_chrome then
                 TerminalUi.statusline()
                 TerminalUi.winbar()
             end

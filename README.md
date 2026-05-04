@@ -135,6 +135,8 @@ require("clodex").setup({
 })
 ```
 
+Set `terminal.prefer_native_statusline = false` to leave Codex terminal statusline and winbar handling to your global UI configuration. The default keeps Clodex's native terminal chrome enabled and disables lualine for `clodex_terminal` buffers when lualine is loaded.
+
 ## Prompt kinds
 
 - `improvement` (`todo`)
