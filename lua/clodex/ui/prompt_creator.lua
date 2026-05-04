@@ -31,10 +31,7 @@ local DEFAULT_SUBMIT_ACTIONS = {
     { value = "chat", label = "chat", key = "c", insert_key = "<C-c>" },
 }
 
-local RESET_AFTER_SUBMIT_ACTIONS = {
-    save = true,
-    exec = true,
-}
+local RESET_AFTER_SUBMIT_ACTIONS = {}
 
 local TAB_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-tabs")
 local FOOTER_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-footer")

@@ -1669,7 +1669,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
     end)
 
-    it("resets the creator after successful normal-mode plan and implement submit keymaps", function()
+    it("closes the creator after successful normal-mode plan and implement submit keymaps", function()
         local submitted_actions = {}
 
         creator = Creator.open({
@@ -1700,22 +1700,38 @@ describe("clodex.ui.prompt_creator", function()
         trigger_buffer_mapping(creator.layout.title_buf, "s", "n")
 
         wait_for(function()
-            return submitted_actions[1] == "save"
-                and creator.layout.title_win ~= nil
-                and creator.layout.title_win:valid()
-                and vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, 1, false)[1] == ""
+            return submitted_actions[1] == "save" and creator.footer_win == nil and creator.layout == nil
         end)
 
-        vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Run prompt again" })
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Run prompt again",
+                details = "Close on implement",
+            },
+            on_submit = function(_, action)
+                submitted_actions[#submitted_actions + 1] = action
+                return { id = "queued-item" }
+            end,
+        })
+
         trigger_buffer_mapping(creator.layout.title_buf, ">", "n")
 
         wait_for(function()
-            return submitted_actions[2] == "exec"
-                and creator.footer_win ~= nil
-                and creator.footer_win:valid()
-                and creator.layout.title_win ~= nil
-                and creator.layout.title_win:valid()
-                and vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, 1, false)[1] == ""
+            return submitted_actions[2] == "exec" and creator.footer_win == nil and creator.layout == nil
         end)
     end)
 
@@ -1750,18 +1766,38 @@ describe("clodex.ui.prompt_creator", function()
         trigger_buffer_mapping(creator.layout.title_buf, "<C-s>", "i")
 
         wait_for(function()
-            return submitted_actions[1] == "save"
-                and creator.layout.title_win ~= nil
-                and creator.layout.title_win:valid()
+            return submitted_actions[1] == "save" and creator.footer_win == nil and creator.layout == nil
         end)
 
-        vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Insert actions again" })
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Insert actions again",
+                details = "Submit from insert mode again",
+            },
+            on_submit = function(_, action)
+                submitted_actions[#submitted_actions + 1] = action
+                return { id = "queued-item" }
+            end,
+        })
+
         trigger_buffer_mapping(creator.layout.title_buf, "<C->>", "i")
 
         wait_for(function()
-            return submitted_actions[2] == "exec"
-                and creator.layout.title_win ~= nil
-                and creator.layout.title_win:valid()
+            return submitted_actions[2] == "exec" and creator.footer_win == nil and creator.layout == nil
         end)
     end)
 
