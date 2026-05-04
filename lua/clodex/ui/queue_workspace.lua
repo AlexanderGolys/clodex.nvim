@@ -540,6 +540,7 @@ local function queue_item_matches_search(item, queue_name, query)
     local text = table
         .concat({
             search_text(item.title),
+            search_text(item.body),
             search_text(item.details),
             search_text(item.prompt),
             prompt_queue_label(queue_name),

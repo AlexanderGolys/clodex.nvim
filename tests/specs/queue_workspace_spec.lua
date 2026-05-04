@@ -1313,6 +1313,7 @@ describe("clodex.ui.queue_workspace", function()
                 id = "item-2",
                 title = "Update docs",
                 details = "Document queue search",
+                body = "Include archived body text",
                 kind = "todo",
                 prompt = "Update docs\n\nDocument queue search",
             },
@@ -1373,6 +1374,79 @@ describe("clodex.ui.queue_workspace", function()
         assert.is_true(vim.tbl_contains(groups, "ClodexQueueItem"))
         assert.is_false(vim.tbl_contains(groups, "ClodexPromptPreviewText"))
         assert.are.same({ 3, 4 }, extmark_rows(workspace.queue_buf, "ClodexQueueSelectionActive"))
+
+        vim.api.nvim_win_close(workspace.queue_win, true)
+    end)
+
+    it("filters queue items by prompt body text", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local items = {
+            {
+                id = "item-1",
+                title = "Fix parser",
+                body = "Handle hidden matcher text",
+                kind = "todo",
+                prompt = "Fix parser",
+            },
+            {
+                id = "item-2",
+                title = "Update docs",
+                body = "Document queue search",
+                kind = "todo",
+                prompt = "Update docs",
+            },
+        }
+        local workspace = Workspace.new({
+            queue_summary = function()
+                return {
+                    project = project,
+                    counts = {
+                        planned = #items,
+                        queued = 0,
+                        implemented = 0,
+                        history = 0,
+                    },
+                    queues = {
+                        planned = items,
+                        queued = {},
+                        implemented = {},
+                        history = {},
+                    },
+                }
+            end,
+        }, {
+            queue_workspace = {
+                preview_max_lines = 3,
+                fold_preview = true,
+            },
+        })
+        workspace.projects = { project }
+        workspace.project_index = 1
+        workspace.focus = "queue"
+        workspace.queue_search = "hidden matcher"
+        workspace.queue_buf = vim.api.nvim_create_buf(false, true)
+        workspace.queue_win = vim.api.nvim_open_win(workspace.queue_buf, false, {
+            relative = "editor",
+            row = 1,
+            col = 1,
+            width = 80,
+            height = 20,
+            style = "minimal",
+        })
+
+        workspace:render_queue()
+
+        local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
+        assert.are.same({
+            "Filter: hidden matcher",
+            "",
+            "Planned (1)",
+            "   Improvement  Fix parser",
+            "",
+        }, lines)
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)

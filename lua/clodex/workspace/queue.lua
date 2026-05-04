@@ -10,6 +10,7 @@ local util = require("clodex.util")
 ---@field id string
 ---@field kind Clodex.PromptCategory
 ---@field title string
+---@field body? string
 ---@field details? string
 ---@field prompt string
 ---@field execution_instructions? string
