@@ -618,22 +618,34 @@ local function item_history_comment(item)
 end
 
 ---@param item Clodex.QueueItem
----@return string
+---@return string, { start_col: integer, end_col: integer }[]
 local function history_commit_suffix(item)
-    local parts = {}
+    local suffix = ""
+    local spans = {} ---@type { start_col: integer, end_col: integer }[]
     for _, commit_id in ipairs(item_history_commits(item)) do
-        parts[#parts + 1] = ("%s%s"):format(COMMIT_ICON, commit_id:sub(1, 8))
+        local part = ("%s%s"):format(COMMIT_ICON, commit_id:sub(1, 8))
+        if suffix == "" then
+            suffix = "  ["
+        else
+            suffix = suffix .. " "
+        end
+        local start_col = #suffix
+        suffix = suffix .. part
+        spans[#spans + 1] = {
+            start_col = start_col,
+            end_col = #suffix,
+        }
     end
-    if #parts == 0 then
-        return ""
+    if suffix == "" then
+        return "", spans
     end
-    return "  [" .. table.concat(parts, " ") .. "]"
+    return suffix .. "]", spans
 end
 
 ---@param item Clodex.QueueItem
 ---@param title string
 ---@param suffix string
----@param opts? { selected?: boolean }
+---@param opts? { selected?: boolean, suffix_spans?: { start_col: integer, end_col: integer }[] }
 ---@return string, Clodex.Extmark[]
 local function queue_item_title_line(item, title, suffix, opts)
     opts = opts or {}
@@ -647,7 +659,15 @@ local function queue_item_title_line(item, title, suffix, opts)
         Extmark.inline(0, title_start, title_end, "ClodexQueueItem"),
     }
     if #suffix > 0 then
-        marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted")
+        if opts.suffix_spans and #opts.suffix_spans > 0 then
+            marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted")
+            for _, span in ipairs(opts.suffix_spans) do
+                marks[#marks + 1] =
+                    Extmark.inline(0, title_end + span.start_col, title_end + span.end_col, "ClodexCommitId", 110)
+            end
+        else
+            marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted")
+        end
     end
     return text, marks
 end
@@ -1882,10 +1902,15 @@ function Workspace:render_queue()
                     rendered_items = true
                     local historical = queue_name == "implemented" or queue_name == "history"
                     local comment = historical and item_history_comment(item) or nil
-                    local suffix = historical and history_commit_suffix(item) or ""
+                    local suffix, suffix_spans = "", {}
+                    if historical then
+                        suffix, suffix_spans = history_commit_suffix(item)
+                    end
                     local selected = #self.queue_item_rows + 1 == self.queue_index
-                    local item_text, item_extmarks =
-                        queue_item_title_line(item, comment or item.title or "", suffix, { selected = selected })
+                    local item_text, item_extmarks = queue_item_title_line(item, item.title or "", suffix, {
+                        selected = selected,
+                        suffix_spans = suffix_spans,
+                    })
                     self.queue_rows[#self.queue_rows + 1] = {
                         kind = "item",
                         text = item_text,
@@ -1896,7 +1921,7 @@ function Workspace:render_queue()
                     block:append_line(item_text, item_extmarks)
 
                     if comment then
-                        local original = "    " .. (item.title or "")
+                        local original = "    " .. comment
                         self.queue_rows[#self.queue_rows + 1] = {
                             kind = "preview",
                             text = original,

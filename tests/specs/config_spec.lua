@@ -171,6 +171,18 @@ describe("clodex.config", function()
             assert.is_nil(active.bg)
         end)
 
+        it("maps commit ids to the diagnostic error color", function()
+            vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222" })
+
+            Config.apply_highlights({
+                highlights = require("clodex.config.highlights"),
+            })
+
+            local commit = vim.api.nvim_get_hl(0, { name = "ClodexCommitId", link = false })
+            assert.are.equal(0xaa2222, commit.fg)
+            assert.is_true(commit.bold)
+        end)
+
         it("maps terminal statusline highlights to the StatusLine background", function()
             vim.api.nvim_set_hl(0, "Normal", { fg = "#dddddd", bg = "#1a1b26" })
             vim.api.nvim_set_hl(0, "StatusLine", { fg = "#eeeeee", bg = "#445566" })

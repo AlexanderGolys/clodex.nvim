@@ -1378,11 +1378,12 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "   Improvement  Implemented parser fix  [󰜘 abc1234]",
-            "    Fix parser",
+            "   Improvement  Fix parser  [󰜘 abc1234]",
+            "    Implemented parser fix",
             "    Adjust token handling",
             "",
         }, lines)
+        assert.is_true(vim.tbl_contains(extmark_groups(workspace.queue_buf), "ClodexCommitId"))
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
