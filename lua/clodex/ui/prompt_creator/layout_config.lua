@@ -8,6 +8,8 @@
 ---@field prompt_background_zindex integer
 ---@field prompt_content_zindex integer
 ---@field prompt_background_margin integer
+---@field prompt_background_margin_right integer
+---@field prompt_background_margin_bottom integer
 ---@field creator_max_height integer
 ---@field creator_screen_margin_cols integer
 ---@field creator_screen_margin_rows integer
@@ -45,6 +47,8 @@ return {
     prompt_background_zindex = 70,
     prompt_content_zindex = 71,
     prompt_background_margin = 1,
+    prompt_background_margin_right = 2,
+    prompt_background_margin_bottom = 2,
     creator_max_height = 32,
     creator_screen_margin_cols = 6,
     creator_screen_margin_rows = 4,

@@ -500,18 +500,18 @@ end
 function Creator:project_background_width()
     local left, _, right = self:creator_frame_bounds()
     if left and right then
-        return (right - left) + (LAYOUT.prompt_background_margin * 2)
+        return (right - left) + LAYOUT.prompt_background_margin + LAYOUT.prompt_background_margin_right
     end
-    return self:total_width() + (LAYOUT.creator_background_margin_cols * 2)
+    return self:total_width() + LAYOUT.creator_background_margin_cols + LAYOUT.prompt_background_margin_right
 end
 
 ---@return integer
 function Creator:project_background_height()
     local _, top, _, bottom = self:creator_frame_bounds()
     if top and bottom then
-        return (bottom - top) + (LAYOUT.prompt_background_margin * 2)
+        return (bottom - top) + LAYOUT.prompt_background_margin + LAYOUT.prompt_background_margin_bottom
     end
-    return self:total_height() + (LAYOUT.prompt_background_margin * 2)
+    return self:total_height() + LAYOUT.prompt_background_margin + LAYOUT.prompt_background_margin_bottom
 end
 
 ---@return integer

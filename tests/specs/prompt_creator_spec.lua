@@ -1733,7 +1733,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(vim.fn.strdisplaywidth(lines[1]), vim.fn.strdisplaywidth(lines[2]))
     end)
 
-    it("adds a one-cell panel background margin around the creator", function()
+    it("adds panel background margin around the creator with extra right and bottom space", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -1771,8 +1771,8 @@ describe("clodex.ui.prompt_creator", function()
         )
         assert.are.equal(left - 1, background_config.col)
         assert.are.equal(top - 1, background_config.row)
-        assert.are.equal((right - left) + 2, background_config.width)
-        assert.are.equal((bottom - top) + 2, background_config.height)
+        assert.are.equal((right - left) + 3, background_config.width)
+        assert.are.equal((bottom - top) + 3, background_config.height)
         assert.are.equal(70, background_config.zindex)
         assert.are.equal(71, picker_config.zindex)
         assert.are.equal(71, footer_config.zindex)
