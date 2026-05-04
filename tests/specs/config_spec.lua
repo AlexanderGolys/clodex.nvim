@@ -151,8 +151,9 @@ describe("clodex.config", function()
             assert.are_not.equal(bug.fg, notworking.fg)
         end)
 
-        it("keeps prompt titles plain and kind names colored without backgrounds", function()
+        it("keeps prompt titles plain and inverts active kind tabs", function()
             vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222", bg = "#331111" })
+            vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#101010" })
 
             Config.apply_highlights({
                 highlights = require("clodex.config.highlights"),
@@ -166,9 +167,9 @@ describe("clodex.config", function()
             assert.are.equal(0xaa2222, kind.fg)
             assert.is_true(kind.bold)
             assert.is_nil(kind.bg)
-            assert.are.equal(kind.fg, active.fg)
+            assert.are.equal(0x101010, active.fg)
+            assert.are.equal(kind.fg, active.bg)
             assert.is_true(active.bold)
-            assert.is_nil(active.bg)
         end)
 
         it("maps commit ids to the diagnostic error color", function()

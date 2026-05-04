@@ -1168,8 +1168,7 @@ function Creator:render_kind_tabs()
         labels[#labels + 1] = {
             label = kind.label,
             hl_group = Prompt.kind_name_group(kind.id),
-            active_hl_group = "ClodexPromptSourceTabActive",
-            active_overlay_hl_group = Prompt.kind_name_group(kind.id),
+            active_hl_group = Prompt.title_active_group(kind.id),
         }
     end
     self.kind_tab_spans = self:render_tab_line(self.kind_buf, labels, self.kind_index, self:content_frame_width())
