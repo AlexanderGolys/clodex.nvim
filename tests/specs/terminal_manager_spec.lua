@@ -119,6 +119,29 @@ describe("clodex.terminal.manager", function()
         vim.api.nvim_win_close(terminal_win, true)
     end)
 
+    it("treats a valid project session buffer as open even when the job is not running", function()
+        local manager = Manager.new({
+            backend = "codex",
+            terminal = {
+                provider = "term",
+                win = {},
+            },
+        })
+        manager.project_sessions["/tmp/demo"] = {
+            kind = "project",
+            project_root = "/tmp/demo",
+            is_running = function()
+                return false
+            end,
+            buf_valid = function()
+                return true
+            end,
+        }
+
+        assert.is_false(manager:is_project_session_running("/tmp/demo"))
+        assert.is_true(manager:is_project_session_open("/tmp/demo"))
+    end)
+
     it("syncs project-local skills before creating a project session", function()
         local original_session = package.loaded["clodex.terminal.session"]
         package.loaded["clodex.terminal.manager"] = nil

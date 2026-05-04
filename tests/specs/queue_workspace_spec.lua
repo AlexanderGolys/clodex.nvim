@@ -1639,6 +1639,64 @@ describe("clodex.ui.queue_workspace", function()
         assert.are.equal("󰚩 ", first_line:sub(1, #"󰚩 "))
     end)
 
+    it("colors projects with open background sessions as active", function()
+        local project = {
+            name = "Background Project",
+            root = "/tmp/background-project",
+        }
+        local workspace = Workspace.new({
+            current_tab = function()
+                return {}
+            end,
+            queue_summary = function()
+                return {
+                    project = project,
+                    session_running = false,
+                    counts = {
+                        planned = 0,
+                        queued = 0,
+                        implemented = 0,
+                        history = 0,
+                    },
+                    queues = {
+                        planned = {},
+                        queued = {},
+                        implemented = {},
+                        history = {},
+                    },
+                }
+            end,
+            is_project_session_open = function(_, checked_project)
+                return checked_project.root == project.root
+            end,
+            project_details_store = {
+                get = function()
+                    return nil
+                end,
+                get_cached = function()
+                    return nil
+                end,
+            },
+        }, {
+            queue_workspace = {
+                width = 1,
+                height = 1,
+                project_width = 0.3,
+                footer_height = 3,
+                preview_max_lines = 3,
+                fold_preview = true,
+                date_format = "ago",
+            },
+        })
+        workspace.projects = { project }
+        workspace.project_index = 1
+        workspace.project_buf = vim.api.nvim_create_buf(false, true)
+
+        workspace:render_projects()
+
+        assert.is_true(vim.tbl_contains(extmark_groups(workspace.project_buf), "ClodexQueueProjectActive"))
+    end)
+
     it("reflows the open workspace when the project content width changes", function()
         local original_list_uis = vim.api.nvim_list_uis
         vim.api.nvim_list_uis = function()

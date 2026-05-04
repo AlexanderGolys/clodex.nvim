@@ -1792,8 +1792,13 @@ function Workspace:render_projects()
         }
         self.project_item_rows[#self.project_item_rows + 1] = #self.project_rows
         local is_active_project = active_root ~= nil and project.root == active_root
+        local session_open = summary.session_running
+            or (
+                type(self.app.is_project_session_open) == "function"
+                and self.app:is_project_session_open(project)
+            )
         local item_hl = is_active_project and "ClodexQueueProjectCurrent"
-            or summary.session_running and "ClodexQueueProjectActive"
+            or session_open and "ClodexQueueProjectActive"
             or "ClodexQueueProjectInactive"
         local item_extmarks = {
             Extmark.inline(0, 0, #title, item_hl),

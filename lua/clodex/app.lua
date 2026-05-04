@@ -73,6 +73,7 @@ end
 ---@field state_snapshot fun(self: Clodex.App): Clodex.App.StateSnapshot
 ---@field projects_for_queue_workspace fun(self: Clodex.App): Clodex.Project[]
 ---@field queue_summary fun(self: Clodex.App, project: Clodex.Project): Clodex.ProjectQueueSummary
+---@field is_project_session_open fun(self: Clodex.App, project: Clodex.Project): boolean
 ---@field refresh_views fun(self: Clodex.App)
 ---@field refresh_changed_project_buffers fun(self: Clodex.App)
 ---@field clear_active_project fun(self: Clodex.App)
@@ -1046,6 +1047,12 @@ end
 ---@return boolean
 function App:is_project_session_running(project)
     return self.terminals:is_project_session_running(project.root)
+end
+
+---@param project Clodex.Project
+---@return boolean
+function App:is_project_session_open(project)
+    return self.terminals:is_project_session_open(project.root)
 end
 
 ---@param project Clodex.Project

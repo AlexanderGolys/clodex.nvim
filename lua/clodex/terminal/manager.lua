@@ -261,6 +261,22 @@ end
 
 ---@param root string
 ---@return boolean
+function Manager:is_project_session_open(root)
+    if type(root) ~= "string" or root == "" then
+        return false
+    end
+
+    local normalized_root = fs.normalize(root)
+    local session = self:project_session(normalized_root)
+    return session ~= nil
+        and session.kind == "project"
+        and session.project_root ~= nil
+        and fs.normalize(session.project_root) == normalized_root
+        and (session:is_running() or session:buf_valid())
+end
+
+---@param root string
+---@return boolean
 function Manager:is_project_session_working(root)
     if type(root) ~= "string" or root == "" then
         return false
