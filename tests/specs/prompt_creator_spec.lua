@@ -848,9 +848,15 @@ describe("clodex.ui.prompt_creator", function()
             return creator.state.kind == "bug"
                 and creator.layout.body_win
                 and creator.layout.body_win:valid()
+                and creator.project_bg_win
+                and creator.project_bg_win:valid()
                 and vim.api.nvim_get_current_win() == creator.layout.body_win.win
                 and vim.api.nvim_get_mode().mode == "n"
         end)
+
+        local background_config = vim.api.nvim_win_get_config(creator.project_bg_win.win)
+        assert.are.equal(creator:project_background_width(), background_config.width)
+        assert.are.equal(creator:project_background_height(), background_config.height)
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
         vim.cmd.startinsert()

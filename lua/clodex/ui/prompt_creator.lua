@@ -1108,6 +1108,16 @@ function Creator:render_project_background()
     vim.bo[self.project_bg_buf].modifiable = false
 end
 
+function Creator:refresh_project_background()
+    self:render_project_background()
+    if not self.panel or not self.panel.background then
+        return
+    end
+    self.project_bg_win = self.panel.background:open()
+    self.panel:watch_window(self.project_bg_win)
+    self.panel.background:update()
+end
+
 -- Project keymaps
 function Creator:apply_project_keymaps()
     self:apply_mouse_keymap(self.project_buf)
@@ -1320,9 +1330,7 @@ end
 
 -- Ensure windows
 function Creator:ensure_shell_windows()
-    self:render_project_background()
-    self.project_bg_win = self.panel.background and self.panel.background:open() or nil
-    self.panel:watch_window(self.project_bg_win)
+    self:refresh_project_background()
     self.project_win = self:open_block(self, "project_block", "project_win", "project", self.project_buf, {
         enter = false,
         border = "rounded",
@@ -1540,11 +1548,7 @@ function Creator:refresh()
         self.layout:update()
     end
     self:render_preview()
-    self:render_project_background()
-    if self.panel.background then
-        self.panel.background:update()
-        self.project_bg_win = self.panel.background.win
-    end
+    self:refresh_project_background()
     self:apply_prompt_theme()
 end
 
