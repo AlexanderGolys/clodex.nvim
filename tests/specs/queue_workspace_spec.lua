@@ -1804,6 +1804,130 @@ describe("clodex.ui.queue_workspace", function()
         vim.api.nvim_win_close(workspace.project_win, true)
     end)
 
+    it("selects the active project and first queued prompt when opening", function()
+        local alpha = {
+            name = "Alpha",
+            root = "/tmp/alpha",
+        }
+        local beta = {
+            name = "Beta",
+            root = "/tmp/beta",
+        }
+        local summaries = {
+            [alpha.root] = {
+                planned = {},
+                queued = {
+                    {
+                        id = "alpha-queued",
+                        title = "Alpha queued",
+                        kind = "todo",
+                        prompt = "Alpha queued",
+                    },
+                },
+                implemented = {},
+                history = {},
+            },
+            [beta.root] = {
+                planned = {
+                    {
+                        id = "beta-planned",
+                        title = "Beta planned",
+                        kind = "todo",
+                        prompt = "Beta planned",
+                    },
+                },
+                queued = {
+                    {
+                        id = "beta-queued",
+                        title = "Beta queued",
+                        kind = "todo",
+                        prompt = "Beta queued",
+                    },
+                },
+                implemented = {},
+                history = {},
+            },
+        }
+        local workspace = Workspace.new({
+            current_tab = function()
+                return {
+                    active_project_root = beta.root,
+                }
+            end,
+            projects_for_queue_workspace = function()
+                return { alpha, beta }
+            end,
+            queue_summary = function(_, project)
+                local queues = summaries[project.root]
+                return {
+                    project = project,
+                    counts = {
+                        planned = #queues.planned,
+                        queued = #queues.queued,
+                        implemented = #queues.implemented,
+                        history = #queues.history,
+                    },
+                    queues = queues,
+                }
+            end,
+            project_details_store = {
+                get = function()
+                    return nil
+                end,
+                get_cached = function()
+                    return nil
+                end,
+            },
+        }, {
+            queue_workspace = {
+                width = 1,
+                height = 1,
+                project_width = 0.3,
+                footer_height = 3,
+                preview_max_lines = 3,
+                fold_preview = true,
+                date_format = "ago",
+            },
+        })
+
+        workspace.project_buf = vim.api.nvim_create_buf(false, true)
+        workspace.queue_buf = vim.api.nvim_create_buf(false, true)
+        workspace.footer_buf = vim.api.nvim_create_buf(false, true)
+        workspace.project_win = vim.api.nvim_open_win(workspace.project_buf, false, {
+            relative = "editor",
+            row = 1,
+            col = 1,
+            width = 24,
+            height = 12,
+            style = "minimal",
+        })
+        workspace.queue_win = vim.api.nvim_open_win(workspace.queue_buf, false, {
+            relative = "editor",
+            row = 1,
+            col = 26,
+            width = 60,
+            height = 12,
+            style = "minimal",
+        })
+        workspace.footer_win = vim.api.nvim_open_win(workspace.footer_buf, false, {
+            relative = "editor",
+            row = 14,
+            col = 1,
+            width = 85,
+            height = 3,
+            style = "minimal",
+        })
+
+        workspace:refresh(true)
+
+        assert.are.equal(2, workspace.project_index)
+        assert.are.equal(2, workspace.queue_index)
+
+        vim.api.nvim_win_close(workspace.footer_win, true)
+        vim.api.nvim_win_close(workspace.queue_win, true)
+        vim.api.nvim_win_close(workspace.project_win, true)
+    end)
+
     it("renders footer actions only for the focused picker", function()
         local project = {
             name = "Test Project",

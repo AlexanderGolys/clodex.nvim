@@ -421,6 +421,20 @@ local function project_index_for_root(projects, root)
     end
 end
 
+---@param summary Clodex.ProjectQueueSummary
+---@param target_queue Clodex.QueueName
+---@return integer?
+local function first_queue_item_index(summary, target_queue)
+    local index = 1
+    for _, queue_name in ipairs({ "planned", "queued", "implemented", "history" }) do
+        local items = summary.queues and summary.queues[queue_name] or {}
+        if queue_name == target_queue then
+            return #items > 0 and index or nil
+        end
+        index = index + #items
+    end
+end
+
 ---@param line integer
 ---@param rows integer[]
 ---@return integer?
@@ -1708,6 +1722,12 @@ function Workspace:refresh(initial)
     if #self.projects == 0 then
         self.project_index = 1
         self.queue_index = 1
+    elseif initial then
+        local active_root = self.app:current_tab().active_project_root
+        self.project_index = project_index_for_root(self.projects, active_root) or 1
+        local project = self.projects[self.project_index]
+        local summary = project and self.app:queue_summary(project) or nil
+        self.queue_index = (summary and first_queue_item_index(summary, "queued")) or 1
     else
         local preserved_index = project_index_for_root(self.projects, selected_root)
         self.project_index = preserved_index or clamp(self.project_index, #self.projects)
