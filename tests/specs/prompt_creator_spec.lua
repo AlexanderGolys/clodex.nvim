@@ -353,6 +353,60 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal("", title)
     end)
 
+    it("normalizes raw edit prompt drafts into title and details fields", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            mode = "edit",
+            initial_draft = {
+                title = "Wrong copied line",
+                prompt = "Real title\n\nReal details\nSecond line",
+            },
+            on_submit = function() end,
+        })
+
+        assert.are.same({ "Real title" }, vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, -1, false))
+        assert.are.same({ "Real details", "Second line" }, vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false))
+
+        creator:close()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            mode = "edit",
+            initial_draft = {
+                title = "Real title\n\nReal details\nSecond line",
+            },
+            on_submit = function() end,
+        })
+
+        assert.are.same({ "Real title" }, vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, -1, false))
+        assert.are.same({ "Real details", "Second line" }, vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false))
+    end)
+
     it("opens with the title focused in normal mode", function()
         creator = Creator.open({
             app = {

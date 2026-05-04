@@ -130,6 +130,38 @@ local LAYOUT_BUILDERS = {
     clipboard_preview = require("clodex.ui.prompt_creator.layouts.clipboard_preview"),
 }
 
+---@param value any
+---@return boolean
+local function blank(value)
+    return type(value) ~= "string" or vim.trim(value) == ""
+end
+
+---@param draft table?
+---@return table?
+local function normalize_initial_draft(draft)
+    if type(draft) ~= "table" then
+        return draft
+    end
+
+    draft = vim.deepcopy(draft)
+    local prompt = type(draft.prompt) == "string" and Prompt.parse(draft.prompt) or nil
+    local title = type(draft.title) == "string" and draft.title or ""
+    local title_prompt = title:find("\n", 1, true) and Prompt.parse(title) or nil
+    local parsed = title_prompt or prompt
+    if not parsed then
+        return draft
+    end
+
+    if prompt or title_prompt or blank(draft.title) then
+        draft.title = parsed.title
+    end
+    if blank(draft.details) and parsed.details then
+        draft.details = parsed.details
+    end
+    draft.prompt = nil
+    return draft
+end
+
 -- New creator
 ---@param opts Clodex.PromptCreator.OpenOpts
 ---@return Clodex.PromptCreator
@@ -243,6 +275,7 @@ end
 -- Prime drafts
 ---@param initial_draft? table
 function Creator:prime_drafts(initial_draft)
+    initial_draft = normalize_initial_draft(initial_draft)
     for _, kind in ipairs(self.kinds) do
         local default_mode = KindRegistry.default_mode(kind.id)
         for _, variant in ipairs(KindRegistry.modes(kind.id)) do

@@ -2206,6 +2206,7 @@ function Workspace:edit_queue_item()
         initial_draft = {
             title = item.title,
             details = item.details,
+            prompt = item.prompt,
             image_path = item.image_path,
         },
         on_submit = function(spec, action, selected_project)

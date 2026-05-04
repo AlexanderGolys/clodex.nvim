@@ -738,6 +738,7 @@ describe("clodex.ui.queue_workspace", function()
             id = "item-1",
             title = "Old title",
             details = "Old details",
+            prompt = "Old title\n\nOld details",
             kind = "todo",
         }
         local edited
@@ -789,6 +790,11 @@ describe("clodex.ui.queue_workspace", function()
         assert.are.equal("todo", open_creator_calls[1].opts.category)
         assert.is_true(open_creator_calls[1].opts.lock_kind)
         assert.are.equal("edit", open_creator_calls[1].opts.mode)
+        assert.are.same({
+            title = "Old title",
+            details = "Old details",
+            prompt = "Old title\n\nOld details",
+        }, open_creator_calls[1].opts.initial_draft)
         assert.are.same(project, edited.project)
         assert.are.equal("item-1", edited.item_id)
         assert.are.equal("New title", edited.spec.title)
