@@ -28,9 +28,6 @@ local PROJECT_LANGUAGE_EXTENSIONS = {
     cu = "cpp",
     cuh = "cpp",
     cl = "cpp",
-    css = "css",
-    htm = "html",
-    html = "html",
     java = "java",
     js = "js",
     jsx = "jsx",
@@ -50,6 +47,7 @@ local PROJECT_LANGUAGE_EXTENSIONS = {
 }
 
 local PROJECT_LANGUAGE_FILENAMES = {
+    ["cargo.toml"] = "rs",
     ["dockerfile"] = "docker",
     ["makefile"] = "make",
 }
@@ -57,10 +55,8 @@ local PROJECT_LANGUAGE_FILENAMES = {
 local LANGUAGE_ICONS = {
     c = " ",
     cpp = " ",
-    css = " ",
     docker = " ",
     go = " ",
-    html = " ",
     java = " ",
     js = " ",
     jsx = " ",

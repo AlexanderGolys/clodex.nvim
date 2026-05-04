@@ -9,11 +9,37 @@ describe("clodex.project.language", function()
 
     it("detects languages from known code paths and ignores non-code files", function()
         assert.are.equal("lua", profile:language_for_path("lua/clodex/init.lua"))
+        assert.are.equal("rs", profile:language_for_path("rust/clodex-mcp/Cargo.toml"))
+        assert.are.equal("rs", profile:language_for_path("rust/clodex-mcp/src/main.rs"))
         assert.are.equal("sh", profile:language_for_path("scripts/setup.zsh"))
         assert.are.equal("docker", profile:language_for_path("Dockerfile"))
+        assert.is_nil(profile:language_for_path("index.html"))
+        assert.is_nil(profile:language_for_path("assets/app.css"))
         assert.is_nil(profile:language_for_path("README.md"))
         assert.is_nil(profile:language_for_path("package.json"))
         assert.is_nil(profile:language_for_path(nil))
+    end)
+
+    it("keeps rust visible for Lua projects with a cargo helper", function()
+        local language_totals = {
+            lua = 93,
+            rs = 2,
+        }
+
+        local languages = profile:dominant_languages(language_totals)
+
+        assert.are.same({
+            "lua",
+            "rs",
+        }, vim.tbl_map(function(language)
+            return language.name
+        end, languages))
+        assert.are.same({
+            98,
+            2,
+        }, vim.tbl_map(function(language)
+            return language.percent
+        end, languages))
     end)
 
     it("adds an other bucket for omitted low-share languages", function()
