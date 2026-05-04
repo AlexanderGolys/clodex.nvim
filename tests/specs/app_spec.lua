@@ -21,6 +21,28 @@ local App = require("clodex.app")
 local Commands = require("clodex.commands")
 
 describe("clodex.app", function()
+    it("syncs bundled skills for every registered project", function()
+        local alpha = { name = "Alpha", root = "/tmp/alpha" }
+        local beta = { name = "Beta", root = "/tmp/beta" }
+        local synced = {}
+        local app = setmetatable({
+            registry = {
+                list = function()
+                    return { alpha, beta }
+                end,
+            },
+            execution = {
+                sync_prompt_skill = function(_, project)
+                    synced[#synced + 1] = project.root
+                end,
+            },
+        }, App)
+
+        app:sync_registered_project_skills()
+
+        assert.are.same({ alpha.root, beta.root }, synced)
+    end)
+
     it("sorts queue workspace projects by active state, running sessions, and project update timestamps", function()
         local alpha = { name = "Alpha", root = "/tmp/alpha" }
         local beta = { name = "Beta", root = "/tmp/beta" }

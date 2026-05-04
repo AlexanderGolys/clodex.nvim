@@ -118,4 +118,63 @@ describe("clodex.terminal.manager", function()
 
         vim.api.nvim_win_close(terminal_win, true)
     end)
+
+    it("syncs project-local skills before creating a project session", function()
+        local original_session = package.loaded["clodex.terminal.session"]
+        package.loaded["clodex.terminal.manager"] = nil
+        package.loaded["clodex.terminal.session"] = {
+            new = function(spec)
+                return {
+                    key = spec.key,
+                    kind = spec.kind,
+                    cwd = spec.cwd,
+                    title = spec.title,
+                    cmd = spec.cmd,
+                    env = spec.env,
+                    runtime_key = spec.runtime_key,
+                    terminal_provider = spec.terminal_provider,
+                    project_root = spec.project_root,
+                    ensure_started = function()
+                        return true
+                    end,
+                    is_running = function()
+                        return true
+                    end,
+                    destroy = function() end,
+                    update_identity = function() end,
+                }
+            end,
+        }
+
+        local synced = {}
+        local manager_with_session = require("clodex.terminal.manager").new({
+            backend = "codex",
+            codex_cmd = { "codex" },
+            terminal = {
+                provider = "term",
+                win = {},
+            },
+            mcp = {
+                enabled = false,
+            },
+        }, {
+            sync_prompt_skill = function(_, project)
+                synced[#synced + 1] = project.root
+            end,
+        })
+        local project = {
+            name = "Demo",
+            root = "/tmp/demo",
+        }
+
+        local first = manager_with_session:ensure_project_session(project)
+        local second = manager_with_session:ensure_project_session(project)
+
+        assert.is_not_nil(first)
+        assert.are.same(first, second)
+        assert.are.same({ "/tmp/demo" }, synced)
+
+        package.loaded["clodex.terminal.manager"] = nil
+        package.loaded["clodex.terminal.session"] = original_session
+    end)
 end)

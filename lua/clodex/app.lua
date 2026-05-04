@@ -384,20 +384,22 @@ function App:setup(opts)
     self.project_bookmarks = self.project_bookmarks or ProjectBookmarks.new()
     self.project_notes = self.project_notes or ProjectNotes.new()
     self.project_cheatsheet = self.project_cheatsheet or ProjectCheatsheet.new()
-    self.terminals = self.terminals or TerminalManager.new(values)
+    self.execution = self.execution or Execution.new(values)
+    self.terminals = self.terminals or TerminalManager.new(values, self.execution)
     self.state_preview = self.state_preview or StatePreview.new(values)
     self.mini_state_preview = self.mini_state_preview or MiniStatePreview.new(values)
     self.queue = self.queue or Queue.new(values.storage.workspaces_dir)
-    self.execution = self.execution or Execution.new(values)
     self.exec_runner = self.exec_runner or ExecutionRunner.new(self, values)
     self.queue_workspace = self.queue_workspace or QueueWorkspace.new(self, values)
     self.session_persistence:update_storage_dir(values.storage.session_state_dir)
     History.configure(values.storage.history_file)
     self.terminals:update_config(values)
+    self.terminals:update_execution(self.execution)
     self.state_preview:update_config(values)
     self.mini_state_preview:update_config(values)
     self.project_details_store:update_config(values)
     self.execution:update_config(values)
+    self:sync_registered_project_skills()
     if values.mcp.enabled ~= false and not Mcp.is_available(values) then
         notify.warn("clodex-mcp binary is unavailable; rebuild the plugin or set `mcp.cmd` explicitly")
     elseif Mcp.is_enabled(values) then
@@ -416,6 +418,23 @@ function App:setup(opts)
     self:setup_execution_timer()
     self:setup_blocked_input_timer()
     self:refresh_state_preview()
+end
+
+--- Installs bundled workflow skills into every registered project's local context directory.
+--- This keeps existing roots ready before their next project session is opened.
+function App:sync_registered_project_skills()
+    if not self.registry or not self.execution or type(self.execution.sync_prompt_skill) ~= "function" then
+        return
+    end
+
+    for _, project in ipairs(self.registry:list()) do
+        local ok, err = pcall(function()
+            self.execution:sync_prompt_skill(project)
+        end)
+        if not ok then
+            notify.warn(("Could not sync Clodex skills for %s: %s"):format(project.name, err))
+        end
+    end
 end
 
 --- Registers the plugin-wide autocommand group for project and terminal state refreshes.

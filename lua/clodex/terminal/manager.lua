@@ -3,6 +3,7 @@ local Mcp = require("clodex.mcp")
 local fs = require("clodex.util.fs")
 local Session = require("clodex.terminal.session")
 local TerminalUi = require("clodex.terminal.ui")
+local notify = require("clodex.util.notify")
 
 --- Defines the Clodex.TerminalTarget.Project type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -26,6 +27,7 @@ local TerminalUi = require("clodex.terminal.ui")
 ---@field config Clodex.Config.Values
 ---@field project_sessions table<string, Clodex.TerminalSession>
 ---@field free_session? Clodex.TerminalSession
+---@field execution? Clodex.Workspace.Execution
 local Manager = {}
 Manager.__index = Manager
 
@@ -121,10 +123,12 @@ local function session_terminal_provider(config)
 end
 
 ---@param config Clodex.Config.Values
+---@param execution? Clodex.Workspace.Execution
 ---@return Clodex.TerminalManager
-function Manager.new(config)
+function Manager.new(config, execution)
     local self = setmetatable({}, Manager)
     self.config = config
+    self.execution = execution
     self.project_sessions = {}
     return self
 end
@@ -132,6 +136,25 @@ end
 ---@param config Clodex.Config.Values
 function Manager:update_config(config)
     self.config = config
+end
+
+---@param execution Clodex.Workspace.Execution
+function Manager:update_execution(execution)
+    self.execution = execution
+end
+
+---@param project Clodex.Project
+function Manager:sync_project_skills(project)
+    if not self.execution or type(self.execution.sync_prompt_skill) ~= "function" then
+        return
+    end
+
+    local ok, err = pcall(function()
+        self.execution:sync_prompt_skill(project)
+    end)
+    if not ok then
+        notify.warn(("Could not sync Clodex skills for %s: %s"):format(project.name, err))
+    end
 end
 
 ---@return Clodex.TerminalSession[]
@@ -296,6 +319,7 @@ function Manager:get_session(target)
         if session then
             session:update_identity(spec)
         else
+            self:sync_project_skills(target.project)
             session = Session.new(spec)
         end
         self.project_sessions[project_root] = session
