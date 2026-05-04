@@ -667,9 +667,10 @@ local function queue_item_title_line(item, title, suffix, opts)
     local text = ("  %s%s%s"):format(prefix, title, suffix)
     local title_start = 2 + #prefix
     local title_end = title_start + #title
+    local label_hl = opts.selected and Prompt.title_group(kind.id) or Prompt.kind_name_group(kind.id)
     local marks = {
         Extmark.inline(0, 2, 2 + #prefix, "ClodexQueueItem"),
-        Extmark.inline(0, 2 + prefix_label_start, 2 + prefix_label_end, Prompt.kind_name_group(kind.id)),
+        Extmark.inline(0, 2 + prefix_label_start, 2 + prefix_label_end, label_hl),
         Extmark.inline(0, title_start, title_end, Prompt.title_group(kind.id)),
     }
     if #suffix > 0 then
