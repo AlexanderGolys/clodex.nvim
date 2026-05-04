@@ -206,6 +206,80 @@ describe("clodex.terminal.session", function()
         vim.fn.jobwait = original_jobwait
     end)
 
+    it("uses the evaluated window when rendering an unfocused terminal winbar", function()
+        local current_win = vim.api.nvim_get_current_win()
+        local current_buf = vim.api.nvim_create_buf(false, true)
+        vim.bo[current_buf].filetype = "clodex_terminal"
+        vim.api.nvim_buf_set_lines(current_buf, 0, -1, false, { "Thinking..." })
+
+        local unfocused_buf = vim.api.nvim_create_buf(false, true)
+        vim.bo[unfocused_buf].filetype = "clodex_terminal"
+        vim.api.nvim_buf_set_lines(unfocused_buf, 0, -1, false, { "Thinking..." })
+
+        local current_session = Session.new({
+            key = "project:/tmp/current",
+            kind = "project",
+            cwd = "/tmp/current",
+            title = "Clodex: Current",
+            cmd = { "codex" },
+        })
+        current_session.buf = current_buf
+        current_session.job_id = 123
+        current_session.awaiting_response = true
+        current_session:set_active_prompt_title("Current prompt")
+
+        local unfocused_session = Session.new({
+            key = "project:/tmp/unfocused",
+            kind = "project",
+            cwd = "/tmp/unfocused",
+            title = "Clodex: Unfocused",
+            cmd = { "codex" },
+        })
+        unfocused_session.buf = unfocused_buf
+        unfocused_session.job_id = 456
+        unfocused_session.awaiting_response = true
+        unfocused_session:set_active_prompt_title("Unfocused prompt")
+
+        local app_module = package.loaded["clodex.app"]
+        package.loaded["clodex.app"] = {
+            instance = function()
+                return {
+                    terminals = {
+                        session_by_buf = function(_, target_buf)
+                            if target_buf == current_buf then
+                                return current_session
+                            end
+                            if target_buf == unfocused_buf then
+                                return unfocused_session
+                            end
+                        end,
+                    },
+                }
+            end,
+        }
+
+        local original_jobwait = vim.fn.jobwait
+        vim.fn.jobwait = function()
+            return { -1 }
+        end
+
+        vim.api.nvim_win_set_buf(current_win, current_buf)
+        vim.cmd("vsplit")
+        local unfocused_win = vim.api.nvim_get_current_win()
+        vim.api.nvim_win_set_buf(unfocused_win, unfocused_buf)
+        vim.api.nvim_set_current_win(current_win)
+
+        local original_statusline_winid = vim.g.statusline_winid
+        vim.g.statusline_winid = unfocused_win
+
+        assert.are.equal(" Unfocused prompt ", TerminalUi.winbar())
+
+        vim.g.statusline_winid = original_statusline_winid
+        vim.fn.jobwait = original_jobwait
+        vim.api.nvim_win_close(unfocused_win, true)
+        package.loaded["clodex.app"] = app_module
+    end)
+
     it("detects when the session is waiting for user input", function()
         local buf = vim.api.nvim_create_buf(false, true)
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {

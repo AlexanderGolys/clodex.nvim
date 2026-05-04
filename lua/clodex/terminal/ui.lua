@@ -147,6 +147,15 @@ local function current_window()
     return vim.api.nvim_win_is_valid(win) and win or nil
 end
 
+---@return integer?
+local function evaluated_window()
+    local win = tonumber(vim.g.statusline_winid)
+    if win and vim.api.nvim_win_is_valid(win) then
+        return win
+    end
+    return current_window()
+end
+
 local function clodex_terminal_window(win)
     return type(win) == "number"
         and vim.api.nvim_win_is_valid(win)
@@ -222,7 +231,7 @@ end
 
 ---@return string
 function M.statusline(win)
-    local target = type(win) == "number" and win or current_window()
+    local target = type(win) == "number" and win or evaluated_window()
     local session = current_session(target)
     if not session then
         return ""
@@ -232,7 +241,7 @@ end
 
 ---@return string
 function M.winbar(win)
-    local target = type(win) == "number" and win or current_window()
+    local target = type(win) == "number" and win or evaluated_window()
     local session = current_session(target)
     if not session then
         return ""
