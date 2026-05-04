@@ -366,4 +366,18 @@ describe("clodex.mcp", function()
         package.loaded["clodex.terminal.manager"] = nil
         package.loaded["clodex.terminal.session"] = original_session
     end)
+
+    it("resolves the MCP active task state path from the configured workspace directory", function()
+        local values = Config.new():setup({
+            storage = {
+                workspaces_dir = "/tmp/clodex-workspaces",
+            },
+        })
+        local project_root = "/tmp/demo"
+
+        assert.are.equal(
+            "/tmp/clodex-workspaces/" .. Mcp.workspace_id(project_root) .. "/mcp/active.json",
+            Mcp.active_state_path(values, project_root)
+        )
+    end)
 end)

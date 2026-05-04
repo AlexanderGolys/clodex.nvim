@@ -134,6 +134,59 @@ describe("clodex.app.queue_actions", function()
         assert.are.same({ "Show prompt title", "<nil>" }, titles)
     end)
 
+    it("syncs active MCP prompt titles into project terminal sessions", function()
+        local active_path = require("clodex.mcp").active_state_path({
+            storage = {
+                workspaces_dir = workspace_root,
+            },
+        }, project.root)
+        fs.write_json(active_path, {
+            item_id = "item-1",
+            source_queue = "queued",
+            claimed_at = "2026-01-01T00:00:00Z",
+            title = "Authoritative prompt title",
+            kind = "bug",
+        })
+
+        local session = {
+            set_active_prompt_title = function(self, title, kind)
+                self.active_prompt_title = title
+                self.active_prompt_kind = kind
+            end,
+        }
+        actions.app.config = {
+            get = function()
+                return {
+                    storage = {
+                        workspaces_dir = workspace_root,
+                    },
+                }
+            end,
+        }
+        actions.app.registry = {
+            list = function()
+                return { project }
+            end,
+        }
+        actions.app.terminals = {
+            project_session = function(_, root)
+                if root == project.root then
+                    return session
+                end
+            end,
+        }
+
+        assert.is_true(actions:poll_active_prompt_titles())
+        assert.are.equal("Authoritative prompt title", session.active_prompt_title)
+        assert.are.equal("bug", session.active_prompt_kind)
+
+        fs.remove(active_path)
+
+        assert.is_true(actions:poll_active_prompt_titles())
+        assert.is_nil(session.active_prompt_title)
+        assert.is_nil(session.active_prompt_kind)
+    end)
+
     it("moves an implemented item back to queued when the source queue is specified", function()
         local item = queue:add_todo(project, {
             title = "fix prompt flow",

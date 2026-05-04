@@ -125,6 +125,10 @@ struct ActiveItem {
     item_id: String,
     claimed_at: String,
     source_queue: String,
+    #[serde(default)]
+    title: Option<String>,
+    #[serde(default)]
+    kind: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -820,6 +824,8 @@ fn claim_or_resume_item(project_root: &str) -> AppResult<TaskClaim> {
         item_id: item.id.clone(),
         claimed_at: timestamp(),
         source_queue: "queued".to_string(),
+        title: Some(item.title.clone()),
+        kind: Some(item.kind.clone()),
     };
     save_active_state(project_root, &active)?;
     append_event(
@@ -1421,6 +1427,11 @@ mod tests {
         assert_eq!(task["status"], "task");
         assert_eq!(task["task"]["id"], "item-1");
         assert_eq!(task["context"]["prior_commits"], json!([]));
+        let active = load_active_state(&root)
+            .expect("active state")
+            .expect("active item");
+        assert_eq!(active.title.as_deref(), Some("first"));
+        assert_eq!(active.kind.as_deref(), Some("todo"));
 
         let closed = close_task(CloseTaskArgs {
             project_root: root.clone(),
@@ -1481,6 +1492,11 @@ mod tests {
         assert_eq!(response["status"], "task");
         assert_eq!(response["closed_task"]["id"], "item-1");
         assert_eq!(response["task"]["id"], "item-2");
+        let active = load_active_state(&root)
+            .expect("active state")
+            .expect("next active item");
+        assert_eq!(active.item_id, "item-2");
+        assert_eq!(active.title.as_deref(), Some("second"));
     }
 
     #[test]

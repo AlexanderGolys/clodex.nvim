@@ -8,6 +8,7 @@ local REPO_ROOT = fs.dirname(fs.dirname(fs.dirname(SOURCE_PATH)))
 local BIN_NAME = vim.fn.has("win32") == 1 and "clodex-mcp.exe" or "clodex-mcp"
 local SERVER_NAME = "clodex"
 local RUNTIME_SIGNATURE_SEPARATOR = "\0"
+local U32_MOD = 4294967296
 
 ---@param values Clodex.Config.Values
 ---@return string
@@ -59,6 +60,47 @@ local function queue_workspace_dir(values)
         return nil
     end
     return fs.normalize(vim.fn.expand(workspace_dir))
+end
+
+---@param project_root string
+---@return string
+local function canonical_project_root(project_root)
+    local uv = vim.uv or vim.loop
+    local realpath = uv and uv.fs_realpath(project_root) or nil
+    return fs.normalize(realpath or project_root)
+end
+
+---@param project_root string
+---@return string
+function M.workspace_id(project_root)
+    project_root = canonical_project_root(project_root)
+    local hash = 5381
+    for index = 1, #project_root do
+        hash = (hash * 33 + project_root:byte(index)) % U32_MOD
+    end
+    return ("%08x"):format(hash)
+end
+
+---@param values Clodex.Config.Values
+---@param project_root string
+---@return string
+function M.queue_data_dir(values, project_root)
+    local workspace_dir = queue_workspace_dir(values)
+    project_root = canonical_project_root(project_root)
+    if type(workspace_dir) == "string" and workspace_dir ~= "" then
+        if vim.startswith(workspace_dir, "/") or workspace_dir:match("^%a:[/\\]") ~= nil then
+            return fs.join(workspace_dir, M.workspace_id(project_root))
+        end
+        return fs.join(project_root, workspace_dir)
+    end
+    return fs.join(project_root, ".clodex")
+end
+
+---@param values Clodex.Config.Values
+---@param project_root string
+---@return string
+function M.active_state_path(values, project_root)
+    return fs.join(M.queue_data_dir(values, project_root), "mcp", "active.json")
 end
 
 ---@param values? Clodex.Config.Values

@@ -1,4 +1,6 @@
 local History = require("clodex.history")
+local Mcp = require("clodex.mcp")
+local fs = require("clodex.util.fs")
 local notify = require("clodex.util.notify")
 
 local COMMIT_ICON = "󰜘 "
@@ -203,6 +205,8 @@ end
 --- Checks configured queue workspace files for external updates.
 --- This keeps the editor in sync when queued prompts complete through the MCP helper.
 function QueueActions:poll_workspace_updates()
+    self:poll_active_prompt_titles()
+
     local changed = false
     for _, project in ipairs(self.app.registry:list()) do
         local revision = self.app.queue:workspace_revision(project)
@@ -217,6 +221,40 @@ function QueueActions:poll_workspace_updates()
     if changed then
         self.app:refresh_views()
     end
+end
+
+--- Syncs active MCP task titles into open project terminal winbars.
+--- The MCP helper owns active queued-task state, so terminal chrome polls its local
+--- runtime file instead of guessing from the item that launched the agent.
+---@return boolean
+function QueueActions:poll_active_prompt_titles()
+    if not self.app.config or not self.app.registry or not self.app.terminals then
+        return false
+    end
+
+    local values = self.app.config:get()
+    local changed = false
+    for _, project in ipairs(self.app.registry:list()) do
+        local session = self.app.terminals:project_session(project.root)
+        if session then
+            local active = fs.read_json(Mcp.active_state_path(values, project.root), nil)
+            local title = type(active) == "table" and active.title or nil
+            local kind = type(active) == "table" and active.kind or nil
+            title = type(title) == "string" and vim.trim(title) or ""
+            kind = type(kind) == "string" and vim.trim(kind) or nil
+            local next_title = title ~= "" and title or nil
+            local next_kind = next_title and kind or nil
+            if session.active_prompt_title ~= next_title or session.active_prompt_kind ~= next_kind then
+                session:set_active_prompt_title(next_title, next_kind)
+                changed = true
+            end
+        end
+    end
+
+    if changed then
+        pcall(vim.cmd.redrawstatus)
+    end
+    return changed
 end
 
 --- Adds a new app queue actions entry and keeps related state aligned.
