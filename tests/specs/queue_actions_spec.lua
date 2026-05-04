@@ -64,6 +64,73 @@ describe("clodex.app.queue_actions", function()
         end
     end)
 
+    it("sets the active terminal prompt title while dispatching an interactive queued item", function()
+        local seen_title
+        local dispatched_prompt
+        local session = {
+            set_active_prompt_title = function(_, title)
+                seen_title = title
+            end,
+            dispatch_prompt = function(_, prompt)
+                dispatched_prompt = prompt
+                return true
+            end,
+        }
+        actions.app.terminals = {
+            ensure_project_session = function()
+                return session
+            end,
+        }
+        actions.app.execution = {
+            dispatch_prompt = function(_, _, item)
+                return ("dispatch %s"):format(item.id)
+            end,
+        }
+
+        local item = queue:add_todo(project, {
+            title = "Show prompt title",
+            details = "surface in winbar",
+            queue = "queued",
+            kind = "todo",
+        })
+
+        assert.is_true(actions:dispatch_item(project, item))
+        assert.are.equal("Show prompt title", seen_title)
+        assert.are.equal(("dispatch %s"):format(item.id), dispatched_prompt)
+    end)
+
+    it("clears the active terminal prompt title when interactive dispatch fails", function()
+        local titles = {}
+        local session = {
+            set_active_prompt_title = function(_, title)
+                titles[#titles + 1] = title or "<nil>"
+            end,
+            dispatch_prompt = function()
+                return false
+            end,
+        }
+        actions.app.terminals = {
+            ensure_project_session = function()
+                return session
+            end,
+        }
+        actions.app.execution = {
+            dispatch_prompt = function()
+                return "$prompt-nvim-clodex"
+            end,
+        }
+
+        local item = queue:add_todo(project, {
+            title = "Show prompt title",
+            details = "surface in winbar",
+            queue = "queued",
+            kind = "todo",
+        })
+
+        assert.is_false(actions:dispatch_item(project, item))
+        assert.are.same({ "Show prompt title", "<nil>" }, titles)
+    end)
+
     it("moves an implemented item back to queued when the source queue is specified", function()
         local item = queue:add_todo(project, {
             title = "fix prompt flow",

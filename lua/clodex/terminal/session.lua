@@ -18,6 +18,7 @@ local notify = require("clodex.util.notify")
 ---@field suppress_exit_warning boolean
 ---@field archived_line_count integer
 ---@field awaiting_response boolean
+---@field active_prompt_title? string
 local Session = {}
 Session.__index = Session
 
@@ -314,6 +315,12 @@ function Session:header_text()
     return ("[Codex CLI] %s"):format(self.title)
 end
 
+---@param title? string
+function Session:set_active_prompt_title(title)
+    title = vim.trim(title or "")
+    self.active_prompt_title = title ~= "" and title or nil
+end
+
 --- Toggles whether the header row is shown in the terminal buffer.
 --- The new setting is applied immediately and persisted for the session lifecycle.
 --- Callers use this for user-facing header visibility toggles.
@@ -324,10 +331,15 @@ end
 
 ---@return string
 function Session:winbar_text()
-    if not self.header_enabled then
+    local active_prompt_title = self.active_prompt_title and self:is_working() and self.active_prompt_title or nil
+    if not self.header_enabled and not active_prompt_title then
         return ""
     end
-    return (" %s "):format(statusline_escape(self:header_text()))
+    local header = self.header_enabled and self:header_text() or ""
+    if active_prompt_title then
+        header = header ~= "" and ("%s - %s"):format(header, active_prompt_title) or active_prompt_title
+    end
+    return (" %s "):format(statusline_escape(header))
 end
 
 ---@return string
@@ -393,12 +405,14 @@ end
 function Session:is_working()
     if not self:is_running() then
         self.awaiting_response = false
+        self.active_prompt_title = nil
         return false
     end
 
     local line = self:last_cli_line()
     if is_idle_line(line) then
         self.awaiting_response = false
+        self.active_prompt_title = nil
         return false
     end
 

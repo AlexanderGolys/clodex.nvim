@@ -115,6 +115,41 @@ describe("clodex.terminal.session", function()
         vim.fn.jobwait = original_jobwait
     end)
 
+    it("shows the active prompt title in the winbar only while working", function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+            "Thinking...",
+        })
+
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "codex" },
+        })
+        session.buf = buf
+        session.job_id = 123
+        session.awaiting_response = true
+        session:set_active_prompt_title("Fix queue dispatch")
+
+        local original_jobwait = vim.fn.jobwait
+        vim.fn.jobwait = function()
+            return { -1 }
+        end
+
+        assert.are.equal(" Fix queue dispatch ", session:winbar_text())
+
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+            "Codex ready",
+        })
+
+        assert.are.equal("", session:winbar_text())
+        assert.is_nil(session.active_prompt_title)
+
+        vim.fn.jobwait = original_jobwait
+    end)
+
     it("detects when the session is waiting for user input", function()
         local buf = vim.api.nvim_create_buf(false, true)
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
