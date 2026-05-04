@@ -1031,11 +1031,20 @@ function Creator:render_project_list()
         if padding > 0 then
             line = line .. string.rep(" ", padding)
         end
-        local highlight = index == self.project_index and "ClodexPromptSourceTabActive"
-            or (project.root == self.active_project_root and active_project_hl or "ClodexPromptSourceTab")
         lines[#lines + 1] = line
         self.project_line_map[#lines] = index
-        marks[#marks + 1] = Extmark.inline(#lines - 1, 0, #line, highlight)
+        local row = #lines - 1
+        local is_selected = index == self.project_index
+        local is_active_project = project.root == self.active_project_root
+        if is_selected then
+            marks[#marks + 1] = Extmark.inline(row, 0, #line, "ClodexPromptSourceTabActive")
+            if is_active_project then
+                marks[#marks + 1] = Extmark.inline(row, 0, #line, active_project_hl, 110, { hl_mode = "combine" })
+            end
+        else
+            local highlight = is_active_project and active_project_hl or "ClodexPromptSourceTab"
+            marks[#marks + 1] = Extmark.inline(row, 0, #line, highlight)
+        end
     end
 
     vim.bo[self.project_buf].modifiable = true
