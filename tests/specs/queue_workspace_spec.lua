@@ -18,6 +18,14 @@ describe("clodex.ui.queue_workspace", function()
         return rows
     end
 
+    local function extmark_groups(buf)
+        local groups = {}
+        for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, -1, 0, -1, { details = true })) do
+            groups[#groups + 1] = mark[4].hl_group
+        end
+        return groups
+    end
+
     before_each(function()
         package.loaded["clodex.ui.queue_workspace"] = nil
         original_select = package.loaded["clodex.ui.select"]
@@ -906,8 +914,8 @@ describe("clodex.ui.queue_workspace", function()
 
         local moved_rows = extmark_rows(workspace.queue_buf, "ClodexQueueSelectionActive")
 
-        assert.are.same({ 1, 2, 3 }, initial_rows)
-        assert.are.same({ 4, 5, 6 }, moved_rows)
+        assert.are.same({ 1, 2 }, initial_rows)
+        assert.are.same({ 3, 4 }, moved_rows)
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
@@ -989,7 +997,7 @@ describe("clodex.ui.queue_workspace", function()
         workspace:update_window_highlights()
 
         assert.are.same({ 0, 1 }, extmark_rows(workspace.project_buf, "ClodexQueueSelectionInactive"))
-        assert.are.same({ 1, 2, 3 }, extmark_rows(workspace.queue_buf, "ClodexQueueSelectionActive"))
+        assert.are.same({ 1, 2 }, extmark_rows(workspace.queue_buf, "ClodexQueueSelectionActive"))
         assert.is_truthy(vim.wo[workspace.project_win].winhl:find("Normal:ClodexQueueFocusInactive", 1, true))
         assert.is_truthy(vim.wo[workspace.project_win].winhl:find("NormalFloat:ClodexQueueFocusInactive", 1, true))
         assert.is_truthy(vim.wo[workspace.project_win].winhl:find("FloatTitle:ClodexQueueInactiveBorder", 1, true))
@@ -1170,11 +1178,13 @@ describe("clodex.ui.queue_workspace", function()
             "Filter: token",
             "",
             "Planned (1)",
-            "  Fix parser",
+            "  Improvement Fix parser",
             "    Adjust token handling",
-            "    Type: Improvement",
             "",
         }, lines)
+        local groups = extmark_groups(workspace.queue_buf)
+        assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementTitleActive"))
+        assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementTitle"))
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
@@ -1298,9 +1308,8 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "  Fix parser  [󰜘 abc1234]",
+            "  Improvement Fix parser  [󰜘 abc1234]",
             "    Adjust token handling",
-            "    Type: Improvement",
             "    󰜘 abc1234",
             "",
         }, lines)
@@ -1364,9 +1373,8 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "  Fix parser  [󰜘 abc1234]",
+            "  Improvement Fix parser  [󰜘 abc1234]",
             "    Adjust token handling",
-            "    Type: Improvement",
             "    󰜘 abc1234",
             "",
         }, lines)
@@ -2253,9 +2261,9 @@ describe("clodex.ui.queue_workspace", function()
         local older_index = 0
         local newer_index = 0
         for index, line in ipairs(queue_lines) do
-            if line == "  Older implemented prompt" then
+            if line == "  Improvement Older implemented prompt" then
                 older_index = index
-            elseif line == "  Newer implemented prompt" then
+            elseif line == "  Improvement Newer implemented prompt" then
                 newer_index = index
             end
         end

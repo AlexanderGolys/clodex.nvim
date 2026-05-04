@@ -537,19 +537,10 @@ local function prompt_item_kind(item)
     return Prompt.categories.get(item.kind).id
 end
 
----@param item Clodex.QueueItem
----@return { text: string, marks: Clodex.Extmark[] }
-local function item_kind_preview_line(item)
-    local kind = Prompt.categories.get(item.kind)
-    local text = ("    Type: %s"):format(kind.label)
-    return {
-        text = text,
-        marks = {
-            Extmark.inline(0, 0, 4, "ClodexQueueItemMuted"),
-            Extmark.inline(0, 4, 10, "ClodexStateFieldLabel"),
-            Extmark.inline(0, 10, #text, Prompt.title_group(kind.id)),
-        },
-    }
+---@param kind Clodex.PromptCategory|string
+---@return string
+local function prompt_title_active_group(kind)
+    return Prompt.title_group(kind) .. "Active"
 end
 
 ---@param item Clodex.QueueItem
@@ -596,7 +587,6 @@ end
 ---@return { text: string, marks: Clodex.Extmark[] }[]
 local function item_metadata_preview_lines(item, project_root)
     local preview = {} ---@type { text: string, marks: Clodex.Extmark[] }[]
-    preview[#preview + 1] = item_kind_preview_line(item)
     local commits = {} ---@type string[]
     for _, commit_id in ipairs(type(item.history_commits) == "table" and item.history_commits or {}) do
         if type(commit_id) == "string" then
@@ -632,6 +622,26 @@ local function item_metadata_preview_lines(item, project_root)
         preview[#preview + 1] = { text = text, marks = marks }
     end
     return preview
+end
+
+---@param item Clodex.QueueItem
+---@param suffix string
+---@return string, Clodex.Extmark[]
+local function queue_item_title_line(item, suffix)
+    local kind = Prompt.categories.get(item.kind)
+    local prefix = kind.label
+    local title = item.title or ""
+    local text = ("  %s %s%s"):format(prefix, title, suffix)
+    local title_start = 2 + #prefix + 1
+    local title_end = title_start + #title
+    local marks = {
+        Extmark.inline(0, 2, 2 + #prefix, prompt_title_active_group(kind.id)),
+        Extmark.inline(0, title_start, title_end, Prompt.title_group(kind.id)),
+    }
+    if #suffix > 0 then
+        marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted")
+    end
+    return text, marks
 end
 
 ---@param queue_name Clodex.QueueName
@@ -1885,8 +1895,7 @@ function Workspace:render_queue()
                     local suffix = (queue_name == "implemented" or queue_name == "history")
                         and history_suffix(item, project and project.root)
                         or ""
-                    local item_text = "  " .. item.title .. suffix
-                    local title_text = "  " .. item.title
+                    local item_text, item_extmarks = queue_item_title_line(item, suffix)
                     self.queue_rows[#self.queue_rows + 1] = {
                         kind = "item",
                         text = item_text,
@@ -1894,13 +1903,6 @@ function Workspace:render_queue()
                         item = item,
                     }
                     self.queue_item_rows[#self.queue_item_rows + 1] = #self.queue_rows
-                    local item_extmarks = {
-                        Extmark.inline(0, 0, #title_text, Prompt.title_group(prompt_item_kind(item))),
-                    }
-                    if #item_text > #title_text then
-                        item_extmarks[#item_extmarks + 1] =
-                            Extmark.inline(0, #title_text, #item_text, "ClodexQueueItemMuted")
-                    end
                     block:append_line(item_text, item_extmarks)
 
                     for _, preview in
