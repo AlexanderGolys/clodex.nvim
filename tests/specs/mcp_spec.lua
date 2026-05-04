@@ -41,15 +41,69 @@ describe("clodex.mcp", function()
             "-c",
             'mcp_servers.clodex.command="cargo"',
             "-c",
-            'mcp_servers.clodex.args=["run", "--bin", "clodex-mcp"]',
+            ('mcp_servers.clodex.args=["run", "--bin", "clodex-mcp", "--workspace-dir", "%s"]'):format(
+                values.storage.workspaces_dir
+            ),
         }, Backend.cli_cmd(values))
         assert.are.equal(Mcp.codex_home(values), env.CODEX_HOME)
         assert.matches("%[mcp_servers%.clodex%]", content)
         assert.matches('command = "cargo"', content)
-        assert.matches('args = %[%"run%", %"%-%-bin%", %"clodex%-mcp%"%]', content)
+        assert.is_truthy(content:find(
+            ('args = ["run", "--bin", "clodex-mcp", "--workspace-dir", "%s"]'):format(
+                values.storage.workspaces_dir
+            ),
+            1,
+            true
+        ))
         assert.matches("CLODEX_WORKSPACES_DIR", content)
 
         fs.remove(runtime_dir)
+    end)
+
+    it("replaces stale configured workspace-dir args with the storage workspace dir", function()
+        local runtime_dir = temp_dir()
+        local workspaces_dir = temp_dir()
+        local values = Config.new():setup({
+            storage = {
+                workspaces_dir = workspaces_dir,
+            },
+            mcp = {
+                enabled = true,
+                cmd = {
+                    "cargo",
+                    "run",
+                    "--bin",
+                    "clodex-mcp",
+                    "--workspace-dir",
+                    ".clodex/workspaces",
+                },
+                runtime_dir = runtime_dir,
+            },
+        })
+        local cli_cmd = Backend.cli_cmd(values)
+        Backend.cli_env(values)
+        local file = assert(io.open(Mcp.codex_config_path(values), "rb"))
+        local content = file:read("*a")
+        file:close()
+
+        assert.are.same({
+            "codex",
+            "-c",
+            'mcp_servers.clodex.command="cargo"',
+            "-c",
+            ('mcp_servers.clodex.args=["run", "--bin", "clodex-mcp", "--workspace-dir", "%s"]'):format(
+                workspaces_dir
+            ),
+        }, cli_cmd)
+        assert.is_truthy(content:find(
+            ('"--workspace-dir", "%s"'):format(workspaces_dir),
+            1,
+            true
+        ))
+        assert.is_nil(content:find(".clodex/workspaces", 1, true))
+
+        fs.remove(runtime_dir)
+        fs.remove(workspaces_dir)
     end)
 
     it("writes persistent opencode runtime config for an enabled MCP server", function()
@@ -68,7 +122,14 @@ describe("clodex.mcp", function()
         assert.are.equal(Mcp.opencode_config_path(values), env.OPENCODE_CONFIG)
         assert.are.same({
             type = "local",
-            command = { "cargo", "run", "--bin", "clodex-mcp" },
+            command = {
+                "cargo",
+                "run",
+                "--bin",
+                "clodex-mcp",
+                "--workspace-dir",
+                values.storage.workspaces_dir,
+            },
             environment = {
                 CLODEX_WORKSPACES_DIR = values.storage.workspaces_dir,
             },
@@ -135,7 +196,14 @@ describe("clodex.mcp", function()
 
         assert.are.same({ "opencode" }, spec.cmd)
         assert.are.equal(Mcp.opencode_config_path(values), spec.env.OPENCODE_CONFIG)
-        assert.are.same({ "cargo", "run", "--bin", "clodex-mcp" }, decoded.mcp.clodex.command)
+        assert.are.same({
+            "cargo",
+            "run",
+            "--bin",
+            "clodex-mcp",
+            "--workspace-dir",
+            values.storage.workspaces_dir,
+        }, decoded.mcp.clodex.command)
         assert.are.same({
             CLODEX_WORKSPACES_DIR = values.storage.workspaces_dir,
         }, decoded.mcp.clodex.environment)

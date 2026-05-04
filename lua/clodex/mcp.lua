@@ -28,23 +28,20 @@ local function raw_server_args(values)
     local args = {}
     local has_configured_command = type(configured) == "table" and #configured > 0
     if has_configured_command and #configured > 1 then
-        for index = 2, #configured do
-            args[#args + 1] = configured[index]
+        local index = 2
+        while index <= #configured do
+            if configured[index] == "--workspace-dir" then
+                index = index + 1
+            else
+                args[#args + 1] = configured[index]
+            end
+            index = index + 1
         end
     end
 
-    local has_workspace_dir = false
-    for _, arg in ipairs(args) do
-        if arg == "--workspace-dir" then
-            has_workspace_dir = true
-            break
-        end
-    end
     local workspace_dir = values and values.storage and values.storage.workspaces_dir or nil
     if
-        not has_configured_command
-        and not has_workspace_dir
-        and type(workspace_dir) == "string"
+        type(workspace_dir) == "string"
         and vim.trim(workspace_dir) ~= ""
     then
         args[#args + 1] = "--workspace-dir"
