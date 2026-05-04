@@ -1162,6 +1162,20 @@ function Creator:apply_prompt_theme()
             Helpers.update_winhl(win.win, { FloatBorder = prompt_hl, FloatTitle = prompt_hl })
         end
     end
+    if self.project_win and self.project_win:valid() then
+        Helpers.hide_window_cursor(self.project_win.win, "ClodexPromptEditorNormal")
+    end
+    for _, win in ipairs({
+        self.kind_win,
+        self.variant_win,
+        self.footer_win,
+        self.preview_win,
+        self.layout and self.layout.preview_win or nil,
+    }) do
+        if win and win:valid() then
+            Helpers.hide_window_cursor(win.win, "ClodexPromptEditorFooter")
+        end
+    end
 end
 
 ---@param column integer
@@ -1212,7 +1226,6 @@ function Creator:ensure_shell_windows()
     end
     if self.project_win and self.project_win:valid() then
         vim.wo[self.project_win.win].cursorline = true
-        Helpers.hide_window_cursor(self.project_win.win, "ClodexPromptEditorNormal")
     end
     self.kind_win = self:open_block(self, "kind_block", "kind_win", "kind_tabs", self.kind_buf, {
         enter = false,

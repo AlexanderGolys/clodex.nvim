@@ -1085,7 +1085,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
     end)
 
-    it("hides the cursor in the target project list window", function()
+    it("hides the cursor in non-text prompt creator windows", function()
         local alpha = { name = "Alpha", root = "/tmp/alpha" }
         local beta = { name = "Beta", root = "/tmp/beta" }
 
@@ -1101,14 +1101,22 @@ describe("clodex.ui.prompt_creator", function()
             },
             project = alpha,
             projects = { alpha, beta },
-            initial_kind = "todo",
+            initial_kind = "bug",
             on_submit = function() end,
         })
 
-        local winhl = vim.wo[creator.project_win.win].winhl
+        local project_winhl = vim.wo[creator.project_win.win].winhl
+        local kind_winhl = vim.wo[creator.kind_win.win].winhl
+        local variant_winhl = vim.wo[creator.variant_win.win].winhl
+        local title_winhl = vim.wo[creator.layout.title_win.win].winhl
 
-        assert.is_truthy(winhl:find("Cursor:ClodexPromptEditorNormal", 1, true))
-        assert.is_truthy(winhl:find("lCursor:ClodexPromptEditorNormal", 1, true))
+        assert.is_truthy(project_winhl:find("Cursor:ClodexPromptEditorNormal", 1, true))
+        assert.is_truthy(project_winhl:find("lCursor:ClodexPromptEditorNormal", 1, true))
+        assert.is_truthy(kind_winhl:find("Cursor:ClodexPromptEditorFooter", 1, true))
+        assert.is_truthy(kind_winhl:find("lCursor:ClodexPromptEditorFooter", 1, true))
+        assert.is_truthy(variant_winhl:find("Cursor:ClodexPromptEditorFooter", 1, true))
+        assert.is_truthy(variant_winhl:find("lCursor:ClodexPromptEditorFooter", 1, true))
+        assert.is_nil(title_winhl:find("Cursor:", 1, true))
     end)
 
     it("extends title and project-list navigation to switch focus and target project", function()
