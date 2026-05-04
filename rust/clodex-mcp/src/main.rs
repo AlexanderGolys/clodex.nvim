@@ -14,6 +14,7 @@ const MCP_PROTOCOL_VERSION: &str = "2024-11-05";
 const SERVER_NAME: &str = "clodex-mcp";
 const ACTIVE_FILE_NAME: &str = "active.json";
 const EVENTS_FILE_NAME: &str = "events.jsonl";
+const LEGACY_RELATIVE_WORKSPACES_DIR: &str = ".clodex/workspaces";
 const QUEUE_NAMES: [&str; 4] = ["planned", "queued", "implemented", "history"];
 const PROMPT_KINDS: [&str; 10] = [
     "todo",
@@ -961,12 +962,70 @@ fn workspace_id(project_root: &str) -> String {
     format!("{hash:08x}")
 }
 
-fn workspace_dir(project_root: &str) -> PathBuf {
-    match configured_workspace_dir() {
+fn path_has_queue_files(path: &Path) -> bool {
+    QUEUE_NAMES
+        .iter()
+        .any(|queue_name| path.join(format!("{queue_name}.json")).is_file())
+}
+
+fn default_neovim_data_dir() -> Option<PathBuf> {
+    if let Some(data_home) = env::var("XDG_DATA_HOME")
+        .ok()
+        .and_then(|value| normalize_optional_string(Some(value)))
+    {
+        return Some(PathBuf::from(data_home).join("nvim"));
+    }
+
+    env::var("HOME")
+        .ok()
+        .and_then(|value| normalize_optional_string(Some(value)))
+        .map(|home| PathBuf::from(home).join(".local/share/nvim"))
+}
+
+fn default_workspaces_dir() -> Option<PathBuf> {
+    default_neovim_data_dir().map(|dir| dir.join("clodex/workspaces"))
+}
+
+fn is_legacy_relative_workspaces_dir(path: &Path) -> bool {
+    path.to_string_lossy().replace('\\', "/") == LEGACY_RELATIVE_WORKSPACES_DIR
+}
+
+fn migrated_default_workspace_dir(
+    project_root: &str,
+    default_base: Option<PathBuf>,
+) -> Option<PathBuf> {
+    default_base.map(|dir| dir.join(workspace_id(project_root)))
+}
+
+fn resolve_workspace_dir(
+    project_root: &str,
+    configured: Option<PathBuf>,
+    default_base: Option<PathBuf>,
+) -> PathBuf {
+    match configured {
         Some(dir) if dir.is_absolute() => dir.join(workspace_id(project_root)),
+        Some(dir) if is_legacy_relative_workspaces_dir(&dir) => {
+            let legacy = Path::new(project_root).join(&dir);
+            match migrated_default_workspace_dir(project_root, default_base) {
+                Some(migrated)
+                    if path_has_queue_files(&migrated) && !path_has_queue_files(&legacy) =>
+                {
+                    migrated
+                }
+                _ => legacy,
+            }
+        }
         Some(dir) => Path::new(project_root).join(dir),
         None => Path::new(project_root).join(".clodex"),
     }
+}
+
+fn workspace_dir(project_root: &str) -> PathBuf {
+    resolve_workspace_dir(
+        project_root,
+        configured_workspace_dir(),
+        default_workspaces_dir(),
+    )
 }
 
 fn queue_file_path(project_root: &str, queue_name: &str) -> PathBuf {
@@ -1271,6 +1330,44 @@ mod tests {
                 .to_string_lossy()
                 .to_string()
         );
+    }
+
+    #[test]
+    fn stale_relative_workspace_dir_falls_forward_to_migrated_default_queue() {
+        let (dir, root) = project_root();
+        let default_base = dir.path().join("nvim-data/clodex/workspaces");
+        let migrated = default_base.join(workspace_id(&root));
+        fs::create_dir_all(&migrated).expect("migrated workspace dir");
+        fs::write(migrated.join("queued.json"), "[]").expect("migrated queue");
+
+        let resolved = resolve_workspace_dir(
+            &root,
+            Some(PathBuf::from(LEGACY_RELATIVE_WORKSPACES_DIR)),
+            Some(default_base),
+        );
+
+        assert_eq!(resolved, migrated);
+    }
+
+    #[test]
+    fn stale_relative_workspace_dir_keeps_existing_legacy_queue_files() {
+        let (dir, root) = project_root();
+        let default_base = dir.path().join("nvim-data/clodex/workspaces");
+        let migrated = default_base.join(workspace_id(&root));
+        fs::create_dir_all(&migrated).expect("migrated workspace dir");
+        fs::write(migrated.join("queued.json"), "[]").expect("migrated queue");
+
+        let legacy = Path::new(&root).join(LEGACY_RELATIVE_WORKSPACES_DIR);
+        fs::create_dir_all(&legacy).expect("legacy workspace dir");
+        fs::write(legacy.join("queued.json"), "[]").expect("legacy queue");
+
+        let resolved = resolve_workspace_dir(
+            &root,
+            Some(PathBuf::from(LEGACY_RELATIVE_WORKSPACES_DIR)),
+            Some(default_base),
+        );
+
+        assert_eq!(resolved, legacy);
     }
 
     #[test]

@@ -38,6 +38,7 @@ Start with the least invasive checks and only apply a fix when the matching caus
 6. Check MCP runtime configuration when agents cannot see the expected tools.
    - Confirm that Codex/OpenCode runtime config points to the current clodex MCP helper.
    - Confirm that any configured `--workspace-dir` and `CLODEX_WORKSPACES_DIR` values match the plugin's current `storage.workspaces_dir`.
+   - If they still say `.clodex/workspaces`, treat that as stale runtime config. Rebuild or restart the helper after updating config so `local_data_dir` reports the local data workspace, not the project-local legacy path.
    - Restart the affected backend session after changing runtime config.
 
 7. Check for stale queue-work assumptions in prompts or docs.
@@ -55,3 +56,14 @@ When `<project_root>/.clodex/` contains legacy queue JSON and `local_data_dir` r
 5. Confirm with `queue_status`.
 6. Report exactly what moved and any files intentionally left in `.clodex/`.
 
+# Stale Runtime Config Fix
+
+When `local_data_dir` reports `<project_root>/.clodex/workspaces` but the real queue files exist under `stdpath("data")/clodex/workspaces/<workspace_id>`:
+
+1. Confirm that `<project_root>/.clodex/workspaces` does not contain queue JSON.
+2. Confirm that the local-data workspace contains queue JSON for the same project.
+3. Update the MCP runtime config so `--workspace-dir` and `CLODEX_WORKSPACES_DIR` point to the configured local-data `storage.workspaces_dir`.
+4. Rebuild or restart the MCP helper if the running agent session already launched it with stale args.
+5. After restart, call `local_data_dir` and `queue_status` again.
+
+The current helper also includes a compatibility fallback for the known stale `.clodex/workspaces` runtime config: if the legacy location has no queue files and the migrated default local-data workspace does have queue files, it uses the migrated local-data workspace.

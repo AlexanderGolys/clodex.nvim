@@ -216,7 +216,7 @@ Clodex keeps durable project data inside each repository:
 - `.clodex/notes/`
 - `.clodex/bookmarks.json`
 
-Queue state stays under `storage.workspaces_dir`, which defaults to `stdpath("data")/clodex/workspaces`, with legacy project-local queue files migrated there on first access. Agents can use the `clodex-debug` skill and `local_data_dir` MCP tool to repair older roots that still contain queue JSON directly under `.clodex/`. Global plugin state stays under `stdpath("data")/clodex/`, including the project registry, session snapshots, MCP runtime config, and the optional history markdown log.
+Queue state stays under `storage.workspaces_dir`, which defaults to `stdpath("data")/clodex/workspaces`, with legacy project-local queue files migrated there on first access. Agents can use the `clodex-debug` skill and `local_data_dir` MCP tool to repair older roots that still contain queue JSON directly under `.clodex/` or sessions launched from stale `.clodex/workspaces` MCP args. The MCP helper falls forward from that stale relative workspace setting to the migrated default local-data workspace when the project-local legacy location has no queue files. Global plugin state stays under `stdpath("data")/clodex/`, including the project registry, session snapshots, MCP runtime config, and the optional history markdown log.
 
 ## Public API
 
