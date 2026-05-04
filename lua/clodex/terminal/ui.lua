@@ -3,6 +3,7 @@ local STATUSLINE_EXPR = "%!v:lua.require('clodex.terminal.ui').statusline()"
 local WINBAR_EXPR = "%!v:lua.require('clodex.terminal.ui').winbar()"
 
 local Backend = require("clodex.backend")
+local Prompt = require("clodex.prompt")
 
 local STATUSLINE_HL_PREFIX = "ClodexTerminalStatuslineDyn"
 local TITLE_HL_PREFIX = "ClodexTerminalTitleDyn"
@@ -66,8 +67,13 @@ local function terminal_statusline_fg(buf)
         or highlight_hex("Normal", "fg")
 end
 
+---@param session? Clodex.TerminalSession
 ---@return string
-local function terminal_title_fg()
+local function terminal_title_fg(session)
+    local kind = session and session.active_prompt_kind or nil
+    if kind and Prompt.categories.is_valid(kind) then
+        return highlight_hex(Prompt.title_group(kind), "fg") or TITLE_FG
+    end
     return TITLE_FG
 end
 
@@ -79,12 +85,13 @@ local function color_key(value)
 end
 
 ---@param win integer
+---@param session? Clodex.TerminalSession
 ---@return string, string, string?, string, string
-local function ensure_terminal_highlights(win)
+local function ensure_terminal_highlights(win, session)
     local buf = vim.api.nvim_win_get_buf(win)
     local bg = terminal_statusline_bg(buf)
     local fg = terminal_statusline_fg(buf)
-    local title_fg = terminal_title_fg()
+    local title_fg = terminal_title_fg(session)
     if not bg or not fg then
         return ("ClodexTerminalStatuslineActive"), ("ClodexTerminalStatusline"), nil, "DiagnosticOk", "DiagnosticOk"
     end
@@ -198,7 +205,7 @@ end
 
 ---@param win integer
 local function apply_terminal_window_highlights(win)
-    local active, inactive, window, title_active, title_inactive = ensure_terminal_highlights(win)
+    local active, inactive, window, title_active, title_inactive = ensure_terminal_highlights(win, current_session(win))
     local highlights = {
         "StatusLine:" .. active,
         "StatusLineNC:" .. inactive,

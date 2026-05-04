@@ -66,10 +66,12 @@ describe("clodex.app.queue_actions", function()
 
     it("sets the active terminal prompt title while dispatching an interactive queued item", function()
         local seen_title
+        local seen_kind
         local dispatched_prompt
         local session = {
-            set_active_prompt_title = function(_, title)
+            set_active_prompt_title = function(_, title, kind)
                 seen_title = title
+                seen_kind = kind
             end,
             dispatch_prompt = function(_, prompt)
                 dispatched_prompt = prompt
@@ -96,6 +98,7 @@ describe("clodex.app.queue_actions", function()
 
         assert.is_true(actions:dispatch_item(project, item))
         assert.are.equal("Show prompt title", seen_title)
+        assert.are.equal("todo", seen_kind)
         assert.are.equal(("dispatch %s"):format(item.id), dispatched_prompt)
     end)
 

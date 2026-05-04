@@ -152,7 +152,7 @@ function QueueActions:dispatch_item(project, item)
         return false
     end
 
-    session:set_active_prompt_title(item.title)
+    session:set_active_prompt_title(item.title, item.kind)
     if not session:dispatch_prompt(self.app.execution:dispatch_prompt(project, item)) then
         session:set_active_prompt_title(nil)
         return false

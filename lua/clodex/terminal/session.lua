@@ -21,6 +21,7 @@ local TITLE_TRUNCATION_SUFFIX = "[...]"
 ---@field archived_line_count integer
 ---@field awaiting_response boolean
 ---@field active_prompt_title? string
+---@field active_prompt_kind? string
 local Session = {}
 Session.__index = Session
 
@@ -349,9 +350,11 @@ function Session:header_text()
 end
 
 ---@param title? string
-function Session:set_active_prompt_title(title)
+---@param kind? string
+function Session:set_active_prompt_title(title, kind)
     title = vim.trim(title or "")
     self.active_prompt_title = title ~= "" and title or nil
+    self.active_prompt_kind = self.active_prompt_title and kind or nil
 end
 
 --- Toggles whether the header row is shown in the terminal buffer.
@@ -453,6 +456,7 @@ function Session:is_working()
     if not self:is_running() then
         self.awaiting_response = false
         self.active_prompt_title = nil
+        self.active_prompt_kind = nil
         return false
     end
 
@@ -460,6 +464,7 @@ function Session:is_working()
     if is_idle_line(line) then
         self.awaiting_response = false
         self.active_prompt_title = nil
+        self.active_prompt_kind = nil
         return false
     end
 

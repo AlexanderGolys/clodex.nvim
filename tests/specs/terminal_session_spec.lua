@@ -173,6 +173,7 @@ describe("clodex.terminal.session", function()
 
         assert.are.equal("", session:winbar_text())
         assert.is_nil(session.active_prompt_title)
+        assert.is_nil(session.active_prompt_kind)
 
         vim.fn.jobwait = original_jobwait
     end)
@@ -531,6 +532,20 @@ describe("clodex.terminal.session", function()
         assert.are.equal(0x00AA00, inactive_winbar.fg)
         assert.are.equal(0x445566, normal.bg)
         assert.are.equal(0xDDEEFF, normal.fg)
+
+        vim.api.nvim_set_hl(0, "ClodexPromptBugTitle", { fg = "#aa2222" })
+        session:set_active_prompt_title("Bug prompt", "bug")
+        TerminalUi.apply_window(win)
+
+        local prompt_winbar_name = vim.wo[win].winhl:match("WinBar:([^,]+)")
+        local prompt_inactive_winbar_name = vim.wo[win].winhl:match("WinBarNC:([^,]+)")
+        local prompt_winbar = vim.api.nvim_get_hl(0, { name = prompt_winbar_name, link = false })
+        local prompt_inactive_winbar = vim.api.nvim_get_hl(0, { name = prompt_inactive_winbar_name, link = false })
+
+        assert.matches("ClodexTerminalTitleDynActive_445566_AA2222", prompt_winbar_name)
+        assert.matches("ClodexTerminalTitleDynInactive_445566_AA2222", prompt_inactive_winbar_name)
+        assert.are.equal(0xAA2222, prompt_winbar.fg)
+        assert.are.equal(0xAA2222, prompt_inactive_winbar.fg)
 
         vim.api.nvim_win_set_buf(win, original_buf)
         package.loaded["clodex.app"] = app_module
