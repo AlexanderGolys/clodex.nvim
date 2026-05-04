@@ -788,6 +788,17 @@ describe("clodex.ui.prompt_creator", function()
                 and vim.api.nvim_get_mode().mode == "n"
         end)
 
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        vim.cmd.startinsert()
+        vim.cmd.stopinsert()
+        trigger_buffer_mapping(creator.layout.title_buf, "<Right>")
+
+        wait_for(function()
+            return creator.state.kind == "freeform"
+                and vim.api.nvim_get_current_win() == creator.layout.title_win.win
+                and vim.api.nvim_get_mode().mode == "n"
+        end)
+
         local footer_maps = vim.api.nvim_buf_get_keymap(creator.footer_buf, "n")
         local footer_insert_maps = vim.api.nvim_buf_get_keymap(creator.footer_buf, "i")
         local has_right_switch = false
@@ -835,7 +846,7 @@ describe("clodex.ui.prompt_creator", function()
         creator:switch_kind(1)
 
         wait_for(function()
-            return creator.state.kind == "freeform" and vim.api.nvim_get_current_win() == creator.footer_win.win
+            return creator.state.kind == "feature" and vim.api.nvim_get_current_win() == creator.footer_win.win
         end)
     end)
 

@@ -832,6 +832,9 @@ function Creator:restore_focus_context(context)
         if not layout_has_slot(self.layout, context.slot) or not self.layout:focus_slot(context.slot, context.insert) then
             return false
         end
+        if not context.insert and self:in_insert_mode() then
+            vim.cmd.stopinsert()
+        end
         restore_cursor(vim.api.nvim_get_current_win(), context.cursor)
         return true
     end
@@ -847,6 +850,9 @@ function Creator:restore_focus_context(context)
         return false
     end
     vim.api.nvim_set_current_win(win.win)
+    if not context.insert and self:in_insert_mode() then
+        vim.cmd.stopinsert()
+    end
     return true
 end
 
