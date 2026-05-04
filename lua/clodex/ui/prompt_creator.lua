@@ -1398,9 +1398,15 @@ function Creator:render_preview()
     end
 
     local ok, Snacks = pcall(require, "snacks")
-    if
-        ok
+    local terminal_env = ok
         and Snacks.image
+        and Snacks.image.terminal
+        and Snacks.image.terminal.env
+        and Snacks.image.terminal.env()
+        or nil
+    local terminal_supports_images = terminal_env and terminal_env.supported == true
+    if
+        terminal_supports_images
         and Snacks.image.supports
         and Snacks.image.supports(self.state.image_path)
         and Snacks.image.placement

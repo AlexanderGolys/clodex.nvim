@@ -1817,6 +1817,11 @@ describe("clodex.ui.prompt_creator", function()
                 end,
             },
             image = {
+                terminal = {
+                    env = function()
+                        return { supported = true }
+                    end,
+                },
                 supports = function()
                     return true
                 end,
@@ -1874,6 +1879,11 @@ describe("clodex.ui.prompt_creator", function()
                 end,
             },
             image = {
+                terminal = {
+                    env = function()
+                        return { supported = true }
+                    end,
+                },
                 supports = function()
                     return true
                 end,
@@ -1935,6 +1945,11 @@ describe("clodex.ui.prompt_creator", function()
                 end,
             },
             image = {
+                terminal = {
+                    env = function()
+                        return { supported = true }
+                    end,
+                },
                 supports = function()
                     return true
                 end,
@@ -1982,6 +1997,61 @@ describe("clodex.ui.prompt_creator", function()
             end, 20),
             "timed out waiting for image preview fallback"
         )
+
+        package.loaded["snacks"] = nil
+    end)
+
+    it("uses fallback image preview text when the terminal cannot render images", function()
+        local placement_created = false
+        package.loaded["snacks"] = {
+            input = { input = function() end },
+            picker = {
+                select = function(_items, _opts, on_choice)
+                    on_choice(nil)
+                end,
+            },
+            image = {
+                terminal = {
+                    env = function()
+                        return { supported = false }
+                    end,
+                },
+                supports = function()
+                    return true
+                end,
+                placement = {
+                    new = function()
+                        placement_created = true
+                    end,
+                },
+            },
+        }
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Todo with image",
+                image_path = "/tmp/demo.png",
+            },
+            on_submit = function() end,
+        })
+
+        local lines = vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false)
+        assert.is_false(placement_created)
+        assert.are.equal("# Clipboard image", lines[1])
 
         package.loaded["snacks"] = nil
     end)
