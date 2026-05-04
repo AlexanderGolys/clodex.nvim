@@ -1160,6 +1160,7 @@ describe("clodex.ui.queue_workspace", function()
         })
         workspace.projects = { project }
         workspace.project_index = 1
+        workspace.focus = "queue"
         workspace.queue_search = "token"
         workspace.queue_buf = vim.api.nvim_create_buf(false, true)
         workspace.queue_win = vim.api.nvim_open_win(workspace.queue_buf, false, {
@@ -1183,8 +1184,9 @@ describe("clodex.ui.queue_workspace", function()
             "",
         }, lines)
         local groups = extmark_groups(workspace.queue_buf)
-        assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementTitleActive"))
+        assert.is_false(vim.tbl_contains(groups, "ClodexPromptImprovementTitleActive"))
         assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementTitle"))
+        assert.are.same({ 3, 4 }, extmark_rows(workspace.queue_buf, "ClodexQueueSelectionActive"))
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)

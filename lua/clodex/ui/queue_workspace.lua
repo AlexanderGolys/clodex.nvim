@@ -622,15 +622,18 @@ end
 ---@param item Clodex.QueueItem
 ---@param title string
 ---@param suffix string
+---@param opts? { selected?: boolean }
 ---@return string, Clodex.Extmark[]
-local function queue_item_title_line(item, title, suffix)
+local function queue_item_title_line(item, title, suffix, opts)
+    opts = opts or {}
     local kind = Prompt.categories.get(item.kind)
     local prefix = kind.label
     local text = ("  %s %s%s"):format(prefix, title, suffix)
     local title_start = 2 + #prefix + 1
     local title_end = title_start + #title
+    local kind_hl = opts.selected and Prompt.title_group(kind.id) or prompt_title_active_group(kind.id)
     local marks = {
-        Extmark.inline(0, 2, 2 + #prefix, prompt_title_active_group(kind.id)),
+        Extmark.inline(0, 2, 2 + #prefix, kind_hl),
         Extmark.inline(0, title_start, title_end, Prompt.title_group(kind.id)),
     }
     if #suffix > 0 then
@@ -1870,7 +1873,9 @@ function Workspace:render_queue()
                     local historical = queue_name == "implemented" or queue_name == "history"
                     local comment = historical and item_history_comment(item) or nil
                     local suffix = historical and history_commit_suffix(item) or ""
-                    local item_text, item_extmarks = queue_item_title_line(item, comment or item.title or "", suffix)
+                    local selected = #self.queue_item_rows + 1 == self.queue_index
+                    local item_text, item_extmarks =
+                        queue_item_title_line(item, comment or item.title or "", suffix, { selected = selected })
                     self.queue_rows[#self.queue_rows + 1] = {
                         kind = "item",
                         text = item_text,
