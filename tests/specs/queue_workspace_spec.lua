@@ -757,7 +757,9 @@ describe("clodex.ui.queue_workspace", function()
         }
         local submitted
         local refresh_count = 0
-        local workspace = {
+        local modal_during_open = false
+        local workspace
+        workspace = {
             config = {
                 storage = {
                     workspaces_dir = ".clodex",
@@ -766,6 +768,7 @@ describe("clodex.ui.queue_workspace", function()
             app = {
                 prompt_actions = {
                     open_creator = function(_, queued_project, opts)
+                        modal_during_open = workspace.modal_input_open == true
                         open_creator_calls[#open_creator_calls + 1] = {
                             project = queued_project,
                             opts = opts,
@@ -787,18 +790,23 @@ describe("clodex.ui.queue_workspace", function()
                 refresh_count = refresh_count + 1
             end,
             queue_index = 4,
+            modal_input_open = false,
         }
 
         Workspace.add_todo(workspace)
 
         assert.are.equal(1, #open_creator_calls)
         assert.are.equal("todo", open_creator_calls[1].opts.category)
+        assert.is_true(modal_during_open)
+        assert.is_function(open_creator_calls[1].opts.on_close)
         assert.are.same(project, submitted.project)
         assert.are.equal("Fix parser", submitted.spec.title)
         assert.are.equal("Handle nested tokens", submitted.spec.details)
         assert.are.equal("chat", submitted.action)
         assert.are.equal(1, refresh_count)
         assert.are.equal(1, workspace.queue_index)
+        open_creator_calls[1].opts.on_close()
+        assert.is_false(workspace.modal_input_open)
     end)
 
     it("updates the selected prompt when editing without changing project", function()
@@ -818,10 +826,13 @@ describe("clodex.ui.queue_workspace", function()
         local deleted
         local refresh_count = 0
         local suppressed_close_watchers = false
-        local workspace = {
+        local modal_during_open = false
+        local workspace
+        workspace = {
             app = {
                 prompt_actions = {
                     open_creator = function(_, queued_project, opts)
+                        modal_during_open = workspace.modal_input_open == true
                         open_creator_calls[#open_creator_calls + 1] = {
                             project = queued_project,
                             opts = opts,
@@ -858,6 +869,7 @@ describe("clodex.ui.queue_workspace", function()
                 suppressed_close_watchers = true
                 fn()
             end,
+            modal_input_open = false,
         }
 
         Workspace.edit_queue_item(workspace)
@@ -868,6 +880,8 @@ describe("clodex.ui.queue_workspace", function()
         assert.is_true(open_creator_calls[1].opts.lock_kind)
         assert.are.equal("edit", open_creator_calls[1].opts.mode)
         assert.is_true(suppressed_close_watchers)
+        assert.is_true(modal_during_open)
+        assert.is_function(open_creator_calls[1].opts.on_close)
         assert.are.same({
             title = "Old title",
             details = "Old details",
@@ -880,6 +894,8 @@ describe("clodex.ui.queue_workspace", function()
         assert.is_nil(submitted)
         assert.is_nil(deleted)
         assert.are.equal(1, refresh_count)
+        open_creator_calls[1].opts.on_close()
+        assert.is_false(workspace.modal_input_open)
     end)
 
     it("moves an edited prompt when the creator target project changes", function()

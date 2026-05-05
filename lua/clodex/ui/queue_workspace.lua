@@ -273,6 +273,27 @@ local function open_workspace_confirm(self, prompt, on_confirm)
 end
 
 ---@param self Clodex.QueueWorkspace
+---@param project Clodex.Project
+---@param opts table
+local function open_workspace_creator(self, project, opts)
+    opts = vim.deepcopy(opts or {})
+    local previous_on_close = opts.on_close
+    opts.on_close = function(creator)
+        self.modal_input_open = false
+        if workspace_is_open(self) then
+            hide_workspace_cursor(self)
+        end
+        if previous_on_close then
+            previous_on_close(creator)
+        end
+    end
+
+    show_workspace_cursor(self)
+    self.modal_input_open = true
+    return self.app.prompt_actions:open_creator(project, opts)
+end
+
+---@param self Clodex.QueueWorkspace
 ---@param prompt string
 ---@param default string
 ---@param apply_search fun(value: string)
@@ -2182,7 +2203,7 @@ function Workspace:add_todo()
         return
     end
 
-    self.app.prompt_actions:open_creator(project, {
+    open_workspace_creator(self, project, {
         category = "todo",
         context = PromptContext.capture({ project = project }),
         active_project_root = project.root,
@@ -2203,7 +2224,7 @@ function Workspace:edit_queue_item()
     end
 
     local function open_editor()
-        self.app.prompt_actions:open_creator(project, {
+        open_workspace_creator(self, project, {
             category = Prompt.categories.is_valid(item.kind) and Prompt.categories.get(item.kind).id or "todo",
             context = PromptContext.capture({ project = project }),
             active_project_root = project.root,

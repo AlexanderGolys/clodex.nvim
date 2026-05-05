@@ -23,6 +23,7 @@ local notify = require("clodex.util.notify")
 ---@field lock_kind? boolean
 ---@field initial_draft? table
 ---@field on_submit fun(spec: Clodex.AppPromptActions.AddTodoSpec, action?: string, project?: Clodex.Project)
+---@field on_close? fun(creator: Clodex.PromptCreator)
 
 local DEFAULT_SUBMIT_ACTIONS = {
     { value = "save", label = "plan", key = "s", insert_key = "<C-s>", reset_key = "S" },
@@ -77,6 +78,7 @@ local PROMPT_FOOTER_NORMAL = "ClodexPromptEditorFooter"
 ---@field kind_tab_spans { start_col: integer, end_col: integer, index: integer }[]
 ---@field variant_tab_spans { start_col: integer, end_col: integer, index: integer }[]
 ---@field autocmd_group? integer
+---@field on_close? fun(creator: Clodex.PromptCreator)
 local Creator = {}
 Creator.__index = Creator
 
@@ -206,6 +208,7 @@ function Creator.new(opts)
         mode = opts.mode or "new",
         lock_kind = opts.lock_kind == true,
         on_submit = opts.on_submit,
+        on_close = opts.on_close,
         kinds = kinds,
         kind_index = kind_index,
         variant_index = 1,
@@ -1793,6 +1796,9 @@ function Creator:close(clear_layout)
     self.variant_win = nil
     self.footer_win = nil
     self.preview_win = nil
+    if self.on_close then
+        pcall(self.on_close, self)
+    end
     self.is_closing = false
     if clear_layout ~= false and closed_layout then
         vim.defer_fn(function()

@@ -183,7 +183,7 @@ function PromptActions:pick_target(opts, callback)
 end
 
 ---@param project Clodex.Project
----@param opts? { category?: Clodex.PromptCategory, context?: Clodex.PromptContext.Capture, initial_draft?: table, submit_actions?: Clodex.UiSelect.MultilineAction[], lock_kind?: boolean, mode?: "new"|"edit", active_project_root?: string, on_submit?: fun(spec: Clodex.AppPromptActions.AddTodoSpec, action?: string, project?: Clodex.Project) }
+---@param opts? { category?: Clodex.PromptCategory, context?: Clodex.PromptContext.Capture, initial_draft?: table, submit_actions?: Clodex.UiSelect.MultilineAction[], lock_kind?: boolean, mode?: "new"|"edit", active_project_root?: string, on_submit?: fun(spec: Clodex.AppPromptActions.AddTodoSpec, action?: string, project?: Clodex.Project), on_close?: fun(creator: Clodex.PromptCreator) }
 function PromptActions:open_creator(project, opts)
     opts = opts or {}
     local category = Prompt.categories.is_valid(opts.category) and Prompt.categories.get(opts.category).id or "todo"
@@ -206,6 +206,7 @@ function PromptActions:open_creator(project, opts)
         on_submit = opts.on_submit or function(spec, action, selected_project)
             return self:submit_prompt(selected_project or project, spec, action)
         end,
+        on_close = opts.on_close,
     })
 end
 
