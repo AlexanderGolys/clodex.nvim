@@ -16,6 +16,7 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
    - A prompt creator implement action may arrive through direct `codex exec` or through the interactive terminal fallback; the MCP task response is authoritative in both cases.
    - The MCP helper writes the active task id, title, and kind to its local runtime `active.json`; clodex.nvim polls that file to keep open project terminal winbars aligned with the authoritative active prompt until MCP clears the active state.
    - Claimed tasks stay in the queued lane until `close_task(success = true, ...)` records completion; unsuccessful closes keep the task queued with the blocker note.
+   - If an older helper left the active item in `implemented` before completion, `get_task` restores that item to `queued` before returning it.
 3. If `get_task` returns `status = done`, stop; the queue is exhausted.
 4. Before interpreting, planning, or implementing the task, send a user-visible chat message that shows the original returned `work_prompt` text as-is so the user can see exactly what the agent is working on.
 5. Otherwise, implement the returned `work_prompt`.

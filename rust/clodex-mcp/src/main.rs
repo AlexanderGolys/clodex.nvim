@@ -799,11 +799,49 @@ fn active_queue_item(
     Ok(None)
 }
 
+fn restore_active_item_to_source_queue(
+    project_root: &str,
+    active: &ActiveItem,
+    queue_name: String,
+    mut items: Vec<QueueItem>,
+    index: usize,
+) -> AppResult<QueueItem> {
+    let source_queue = active.source_queue.as_str();
+    if queue_name == source_queue {
+        return Ok(items[index].clone());
+    }
+
+    let item = items.remove(index);
+    save_queue(project_root, &queue_name, &items)?;
+
+    let mut source_items = load_queue(project_root, source_queue)?;
+    source_items.insert(0, item.clone());
+    save_queue(project_root, source_queue, &source_items)?;
+    append_event(
+        project_root,
+        "restore_active",
+        json!({
+            "item_id": item.id,
+            "from_queue": queue_name,
+            "to_queue": source_queue,
+        }),
+    )?;
+
+    Ok(item)
+}
+
 fn claim_or_resume_item(project_root: &str) -> AppResult<TaskClaim> {
     if let Some(current) = load_active_state(project_root)? {
-        if let Some((_queue_name, items, index)) = active_queue_item(project_root, &current)? {
+        if let Some((queue_name, items, index)) = active_queue_item(project_root, &current)? {
+            let item = restore_active_item_to_source_queue(
+                project_root,
+                &current,
+                queue_name,
+                items,
+                index,
+            )?;
             return Ok(TaskClaim::Task {
-                item: items[index].clone(),
+                item,
                 active_exists: true,
             });
         }
@@ -1462,6 +1500,40 @@ mod tests {
 
         assert_eq!(first["task"]["id"], resumed["task"]["id"]);
         assert_eq!(resumed["active"], true);
+    }
+
+    #[test]
+    fn get_task_restores_legacy_active_item_from_implemented_to_queued() {
+        let (_dir, root) = project_root();
+        save_queue(&root, "implemented", &[sample_item("item-1", "first")])
+            .expect("save implemented");
+        save_active_state(
+            &root,
+            &ActiveItem {
+                item_id: "item-1".to_string(),
+                claimed_at: timestamp(),
+                source_queue: "queued".to_string(),
+                title: Some("first".to_string()),
+                kind: Some("todo".to_string()),
+            },
+        )
+        .expect("save active");
+
+        let resumed = get_task(ProjectRootArgs {
+            project_root: root.clone(),
+        })
+        .expect("resume active task");
+
+        assert_eq!(resumed["status"], "task");
+        assert_eq!(resumed["active"], true);
+        assert_eq!(resumed["task"]["id"], "item-1");
+        assert_eq!(
+            load_queue(&root, "implemented").expect("implemented").len(),
+            0
+        );
+        let queued = load_queue(&root, "queued").expect("queued");
+        assert_eq!(queued.len(), 1);
+        assert_eq!(queued[0].id, "item-1");
     }
 
     #[test]
