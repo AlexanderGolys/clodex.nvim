@@ -22,6 +22,7 @@ local TITLE_TRUNCATION_SUFFIX = "[...]"
 ---@field awaiting_response boolean
 ---@field active_prompt_title? string
 ---@field active_prompt_kind? string
+---@field active_prompt_authoritative? boolean
 local Session = {}
 Session.__index = Session
 
@@ -349,12 +350,17 @@ function Session:header_text()
     return ("[Codex CLI] %s"):format(self.title)
 end
 
+---@class Clodex.TerminalSession.ActivePromptOpts
+---@field authoritative? boolean
+
 ---@param title? string
 ---@param kind? string
-function Session:set_active_prompt_title(title, kind)
+---@param opts? Clodex.TerminalSession.ActivePromptOpts
+function Session:set_active_prompt_title(title, kind, opts)
     title = vim.trim(title or "")
     self.active_prompt_title = title ~= "" and title or nil
     self.active_prompt_kind = self.active_prompt_title and kind or nil
+    self.active_prompt_authoritative = self.active_prompt_title and opts and opts.authoritative == true or nil
 end
 
 --- Toggles whether the header row is shown in the terminal buffer.
@@ -368,7 +374,10 @@ end
 ---@param max_width? integer
 ---@return string
 function Session:winbar_text(max_width)
-    local active_prompt_title = self.active_prompt_title and self:is_working() and self.active_prompt_title or nil
+    local active_prompt_title = self.active_prompt_title
+    if active_prompt_title and not self.active_prompt_authoritative and not self:is_working() then
+        active_prompt_title = nil
+    end
     if not self.header_enabled and not active_prompt_title then
         return ""
     end
@@ -455,16 +464,20 @@ end
 function Session:is_working()
     if not self:is_running() then
         self.awaiting_response = false
-        self.active_prompt_title = nil
-        self.active_prompt_kind = nil
+        if not self.active_prompt_authoritative then
+            self.active_prompt_title = nil
+            self.active_prompt_kind = nil
+        end
         return false
     end
 
     local line = self:last_cli_line()
     if is_idle_line(line) then
         self.awaiting_response = false
-        self.active_prompt_title = nil
-        self.active_prompt_kind = nil
+        if not self.active_prompt_authoritative then
+            self.active_prompt_title = nil
+            self.active_prompt_kind = nil
+        end
         return false
     end
 

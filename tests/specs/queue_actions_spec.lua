@@ -148,10 +148,12 @@ describe("clodex.app.queue_actions", function()
             kind = "bug",
         })
 
+        local authoritative
         local session = {
-            set_active_prompt_title = function(self, title, kind)
+            set_active_prompt_title = function(self, title, kind, opts)
                 self.active_prompt_title = title
                 self.active_prompt_kind = kind
+                authoritative = title and opts and opts.authoritative == true or nil
             end,
         }
         actions.app.config = {
@@ -179,12 +181,14 @@ describe("clodex.app.queue_actions", function()
         assert.is_true(actions:poll_active_prompt_titles())
         assert.are.equal("Authoritative prompt title", session.active_prompt_title)
         assert.are.equal("bug", session.active_prompt_kind)
+        assert.is_true(authoritative)
 
         fs.remove(active_path)
 
         assert.is_true(actions:poll_active_prompt_titles())
         assert.is_nil(session.active_prompt_title)
         assert.is_nil(session.active_prompt_kind)
+        assert.is_nil(authoritative)
     end)
 
     it("moves an implemented item back to queued when the source queue is specified", function()

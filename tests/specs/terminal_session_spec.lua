@@ -178,6 +178,42 @@ describe("clodex.terminal.session", function()
         vim.fn.jobwait = original_jobwait
     end)
 
+    it("keeps MCP authoritative prompt titles visible until explicitly cleared", function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+            "Codex ready",
+        })
+
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "codex" },
+        })
+        session.buf = buf
+        session.job_id = 123
+        session:set_active_prompt_title("Authoritative prompt", "bug", { authoritative = true })
+
+        local original_jobwait = vim.fn.jobwait
+        vim.fn.jobwait = function()
+            return { -1 }
+        end
+
+        assert.are.equal(" Authoritative prompt ", session:winbar_text())
+        assert.are.equal("Authoritative prompt", session.active_prompt_title)
+        assert.are.equal("bug", session.active_prompt_kind)
+
+        session:set_active_prompt_title(nil, nil, { authoritative = true })
+
+        assert.are.equal("", session:winbar_text())
+        assert.is_nil(session.active_prompt_title)
+        assert.is_nil(session.active_prompt_kind)
+        assert.is_nil(session.active_prompt_authoritative)
+
+        vim.fn.jobwait = original_jobwait
+    end)
+
     it("truncates long active prompt titles from the right with an omission marker", function()
         local buf = vim.api.nvim_create_buf(false, true)
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {

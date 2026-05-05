@@ -245,7 +245,7 @@ function QueueActions:poll_active_prompt_titles()
             local next_title = title ~= "" and title or nil
             local next_kind = next_title and kind or nil
             if session.active_prompt_title ~= next_title or session.active_prompt_kind ~= next_kind then
-                session:set_active_prompt_title(next_title, next_kind)
+                session:set_active_prompt_title(next_title, next_kind, { authoritative = true })
                 changed = true
             end
         end
