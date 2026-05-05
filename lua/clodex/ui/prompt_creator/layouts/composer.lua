@@ -116,6 +116,7 @@ function ComposerLayout:apply_keymaps()
 
     if not vim.b[self.body_buf].clodex_prompt_keymaps_applied then
         self.creator:apply_common_keymaps(self.body_buf)
+        self.creator:attach_prompt_context(self.body_buf)
         vim.keymap.set("n", "<Tab>", function()
             self:focus_title(false)
         end, { buffer = self.body_buf, silent = true })
@@ -323,6 +324,11 @@ end
 ---@return integer[]
 function ComposerLayout:buffers()
     return { self.title_buf, self.body_buf }
+end
+
+---@return integer[]
+function ComposerLayout:context_buffers()
+    return { self.body_buf }
 end
 
 ---@param insert_mode? boolean

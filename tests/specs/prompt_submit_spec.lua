@@ -10,7 +10,7 @@ describe("clodex.prompt.submit", function()
         package.loaded["clodex.prompt.submit"] = nil
     end)
 
-    it("expands context tokens for standard creator fields", function()
+    it("expands context tokens for standard creator details only", function()
         local spec = Submit.build_spec({
             kind = "todo",
             title = "Fix &file",
@@ -24,7 +24,7 @@ describe("clodex.prompt.submit", function()
             },
         })
 
-        assert.are.equal("Fix @lua/demo.lua ([Inserted context from &file])", spec.title)
+        assert.are.equal("Fix &file", spec.title)
         assert.are.equal('Inspect "value" under the cursor in @lua/demo.lua: line 7 ([Inserted context from &word])', spec.details)
     end)
 

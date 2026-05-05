@@ -411,10 +411,10 @@ end
 
 -- Refresh contexts
 function Creator:refresh_layout_prompt_contexts()
-    if not self.layout or not self.layout.buffers then
+    if not self.layout or not self.layout.context_buffers then
         return
     end
-    for _, buf in ipairs(self.layout:buffers()) do
+    for _, buf in ipairs(self.layout:context_buffers()) do
         if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].modifiable then
             self:refresh_prompt_context(buf)
         end
@@ -456,6 +456,26 @@ function Creator:attach_prompt_context(buf)
             ui_select.clear_prompt_context(buf)
         end,
     })
+    vim.keymap.set("n", "&", function()
+        self:trigger_context_completion(buf)
+    end, { buffer = buf, silent = true })
+    vim.keymap.set("i", "&", function()
+        self:refresh_prompt_context(buf)
+        vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_get_current_buf() == buf then
+                self:maybe_trigger_prompt_context_completion(buf)
+            end
+        end)
+        return "&"
+    end, { buffer = buf, silent = true, expr = true })
+end
+
+---@param buf integer
+function Creator:attach_editor_mode_events(buf)
+    if not vim.bo[buf].modifiable then
+        return
+    end
+
     vim.api.nvim_create_autocmd({ "InsertEnter", "InsertLeave" }, {
         buffer = buf,
         callback = function(event)
@@ -464,13 +484,6 @@ function Creator:attach_prompt_context(buf)
             end
         end,
     })
-    vim.keymap.set("n", "&", function()
-        self:trigger_context_completion(buf)
-    end, { buffer = buf, silent = true })
-    vim.keymap.set("i", "&", function()
-        self:refresh_prompt_context(buf)
-        return "&"
-    end, { buffer = buf, silent = true, expr = true })
 end
 
 -- Save draft
@@ -1718,7 +1731,7 @@ function Creator:apply_common_keymaps(buf)
     vim.keymap.set("n", "<Esc>", function()
         self:close()
     end, { buffer = buf, silent = true })
-    self:attach_prompt_context(buf)
+    self:attach_editor_mode_events(buf)
 end
 
 ---@param action string

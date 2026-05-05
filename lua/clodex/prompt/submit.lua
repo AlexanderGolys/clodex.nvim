@@ -22,10 +22,17 @@ local function expand_field(text, context)
     return PromptContext.expand_text(text, context)
 end
 
+---@param text string?
+---@return string?
+local function trim_field(text)
+    text = text and vim.trim(text) or ""
+    return text ~= "" and text or nil
+end
+
 ---@param state table
 ---@return Clodex.AppPromptActions.AddTodoSpec?
 function M.build_spec(state)
-    local title = expand_field(state.title, state.context)
+    local title = trim_field(state.title)
     local details = expand_field(state.details, state.context)
     local image_path = state.image_path
 

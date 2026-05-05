@@ -808,7 +808,7 @@ describe("clodex.ui.prompt_creator", function()
         local title_groups = extmark_groups(title_buf)
         local body_groups = extmark_groups(body_buf)
 
-        assert.is_true(vim.tbl_contains(title_groups, "ClodexPromptEditorContext"))
+        assert.is_false(vim.tbl_contains(title_groups, "ClodexPromptEditorContext"))
         assert.are.equal(7, vim.tbl_count(vim.tbl_filter(function(group)
             return group == "ClodexPromptEditorContext"
         end, body_groups)))
@@ -817,8 +817,7 @@ describe("clodex.ui.prompt_creator", function()
         vim.api.nvim_win_set_cursor(creator.layout.title_win.win, { 1, 11 })
 
         local title_items = require("clodex.ui.select").prompt_context_complete(0, "&l")
-        assert.is_true(#title_items > 0)
-        assert.are.equal("&line", title_items[1].word)
+        assert.are.equal(0, #title_items)
 
         vim.api.nvim_set_current_win(creator.layout.body_win.win)
         vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 7, 16 })
@@ -841,13 +840,24 @@ describe("clodex.ui.prompt_creator", function()
             assert.is_true(vim.tbl_contains(words, token), token)
         end
 
+        local body_ampersand
+        for _, map in ipairs(vim.api.nvim_buf_get_keymap(body_buf, "i")) do
+            if map.lhs == "&" then
+                body_ampersand = map.callback
+            end
+        end
+        assert.is_function(body_ampersand)
+        for _, map in ipairs(vim.api.nvim_buf_get_keymap(title_buf, "i")) do
+            assert.are_not.equal("&", map.lhs)
+        end
+
         creator:submit("queue")
 
         wait_for(function()
             return submitted ~= nil
         end)
 
-        assert.matches("Inserted context from &line", submitted.title)
+        assert.are.equal("Explain &line", submitted.title)
         assert.matches("Inserted context from &file", submitted.details)
         assert.matches("Inserted context from &selection", submitted.details)
         assert.matches("Inserted context from &visible_buff", submitted.details)
