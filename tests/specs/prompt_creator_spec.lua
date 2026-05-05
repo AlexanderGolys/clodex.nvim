@@ -581,6 +581,45 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(title_cfg.zindex, footer_cfg.zindex)
     end)
 
+    it("restores the decorative background after tab focus returns", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        local background_win = creator.project_bg_win.win
+        vim.api.nvim_win_close(background_win, true)
+
+        wait_for(function()
+            return creator.layout
+                and creator.layout.title_win
+                and creator.layout.title_win:valid()
+                and creator.project_bg_win
+                and not creator.project_bg_win:valid()
+        end)
+
+        vim.api.nvim_exec_autocmds("TabEnter", {})
+
+        wait_for(function()
+            return creator.project_bg_win
+                and creator.project_bg_win:valid()
+                and creator.project_bg_win.win ~= background_win
+        end)
+    end)
+
     it("places secondary tabs between the body and footer", function()
         creator = Creator.open({
             app = {

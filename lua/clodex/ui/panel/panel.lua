@@ -195,7 +195,7 @@ end
 
 function Panel:open()
     if self.background then
-        self:watch_window(self.background:open())
+        self.background:open()
     end
     for _, id in ipairs(self.block_order) do
         local block = self.blocks[id]

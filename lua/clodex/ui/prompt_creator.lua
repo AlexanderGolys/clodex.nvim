@@ -76,6 +76,7 @@ local PROMPT_FOOTER_NORMAL = "ClodexPromptEditorFooter"
 ---@field project_line_map integer[]
 ---@field kind_tab_spans { start_col: integer, end_col: integer, index: integer }[]
 ---@field variant_tab_spans { start_col: integer, end_col: integer, index: integer }[]
+---@field autocmd_group? integer
 local Creator = {}
 Creator.__index = Creator
 
@@ -1114,8 +1115,59 @@ function Creator:refresh_project_background()
         return
     end
     self.project_bg_win = self.panel.background:open()
-    self.panel:watch_window(self.project_bg_win)
     self.panel.background:update()
+end
+
+---@return boolean
+function Creator:has_window_in_current_tab()
+    local current_tab = vim.api.nvim_get_current_tabpage()
+    local windows = {
+        self.project_win,
+        self.kind_win,
+        self.variant_win,
+        self.footer_win,
+        self.preview_win,
+        self.layout and self.layout.title_win or nil,
+        self.layout and self.layout.body_win or nil,
+        self.layout and self.layout.preview_win or nil,
+    }
+    for _, win in ipairs(windows) do
+        if win and win:valid() then
+            local ok, tabpage = pcall(vim.api.nvim_win_get_tabpage, win.win)
+            if ok and tabpage == current_tab then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+function Creator:refresh_current_tab_background()
+    if self.is_closing or not self:has_window_in_current_tab() then
+        return
+    end
+    self:refresh_project_background()
+    self:apply_prompt_theme()
+end
+
+function Creator:setup_autocmds()
+    if self.autocmd_group then
+        return
+    end
+
+    self.autocmd_group = vim.api.nvim_create_augroup("clodex_prompt_creator_" .. self.project_bg_buf, {
+        clear = true,
+    })
+    vim.api.nvim_create_autocmd({ "TabEnter", "WinEnter", "FocusGained", "VimResized" }, {
+        group = self.autocmd_group,
+        callback = function()
+            vim.schedule(function()
+                if self.autocmd_group then
+                    self:refresh_current_tab_background()
+                end
+            end)
+        end,
+    })
 end
 
 -- Project keymaps
@@ -1698,6 +1750,10 @@ function Creator:close(clear_layout)
     end
 
     self.is_closing = true
+    if self.autocmd_group then
+        pcall(vim.api.nvim_del_augroup_by_id, self.autocmd_group)
+        self.autocmd_group = nil
+    end
     local layout_buffers = self.layout and self.layout.buffers and self.layout:buffers() or {}
     local lingering_buffers = {
         self.project_bg_buf,
@@ -1738,6 +1794,7 @@ end
 ---@return Clodex.PromptCreator
 function Creator.open(opts)
     local creator = Creator.new(opts)
+    creator:setup_autocmds()
     creator:ensure_shell_windows()
     creator:render_kind_tabs()
     creator:render_variant_tabs()
