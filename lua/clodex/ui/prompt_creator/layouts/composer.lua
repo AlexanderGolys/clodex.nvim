@@ -20,6 +20,24 @@ local function schedule_insert_focus(focus)
     return ""
 end
 
+---@param win snacks.win?
+---@return integer
+local function cursor_row(win)
+    if not win or not win:valid() then
+        return 1
+    end
+    return vim.api.nvim_win_get_cursor(win.win)[1]
+end
+
+---@param buf integer
+---@return integer
+local function line_count(buf)
+    if not vim.api.nvim_buf_is_valid(buf) then
+        return 1
+    end
+    return math.max(vim.api.nvim_buf_line_count(buf), 1)
+end
+
 ---@param creator Clodex.PromptCreator
 ---@return Clodex.PromptCreator.ComposerLayout
 function ComposerLayout.new(creator)
@@ -88,17 +106,24 @@ function ComposerLayout:apply_keymaps()
             self:focus_body(false)
         end, { buffer = self.title_buf, silent = true })
         vim.keymap.set("n", "<Down>", function()
-            self:focus_body(false)
-        end, { buffer = self.title_buf, silent = true })
+            if self:should_focus_body_from_title() then
+                self:focus_body(false)
+                return ""
+            end
+            return vim.keycode("<Down>")
+        end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("n", "<Up>", function()
-            self:focus_body(false)
-        end, { buffer = self.title_buf, silent = true })
+            return vim.keycode("<Up>")
+        end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("i", "<S-Tab>", function()
             return schedule_insert_focus(function()
                 self:focus_body(true)
             end)
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("i", "<Down>", function()
+            if not self:should_focus_body_from_title() then
+                return vim.keycode("<Down>")
+            end
             return schedule_insert_focus(function()
                 self:focus_body(true)
             end)
@@ -126,16 +151,23 @@ function ComposerLayout:apply_keymaps()
             end)
         end, { buffer = self.body_buf, silent = true, expr = true })
         vim.keymap.set("i", "<Up>", function()
+            if not self:should_focus_title_from_body() then
+                return vim.keycode("<Up>")
+            end
             return schedule_insert_focus(function()
                 self:focus_title(true)
             end)
         end, { buffer = self.body_buf, silent = true, expr = true })
-        vim.keymap.set("n", "<Down>", function()
-            self:focus_title(false)
-        end, { buffer = self.body_buf, silent = true })
         vim.keymap.set("n", "<Up>", function()
-            self:focus_title(false)
-        end, { buffer = self.body_buf, silent = true })
+            if self:should_focus_title_from_body() then
+                self:focus_title(false)
+                return ""
+            end
+            return vim.keycode("<Up>")
+        end, { buffer = self.body_buf, silent = true, expr = true })
+        vim.keymap.set("n", "<Down>", function()
+            return vim.keycode("<Down>")
+        end, { buffer = self.body_buf, silent = true, expr = true })
         vim.b[self.body_buf].clodex_prompt_keymaps_applied = true
     end
 end
@@ -289,7 +321,15 @@ function ComposerLayout:should_focus_title_from_body()
     if not self.body_win or not self.body_win:valid() or vim.fn.pumvisible() == 1 then
         return false
     end
-    return vim.api.nvim_win_get_cursor(self.body_win.win)[1] <= 1
+    return cursor_row(self.body_win) <= 1
+end
+
+---@return boolean
+function ComposerLayout:should_focus_body_from_title()
+    if not self.title_win or not self.title_win:valid() or vim.fn.pumvisible() == 1 then
+        return false
+    end
+    return cursor_row(self.title_win) >= line_count(self.title_buf)
 end
 
 function ComposerLayout:update()

@@ -1164,6 +1164,21 @@ describe("clodex.ui.prompt_creator", function()
             return vim.api.nvim_get_current_win() == creator.layout.title_win.win
         end)
 
+        vim.api.nvim_set_current_win(creator.layout.body_win.win)
+        vim.api.nvim_win_set_cursor(creator.layout.body_win.win, { 2, 0 })
+        assert.are_not.equal("", body_up())
+        assert.are.equal(creator.layout.body_win.win, vim.api.nvim_get_current_win())
+
+        local body_down
+        for _, map in ipairs(vim.api.nvim_buf_get_keymap(creator.layout.body_buf, "n")) do
+            if map.lhs == "<Down>" then
+                body_down = map.callback
+            end
+        end
+        assert.is_function(body_down)
+        assert.are_not.equal("", body_down())
+        assert.are.equal(creator.layout.body_win.win, vim.api.nvim_get_current_win())
+
         assert.are.equal("", trigger_buffer_mapping(creator.layout.title_buf, "<S-Tab>", "i"))
 
         wait_for(function()
