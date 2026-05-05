@@ -1113,6 +1113,7 @@ describe("clodex.ui.prompt_creator", function()
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
         vim.cmd.stopinsert()
         trigger_buffer_mapping(creator.layout.title_buf, "<Down>")
+        assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
@@ -1128,6 +1129,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         trigger_buffer_mapping(creator.layout.body_buf, "<Up>")
+        assert.are.equal(creator.layout.body_win.win, vim.api.nvim_get_current_win())
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.title_win.win

@@ -15,7 +15,7 @@ local TITLE_MIN_WRAP_WIDTH = 16
 
 ---@param focus fun()
 ---@return string
-local function schedule_insert_focus(focus)
+local function schedule_focus(focus)
     vim.schedule(focus)
     return ""
 end
@@ -107,8 +107,9 @@ function ComposerLayout:apply_keymaps()
         end, { buffer = self.title_buf, silent = true })
         vim.keymap.set("n", "<Down>", function()
             if self:should_focus_body_from_title() then
-                self:focus_body(false)
-                return ""
+                return schedule_focus(function()
+                    self:focus_body(false)
+                end)
             end
             return vim.keycode("<Down>")
         end, { buffer = self.title_buf, silent = true, expr = true })
@@ -116,7 +117,7 @@ function ComposerLayout:apply_keymaps()
             return vim.keycode("<Up>")
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("i", "<S-Tab>", function()
-            return schedule_insert_focus(function()
+            return schedule_focus(function()
                 self:focus_body(true)
             end)
         end, { buffer = self.title_buf, silent = true, expr = true })
@@ -124,7 +125,7 @@ function ComposerLayout:apply_keymaps()
             if not self:should_focus_body_from_title() then
                 return vim.keycode("<Down>")
             end
-            return schedule_insert_focus(function()
+            return schedule_focus(function()
                 self:focus_body(true)
             end)
         end, { buffer = self.title_buf, silent = true, expr = true })
@@ -146,7 +147,7 @@ function ComposerLayout:apply_keymaps()
             self:focus_title(false)
         end, { buffer = self.body_buf, silent = true })
         vim.keymap.set("i", "<S-Tab>", function()
-            return schedule_insert_focus(function()
+            return schedule_focus(function()
                 self:focus_title(true)
             end)
         end, { buffer = self.body_buf, silent = true, expr = true })
@@ -154,14 +155,15 @@ function ComposerLayout:apply_keymaps()
             if not self:should_focus_title_from_body() then
                 return vim.keycode("<Up>")
             end
-            return schedule_insert_focus(function()
+            return schedule_focus(function()
                 self:focus_title(true)
             end)
         end, { buffer = self.body_buf, silent = true, expr = true })
         vim.keymap.set("n", "<Up>", function()
             if self:should_focus_title_from_body() then
-                self:focus_title(false)
-                return ""
+                return schedule_focus(function()
+                    self:focus_title(false)
+                end)
             end
             return vim.keycode("<Up>")
         end, { buffer = self.body_buf, silent = true, expr = true })
