@@ -830,6 +830,16 @@ fn restore_active_item_to_source_queue(
     Ok(item)
 }
 
+fn active_state_for_item(active: &ActiveItem, item: &QueueItem) -> ActiveItem {
+    ActiveItem {
+        item_id: active.item_id.clone(),
+        claimed_at: active.claimed_at.clone(),
+        source_queue: active.source_queue.clone(),
+        title: Some(item.title.clone()),
+        kind: Some(item.kind.clone()),
+    }
+}
+
 fn claim_or_resume_item(project_root: &str) -> AppResult<TaskClaim> {
     if let Some(current) = load_active_state(project_root)? {
         if let Some((queue_name, items, index)) = active_queue_item(project_root, &current)? {
@@ -840,6 +850,7 @@ fn claim_or_resume_item(project_root: &str) -> AppResult<TaskClaim> {
                 items,
                 index,
             )?;
+            save_active_state(project_root, &active_state_for_item(&current, &item))?;
             return Ok(TaskClaim::Task {
                 item,
                 active_exists: true,
@@ -1500,6 +1511,36 @@ mod tests {
 
         assert_eq!(first["task"]["id"], resumed["task"]["id"]);
         assert_eq!(resumed["active"], true);
+    }
+
+    #[test]
+    fn get_task_refreshes_active_title_when_resuming_existing_item() {
+        let (_dir, root) = project_root();
+        save_queue(&root, "queued", &[sample_item("item-1", "first")]).expect("save queued");
+        save_active_state(
+            &root,
+            &ActiveItem {
+                item_id: "item-1".to_string(),
+                claimed_at: timestamp(),
+                source_queue: "queued".to_string(),
+                title: None,
+                kind: None,
+            },
+        )
+        .expect("save active");
+
+        let resumed = get_task(ProjectRootArgs {
+            project_root: root.clone(),
+        })
+        .expect("resume active task");
+
+        assert_eq!(resumed["status"], "task");
+        assert_eq!(resumed["active"], true);
+        let active = load_active_state(&root)
+            .expect("active state")
+            .expect("active item");
+        assert_eq!(active.title.as_deref(), Some("first"));
+        assert_eq!(active.kind.as_deref(), Some("todo"));
     }
 
     #[test]
