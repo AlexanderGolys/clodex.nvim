@@ -464,12 +464,7 @@ function Creator:attach_prompt_context(buf)
     end, { buffer = buf, silent = true })
     vim.keymap.set("i", "&", function()
         self:refresh_prompt_context(buf)
-        vim.schedule(function()
-            if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_get_current_buf() == buf then
-                self:maybe_trigger_prompt_context_completion(buf)
-            end
-        end)
-        return "&"
+        return "&" .. vim.keycode("<C-x><C-u>")
     end, { buffer = buf, silent = true, expr = true })
 end
 

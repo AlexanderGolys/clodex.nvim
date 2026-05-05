@@ -847,6 +847,7 @@ describe("clodex.ui.prompt_creator", function()
             end
         end
         assert.is_function(body_ampersand)
+        assert.are.equal("&" .. vim.keycode("<C-x><C-u>"), body_ampersand())
         for _, map in ipairs(vim.api.nvim_buf_get_keymap(title_buf, "i")) do
             assert.are_not.equal("&", map.lhs)
         end
