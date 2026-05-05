@@ -82,7 +82,7 @@ function ClipboardPreviewLayout:apply_keymaps()
         end, { buffer = self.title_buf, silent = true })
         vim.keymap.set("i", "<S-Tab>", function()
             self:focus_preview()
-            return vim.keycode("<Ignore>")
+            return ""
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.b[self.title_buf].clodex_prompt_keymaps_applied = true
     end

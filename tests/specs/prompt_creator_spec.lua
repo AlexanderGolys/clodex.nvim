@@ -1145,7 +1145,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_function(title_down)
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
-        title_down()
+        assert.are.equal("", title_down())
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
@@ -1158,13 +1158,13 @@ describe("clodex.ui.prompt_creator", function()
             end
         end
         assert.is_function(body_up)
-        body_up()
+        assert.are.equal("", body_up())
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.title_win.win
         end)
 
-        trigger_buffer_mapping(creator.layout.title_buf, "<S-Tab>", "i")
+        assert.are.equal("", trigger_buffer_mapping(creator.layout.title_buf, "<S-Tab>", "i"))
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win

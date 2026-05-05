@@ -17,7 +17,7 @@ local TITLE_MIN_WRAP_WIDTH = 16
 ---@return string
 local function schedule_insert_focus(focus)
     vim.schedule(focus)
-    return vim.keycode("<Ignore>")
+    return ""
 end
 
 ---@param creator Clodex.PromptCreator
@@ -82,7 +82,7 @@ function ComposerLayout:apply_keymaps()
         self.creator:apply_first_slot_keymaps(self.title_buf)
         vim.keymap.set("i", "<CR>", function()
             self:split_title_at_cursor()
-            return vim.keycode("<Ignore>")
+            return ""
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("n", "<Tab>", function()
             self:focus_body(false)
