@@ -208,12 +208,12 @@ end
 -- Footer item
 ---@class Clodex.PromptCreator.FooterItem
 ---@field keys string[]
----@field label string
+---@field label? string
 ---@field key_separator? string
 
 -- Footer item
 ---@param keys string|string[]
----@param label string
+---@param label? string
 ---@param key_separator? string
 ---@return Clodex.PromptCreator.FooterItem
 function Helpers.footer_item(keys, label, key_separator)
@@ -241,7 +241,7 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
             Helpers.footer_item("C-s", "plan"),
             Helpers.footer_item("C-q", "queue"),
             Helpers.footer_item("C-.", "implement"),
-            Helpers.footer_item("C-S-.", "implement+reset"),
+            Helpers.footer_item("C-S-."),
             Helpers.footer_item("C-c", "chat"),
             Helpers.footer_item("q", "close"),
         })
@@ -271,10 +271,10 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
         {
             Helpers.footer_item("C-←/→", "kind (insert)"),
             Helpers.footer_item("s", "plan"),
-            Helpers.footer_item("S", "plan+reset"),
+            Helpers.footer_item("S"),
             Helpers.footer_item("󰌑 ", "queue"),
             Helpers.footer_item(".", "implement"),
-            Helpers.footer_item("S-.", "implement+reset"),
+            Helpers.footer_item("S-."),
             Helpers.footer_item("c", "chat"),
             Helpers.footer_item("q", "close"),
         },
@@ -285,6 +285,9 @@ end
 ---@param item Clodex.PromptCreator.FooterItem
 ---@return string
 function Helpers.footer_item_text(item)
+    if item.label == nil or item.label == "" then
+        return table.concat(item.keys, item.key_separator or "/")
+    end
     return ("%s: %s"):format(table.concat(item.keys, item.key_separator or "/"), item.label)
 end
 
