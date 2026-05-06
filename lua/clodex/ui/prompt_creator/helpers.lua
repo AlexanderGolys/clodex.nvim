@@ -269,7 +269,6 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
     return {
         row_one,
         {
-            Helpers.footer_item("C-←/→", "kind (insert)"),
             Helpers.footer_item("s", "plan"),
             Helpers.footer_item("S"),
             Helpers.footer_item("󰌑 ", "queue"),
