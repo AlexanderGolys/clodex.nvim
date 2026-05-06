@@ -1663,7 +1663,7 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "   Improvement  Fix parser  [󰜘 abc1234]",
+            "   Improvement  Fix parser  󰜘 abc1234",
             "                    Implemented parser fix",
             "                    Adjust token handling",
             "",
@@ -1738,7 +1738,7 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "   Not Working  Fix creator context  [󰜘 f3e2f7a9 󰜘 ac39acf4 󰜘 d7258068]",
+            "   Not Working  Fix creator context  󰜘 f3e2f7a9 󰜘 ac39acf4 󰜘 d7258068",
             "                    󰜘 f3e2f7a9",
             "                    󰜘 ac39acf4",
             "                    󰜘 d7258068",
@@ -1815,10 +1815,76 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "   Improvement  Fix parser  [󰜘 abc1234]",
+            "   Improvement  Fix parser  󰜘 abc1234",
             "                    Adjust token handling",
             "",
         }, lines)
+
+        vim.api.nvim_win_close(workspace.queue_win, true)
+    end)
+
+    it("omits commit metadata when implemented items have no commit ids", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local workspace = Workspace.new({
+            queue_summary = function()
+                return {
+                    project = project,
+                    counts = {
+                        planned = 0,
+                        queued = 0,
+                        implemented = 1,
+                        history = 0,
+                    },
+                    queues = {
+                        planned = {},
+                        queued = {},
+                        implemented = {
+                            {
+                                id = "item-1",
+                                title = "Fix parser",
+                                details = "Adjust token handling",
+                                prompt = "Fix parser\n\nAdjust token handling",
+                                kind = "todo",
+                                history_summary = "Implemented parser fix",
+                                history_commits = { vim.NIL, "", "   " },
+                            },
+                        },
+                        history = {},
+                    },
+                }
+            end,
+        }, {
+            queue_workspace = {
+                preview_max_lines = 3,
+                fold_preview = true,
+            },
+        })
+        workspace.projects = { project }
+        workspace.project_index = 1
+        workspace.queue_buf = vim.api.nvim_create_buf(false, true)
+        workspace.queue_win = vim.api.nvim_open_win(workspace.queue_buf, false, {
+            relative = "editor",
+            row = 1,
+            col = 1,
+            width = 80,
+            height = 20,
+            style = "minimal",
+        })
+
+        workspace:render_queue()
+
+        local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
+        assert.are.same({
+            "Implemented (1)",
+            "   Improvement  Fix parser",
+            "                    Implemented parser fix",
+            "                    Adjust token handling",
+            "",
+        }, lines)
+        assert.are.equal(0, #inline_extmarks(workspace.queue_buf, "ClodexCommitId"))
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
