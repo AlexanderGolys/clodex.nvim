@@ -660,7 +660,7 @@ local function history_commit_suffix(item)
     for _, commit_id in ipairs(item_history_commits(item)) do
         local part = ("%s%s"):format(COMMIT_ICON, commit_id:sub(1, 8))
         if suffix == "" then
-            suffix = "  ["
+            suffix = "  "
         else
             suffix = suffix .. " "
         end
@@ -674,7 +674,7 @@ local function history_commit_suffix(item)
     if suffix == "" then
         return "", spans
     end
-    return suffix .. "]", spans
+    return suffix, spans
 end
 
 ---@param item Clodex.QueueItem
