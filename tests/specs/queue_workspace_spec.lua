@@ -1678,6 +1678,87 @@ describe("clodex.ui.queue_workspace", function()
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
 
+    it("lists every implemented commit id when history has multiple commits", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local workspace = Workspace.new({
+            queue_summary = function()
+                return {
+                    project = project,
+                    counts = {
+                        planned = 0,
+                        queued = 0,
+                        implemented = 1,
+                        history = 0,
+                    },
+                    queues = {
+                        planned = {},
+                        queued = {},
+                        implemented = {
+                            {
+                                id = "item-1",
+                                title = "Fix creator context",
+                                details = "Restore macro expansion",
+                                prompt = "Fix creator context\n\nRestore macro expansion",
+                                kind = "notworking",
+                                history_summary = "Restored context capture",
+                                history_commits = {
+                                    "f3e2f7a99",
+                                    "ac39acf44",
+                                    "d72580688",
+                                },
+                            },
+                        },
+                        history = {},
+                    },
+                }
+            end,
+        }, {
+            queue_workspace = {
+                preview_max_lines = 3,
+                fold_preview = true,
+            },
+        })
+        workspace.projects = { project }
+        workspace.project_index = 1
+        workspace.queue_buf = vim.api.nvim_create_buf(false, true)
+        workspace.queue_win = vim.api.nvim_open_win(workspace.queue_buf, false, {
+            relative = "editor",
+            row = 1,
+            col = 1,
+            width = 80,
+            height = 20,
+            style = "minimal",
+        })
+
+        workspace:render_queue()
+
+        local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
+        assert.are.same({
+            "Implemented (1)",
+            "   Not Working  Fix creator context  [󰜘 f3e2f7a9 󰜘 ac39acf4 󰜘 d7258068]",
+            "                    󰜘 f3e2f7a9",
+            "                    󰜘 ac39acf4",
+            "                    󰜘 d7258068",
+            "                    Restored context capture",
+            "                    Restore macro expansion",
+            "",
+        }, lines)
+
+        local commit_marks = inline_extmarks(workspace.queue_buf, "ClodexCommitId")
+        assert.are.equal(6, #commit_marks)
+        assert.are.equal(lines[2]:find("󰜘 f3e2f7a9", 1, true) - 1, commit_marks[1][3])
+        assert.are.equal(lines[2]:find("󰜘 ac39acf4", 1, true) - 1, commit_marks[2][3])
+        assert.are.equal(lines[2]:find("󰜘 d7258068", 1, true) - 1, commit_marks[3][3])
+        assert.are.equal(2, commit_marks[4][2])
+        assert.are.equal(3, commit_marks[5][2])
+        assert.are.equal(4, commit_marks[6][2])
+
+        vim.api.nvim_win_close(workspace.queue_win, true)
+    end)
+
     it("ignores malformed history metadata while rendering implemented items", function()
         local project = {
             name = "Test Project",

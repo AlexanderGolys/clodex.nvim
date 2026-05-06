@@ -678,6 +678,23 @@ local function history_commit_suffix(item)
 end
 
 ---@param item Clodex.QueueItem
+---@param indent string
+---@return string[]
+local function history_commit_preview_lines(item, indent)
+    local commits = item_history_commits(item)
+    if #commits <= 1 then
+        return {}
+    end
+
+    local lines = {} ---@type string[]
+    for _, commit_id in ipairs(commits) do
+        local short = commit_id:sub(1, 8)
+        lines[#lines + 1] = ("%s%s%s"):format(indent, COMMIT_ICON, short)
+    end
+    return lines
+end
+
+---@param item Clodex.QueueItem
 ---@param title string
 ---@param suffix string
 ---@param opts? { selected?: boolean, suffix_spans?: { start_col: integer, end_col: integer }[] }
@@ -1982,6 +1999,19 @@ function Workspace:render_queue()
                     }
                     self.queue_item_rows[#self.queue_item_rows + 1] = #self.queue_rows
                     block:append_line(item_text, item_extmarks)
+
+                    for _, text in ipairs(history_commit_preview_lines(item, prompt_text_indent)) do
+                        self.queue_rows[#self.queue_rows + 1] = {
+                            kind = "preview",
+                            text = text,
+                            queue = queue_name,
+                            item = item,
+                        }
+                        block:append_line(text, {
+                            Extmark.inline(0, 0, #text, "ClodexQueueItemMuted"),
+                            Extmark.inline(0, #prompt_text_indent, #text, "ClodexCommitId", COMMIT_ID_PRIORITY),
+                        })
+                    end
 
                     if comment then
                         local original = prompt_text_indent .. comment
