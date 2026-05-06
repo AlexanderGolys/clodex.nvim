@@ -1933,6 +1933,57 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(footer_config.col + footer_config.width <= background_config.col + background_config.width)
     end)
 
+    it("resizes the panel background after dynamic creator blocks are added", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = { name = "Alpha", root = "/tmp/alpha" },
+            projects = {
+                { name = "Alpha", root = "/tmp/alpha" },
+                { name = "Beta", root = "/tmp/beta" },
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        creator:switch_kind(1)
+        wait_for(function()
+            return creator.state.kind == "bug"
+                and creator.variant_win
+                and creator.variant_win:valid()
+        end)
+
+        creator.state.image_path = "/tmp/clipboard.png"
+        creator:refresh()
+        wait_for(function()
+            return creator.preview_win
+                and creator.preview_win:valid()
+                and creator.project_bg_win
+                and creator.project_bg_win:valid()
+        end)
+
+        local background_config = vim.api.nvim_win_get_config(creator.project_bg_win.win)
+        local preview_config = vim.api.nvim_win_get_config(creator.preview_win.win)
+        local variant_config = vim.api.nvim_win_get_config(creator.variant_win.win)
+        local left, top, right, bottom = creator:creator_frame_bounds()
+        assert.are.equal(left - 1, background_config.col)
+        assert.are.equal(top - 1, background_config.row)
+        assert.are.equal((right - left) + 3, background_config.width)
+        assert.are.equal((bottom - top) + 3, background_config.height)
+        assert.is_true(background_config.col < preview_config.col)
+        assert.is_true(background_config.row < variant_config.row)
+        assert.is_true(background_config.col + background_config.width > preview_config.col + preview_config.width)
+        assert.is_true(background_config.row + background_config.height > variant_config.row + variant_config.height)
+        assert.are.equal(background_config.width, #vim.api.nvim_buf_get_lines(creator.project_bg_buf, 0, 1, false)[1])
+    end)
+
     it("destroys the variant tab panel after toggling bug tabs off more than once", function()
         creator = Creator.open({
             app = {

@@ -1120,12 +1120,20 @@ function Creator:render_project_background()
 end
 
 function Creator:refresh_project_background()
-    self:render_project_background()
     if not self.panel or not self.panel.background then
         return
     end
     self.project_bg_win = self.panel.background:open()
     self.panel.background:update()
+    if self.project_bg_win and self.project_bg_win:valid() then
+        local config = vim.api.nvim_win_get_config(self.project_bg_win.win)
+        config.row = self:project_background_row()
+        config.col = self:project_background_col()
+        config.width = self:project_background_width()
+        config.height = self:project_background_height()
+        vim.api.nvim_win_set_config(self.project_bg_win.win, config)
+    end
+    self:render_project_background()
 end
 
 ---@return boolean
@@ -1391,7 +1399,6 @@ end
 
 -- Ensure windows
 function Creator:ensure_shell_windows()
-    self:refresh_project_background()
     self.project_win = self:open_block(self, "project_block", "project_win", "project", self.project_buf, {
         enter = false,
         border = "rounded",
