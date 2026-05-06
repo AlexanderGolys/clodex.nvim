@@ -693,7 +693,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_nil(table.concat(normal_lines, "\n"):find("implement+reset", 1, true))
         assert.is_nil(table.concat(insert_lines, "\n"):find("implement+reset", 1, true))
         assert.is_truthy(table.concat(normal_lines, "\n"):find("S", 1, true))
-        assert.is_truthy(table.concat(normal_lines, "\n"):find("S-.", 1, true))
+        assert.is_truthy(table.concat(normal_lines, "\n"):find("M", 1, true))
         assert.is_truthy(table.concat(insert_lines, "\n"):find("C-S-.", 1, true))
     end)
 
@@ -968,7 +968,7 @@ describe("clodex.ui.prompt_creator", function()
                 has_h_switch = true
             elseif map.lhs == "l" then
                 has_l_switch = true
-            elseif map.lhs == "." then
+            elseif map.lhs == "m" then
                 has_implement_action = true
             elseif map.lhs == "<" then
                 has_old_left_switch = true
@@ -2426,7 +2426,7 @@ describe("clodex.ui.prompt_creator", function()
             end,
         })
 
-        trigger_buffer_mapping(creator.layout.title_buf, ".", "n")
+        trigger_buffer_mapping(creator.layout.title_buf, "m", "n")
 
         wait_for(function()
             return submitted_actions[2] == "exec" and creator.footer_win == nil and creator.layout == nil
@@ -2537,7 +2537,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Reset prompt again" })
-        trigger_buffer_mapping(creator.layout.title_buf, "<S-.>", "n")
+        trigger_buffer_mapping(creator.layout.title_buf, "M", "n")
 
         wait_for(function()
             return submitted_actions[2] == "exec"
