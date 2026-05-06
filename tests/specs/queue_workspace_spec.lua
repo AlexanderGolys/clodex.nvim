@@ -26,6 +26,16 @@ describe("clodex.ui.queue_workspace", function()
         return groups
     end
 
+    local function inline_extmarks(buf, hl_group)
+        local matches = {}
+        for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, -1, 0, -1, { details = true })) do
+            if mark[4].hl_group == hl_group then
+                matches[#matches + 1] = mark
+            end
+        end
+        return matches
+    end
+
     local function trigger_buffer_mapping(buf, lhs)
         for _, map in ipairs(vim.api.nvim_buf_get_keymap(buf, "n")) do
             if map.lhs == lhs then
@@ -1658,7 +1668,12 @@ describe("clodex.ui.queue_workspace", function()
             "                    Adjust token handling",
             "",
         }, lines)
-        assert.is_true(vim.tbl_contains(extmark_groups(workspace.queue_buf), "ClodexCommitId"))
+        local commit_marks = inline_extmarks(workspace.queue_buf, "ClodexCommitId")
+        local muted_marks = inline_extmarks(workspace.queue_buf, "ClodexQueueItemMuted")
+        assert.are.equal(1, #commit_marks)
+        assert.are.equal(1, commit_marks[1][2])
+        assert.is_true(commit_marks[1][4].priority > muted_marks[1][4].priority)
+        assert.are.equal(lines[2]:find("󰜘 abc1234", 1, true) - 1, commit_marks[1][3])
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)

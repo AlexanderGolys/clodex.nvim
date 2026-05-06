@@ -79,6 +79,8 @@ local QUEUE_LABELS = {
     history = "History",
 }
 local PROMPT_TEXT_TAB_COLS = 4
+local COMMIT_SUFFIX_PRIORITY = 90
+local COMMIT_ID_PRIORITY = 120
 local PROMPT_KIND_PREFIX_WIDTH = (function()
     local width = 0
     for _, kind in ipairs(Prompt.categories.list()) do
@@ -694,10 +696,10 @@ local function queue_item_title_line(item, title, suffix, opts)
     }
     if #suffix > 0 then
         if opts.suffix_spans and #opts.suffix_spans > 0 then
-            marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted")
+            marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted", COMMIT_SUFFIX_PRIORITY)
             for _, span in ipairs(opts.suffix_spans) do
                 marks[#marks + 1] =
-                    Extmark.inline(0, title_end + span.start_col, title_end + span.end_col, "ClodexCommitId", 110)
+                    Extmark.inline(0, title_end + span.start_col, title_end + span.end_col, "ClodexCommitId", COMMIT_ID_PRIORITY)
             end
         else
             marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted")
