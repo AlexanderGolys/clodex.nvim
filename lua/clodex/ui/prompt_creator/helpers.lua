@@ -242,7 +242,6 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
             Helpers.footer_item("C-.", "implement"),
             Helpers.footer_item("C-S-."),
             Helpers.footer_item("C-c", "chat"),
-            Helpers.footer_item("q", "close"),
         })
         return {
             {
@@ -274,7 +273,6 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
             Helpers.footer_item("m", "implement"),
             Helpers.footer_item("M"),
             Helpers.footer_item("c", "chat"),
-            Helpers.footer_item("q", "close"),
         },
     }
 end
