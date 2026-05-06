@@ -158,6 +158,7 @@ describe("clodex.terminal.session", function()
         session.buf = buf
         session.job_id = 123
         session.awaiting_response = true
+        session:update_buffer_state()
         session:set_active_prompt_title("Fix queue dispatch")
 
         local original_jobwait = vim.fn.jobwait
@@ -166,6 +167,7 @@ describe("clodex.terminal.session", function()
         end
 
         assert.are.equal(" Fix queue dispatch ", session:winbar_text())
+        assert.are.equal("Clodex: Demo - Fix queue dispatch", vim.b[buf].term_title)
 
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
             "Codex ready",
@@ -174,6 +176,7 @@ describe("clodex.terminal.session", function()
         assert.are.equal("", session:winbar_text())
         assert.is_nil(session.active_prompt_title)
         assert.is_nil(session.active_prompt_kind)
+        assert.are.equal("Clodex: Demo", vim.b[buf].term_title)
 
         vim.fn.jobwait = original_jobwait
     end)
@@ -193,6 +196,7 @@ describe("clodex.terminal.session", function()
         })
         session.buf = buf
         session.job_id = 123
+        session:update_buffer_state()
         session:set_active_prompt_title("Authoritative prompt", "bug", { authoritative = true })
 
         local original_jobwait = vim.fn.jobwait
@@ -203,6 +207,7 @@ describe("clodex.terminal.session", function()
         assert.are.equal(" Authoritative prompt ", session:winbar_text())
         assert.are.equal("Authoritative prompt", session.active_prompt_title)
         assert.are.equal("bug", session.active_prompt_kind)
+        assert.are.equal("Clodex: Demo - Authoritative prompt", vim.b[buf].term_title)
 
         session:set_active_prompt_title(nil, nil, { authoritative = true })
 
@@ -210,6 +215,7 @@ describe("clodex.terminal.session", function()
         assert.is_nil(session.active_prompt_title)
         assert.is_nil(session.active_prompt_kind)
         assert.is_nil(session.active_prompt_authoritative)
+        assert.are.equal("Clodex: Demo", vim.b[buf].term_title)
 
         vim.fn.jobwait = original_jobwait
     end)

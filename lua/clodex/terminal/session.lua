@@ -117,6 +117,22 @@ local function terminal_job_id(buf)
     end
 end
 
+---@param session Clodex.TerminalSession
+---@return string
+local function window_title_text(session)
+    if session.active_prompt_title and session.active_prompt_title ~= "" then
+        return ("%s - %s"):format(session.title, session.active_prompt_title)
+    end
+    return session.title
+end
+
+---@param session Clodex.TerminalSession
+local function sync_terminal_title(session)
+    if session.buf ~= nil and vim.api.nvim_buf_is_valid(session.buf) then
+        vim.b[session.buf].term_title = window_title_text(session)
+    end
+end
+
 ---@param self Clodex.TerminalSession
 local function attach_termclose_handler(self)
     vim.api.nvim_create_autocmd("TermClose", {
@@ -361,6 +377,7 @@ function Session:set_active_prompt_title(title, kind, opts)
     self.active_prompt_title = title ~= "" and title or nil
     self.active_prompt_kind = self.active_prompt_title and kind or nil
     self.active_prompt_authoritative = self.active_prompt_title and opts and opts.authoritative == true or nil
+    sync_terminal_title(self)
 end
 
 --- Toggles whether the header row is shown in the terminal buffer.
@@ -467,6 +484,7 @@ function Session:is_working()
         if not self.active_prompt_authoritative then
             self.active_prompt_title = nil
             self.active_prompt_kind = nil
+            sync_terminal_title(self)
         end
         return false
     end
@@ -477,6 +495,7 @@ function Session:is_working()
         if not self.active_prompt_authoritative then
             self.active_prompt_title = nil
             self.active_prompt_kind = nil
+            sync_terminal_title(self)
         end
         return false
     end
@@ -511,9 +530,9 @@ function Session:update_buffer_state()
         cwd = self.cwd,
         project_root = self.project_root,
     }
-    -- Keep Neovim's terminal title metadata aligned with the Clodex session identity.
+    -- Keep Neovim's terminal title metadata aligned with the visible Clodex title.
     -- Snacks and user statusline/winbar setups may read `b:term_title` for inactive terminals.
-    vim.b[self.buf].term_title = self.title
+    sync_terminal_title(self)
     vim.keymap.set("n", "<localleader>h", "<Cmd>Clodex header<CR>", {
         buffer = self.buf,
         silent = true,
