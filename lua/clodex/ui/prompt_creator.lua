@@ -1070,6 +1070,7 @@ function Creator:render_project_list()
     local marks = {} ---@type Clodex.Extmark[]
     self.project_line_map = {}
     local active_project_hl = Prompt.title_group(self.state.kind)
+    local active_selected_project_hl = Prompt.title_active_group(self.state.kind)
     local target_width = self:project_list_width()
     for index, project in ipairs(self.projects) do
         local details = Helpers.project_details(self.app, project)
@@ -1085,9 +1086,10 @@ function Creator:render_project_list()
         local is_selected = index == self.project_index
         local is_active_project = project.root == self.active_project_root
         if is_selected then
-            marks[#marks + 1] = Extmark.inline(row, 0, #line, "ClodexPromptSourceTabActive")
             if is_active_project then
-                marks[#marks + 1] = Extmark.inline(row, 0, #line, active_project_hl, 110, { hl_mode = "combine" })
+                marks[#marks + 1] = Extmark.inline(row, 0, #line, active_selected_project_hl)
+            else
+                marks[#marks + 1] = Extmark.inline(row, 0, #line, "ClodexPromptSourceTabActive")
             end
         else
             local highlight = is_active_project and active_project_hl or "ClodexPromptSourceTab"

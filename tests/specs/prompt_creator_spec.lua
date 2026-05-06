@@ -1820,8 +1820,8 @@ describe("clodex.ui.prompt_creator", function()
         })
 
         local initial_groups = extmark_groups(creator.project_buf)
-        assert.is_true(vim.tbl_contains(initial_groups, "ClodexPromptSourceTabActive"))
-        assert.is_true(vim.tbl_contains(initial_groups, "ClodexPromptBugTitle"))
+        assert.is_false(vim.tbl_contains(initial_groups, "ClodexPromptSourceTabActive"))
+        assert.is_true(vim.tbl_contains(initial_groups, "ClodexPromptBugTitleActive"))
 
         trigger_buffer_mapping(creator.layout.title_buf, "<C-Down>")
 
@@ -1832,6 +1832,7 @@ describe("clodex.ui.prompt_creator", function()
         local groups = extmark_groups(creator.project_buf)
         assert.is_true(vim.tbl_contains(groups, "ClodexPromptBugTitle"))
         assert.is_true(vim.tbl_contains(groups, "ClodexPromptSourceTabActive"))
+        assert.is_false(vim.tbl_contains(groups, "ClodexPromptBugTitleActive"))
     end)
 
     it("pads project picker rows to the same visual width", function()
