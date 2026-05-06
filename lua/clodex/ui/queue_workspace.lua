@@ -1980,9 +1980,10 @@ function Workspace:render_queue()
                 for _, item in ipairs(items) do
                     rendered_items = true
                     local historical = queue_name == "implemented" or queue_name == "history"
+                    local has_commits = #item_history_commits(item) > 0
                     local comment = historical and item_history_comment(item) or nil
                     local suffix, suffix_spans = "", {}
-                    if historical then
+                    if has_commits then
                         suffix, suffix_spans = history_commit_suffix(item)
                     end
                     local selected = #self.queue_item_rows + 1 == self.queue_index
