@@ -202,6 +202,24 @@ describe("clodex.config", function()
             assert.is_true(active.bold)
         end)
 
+        it("keeps prompt border backgrounds aligned with editor backgrounds", function()
+            vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222" })
+            vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#101010" })
+
+            Config.apply_highlights({
+                highlights = require("clodex.config.highlights"),
+            })
+
+            local editor = vim.api.nvim_get_hl(0, { name = "ClodexPromptEditorNormal", link = false })
+            local default_border = vim.api.nvim_get_hl(0, { name = "ClodexPromptEditorBorder", link = false })
+            local kind_border = vim.api.nvim_get_hl(0, { name = "ClodexPromptBugTitleBorder", link = false })
+
+            assert.are.equal(editor.bg, default_border.bg)
+            assert.are.equal(editor.bg, kind_border.bg)
+            assert.are.equal(0xaa2222, kind_border.fg)
+            assert.is_true(kind_border.bold)
+        end)
+
         it("maps commit ids to the diagnostic error color", function()
             vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222" })
 

@@ -192,6 +192,66 @@ ClodexPromptExplainKindName = {
       fg = { from = "Type" },
       bold = true,
     },
+-- &&&ClodexPromptImprovementTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptImprovementTitleBorder = {
+      fg = { from = { "@constructor", "Function", "Identifier" } },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
+-- &&&ClodexPromptBugTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptBugTitleBorder = {
+      fg = { from = "DiagnosticError" },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
+-- &&&ClodexPromptNotWorkingTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptNotWorkingTitleBorder = {
+      fg = { from = "DiagnosticError", adjust = 0.18 },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
+-- &&&ClodexPromptFixTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptFixTitleBorder = {
+      fg = { from = { "Normal", "NormalFloat" } },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
+-- &&&ClodexPromptFeatureTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptFeatureTitleBorder = {
+      fg = { from = "Function" },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
+-- &&&ClodexPromptRestructureTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptRestructureTitleBorder = {
+      fg = { from = "String" },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
+-- &&&ClodexPromptVisionTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptVisionTitleBorder = {
+      fg = { from = "PreProc" },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
+-- &&&ClodexPromptCleanupTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptCleanupTitleBorder = {
+      fg = { from = "Comment" },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
+-- &&&ClodexPromptDocsTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptDocsTitleBorder = {
+      fg = { from = "Special" },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
+-- &&&ClodexPromptExplainTitleBorder&&&Lorem Ipsum&&&
+ClodexPromptExplainTitleBorder = {
+      fg = { from = "Type" },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bold = true,
+    },
 -- &&&ClodexPromptImprovementTitleActive&&&Lorem Ipsum&&&
 ClodexPromptImprovementTitleActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
@@ -389,6 +449,7 @@ ClodexPromptEditorNormal = {
 -- &&&ClodexPromptEditorBorder&&&Lorem Ipsum&&&
 ClodexPromptEditorBorder = {
       fg = { from = { "Identifier", "FloatBorder" } },
+      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bold = true,
     },
 -- &&&ClodexPromptEditorTitle&&&Lorem Ipsum&&&

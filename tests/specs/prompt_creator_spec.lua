@@ -453,16 +453,16 @@ describe("clodex.ui.prompt_creator", function()
             vim.wo[creator.layout.title_win.win].winhl:find("NormalFloat:ClodexPromptEditorNormal", 1, true)
         )
         assert.is_truthy(
-            vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true)
+            vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitleBorder", 1, true)
         )
         assert.is_truthy(
-            vim.wo[creator.layout.title_win.win].winhl:find("FloatTitle:ClodexPromptImprovementTitle", 1, true)
+            vim.wo[creator.layout.title_win.win].winhl:find("FloatTitle:ClodexPromptImprovementTitleBorder", 1, true)
         )
         assert.is_truthy(
             vim.wo[creator.layout.body_win.win].winhl:find("NormalFloat:ClodexPromptEditorNormal", 1, true)
         )
         assert.is_truthy(
-            vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true)
+            vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitleBorder", 1, true)
         )
 
         trigger_buffer_mapping(creator.layout.title_buf, "<Tab>")
@@ -475,7 +475,7 @@ describe("clodex.ui.prompt_creator", function()
                     true
                 )
                 and vim.wo[creator.layout.body_win.win].winhl:find(
-                    "FloatBorder:ClodexPromptImprovementTitle",
+                    "FloatBorder:ClodexPromptImprovementTitleBorder",
                     1,
                     true
                 )
@@ -485,7 +485,7 @@ describe("clodex.ui.prompt_creator", function()
                     true
                 )
                 and vim.wo[creator.layout.title_win.win].winhl:find(
-                    "FloatBorder:ClodexPromptImprovementTitle",
+                    "FloatBorder:ClodexPromptImprovementTitleBorder",
                     1,
                     true
                 )
@@ -704,13 +704,15 @@ describe("clodex.ui.prompt_creator", function()
             on_submit = function() end,
         })
 
-        assert.is_truthy(vim.wo[creator.footer_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true))
+        assert.is_truthy(
+            vim.wo[creator.footer_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitleBorder", 1, true)
+        )
         assert.is_truthy(vim.tbl_contains(extmark_groups(creator.footer_buf), "ClodexPromptImprovementTitle"))
         assert.is_truthy(
-            vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true)
+            vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitleBorder", 1, true)
         )
         assert.is_truthy(
-            vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitle", 1, true)
+            vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptImprovementTitleBorder", 1, true)
         )
 
         creator:switch_kind(1)
@@ -719,12 +721,12 @@ describe("clodex.ui.prompt_creator", function()
             return creator.state.kind == "bug"
         end)
 
-        assert.is_truthy(vim.wo[creator.footer_win.win].winhl:find("FloatBorder:ClodexPromptBugTitle", 1, true))
+        assert.is_truthy(vim.wo[creator.footer_win.win].winhl:find("FloatBorder:ClodexPromptBugTitleBorder", 1, true))
         assert.is_truthy(vim.tbl_contains(extmark_groups(creator.footer_buf), "ClodexPromptBugTitle"))
         assert.is_truthy(
-            vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptBugTitle", 1, true)
+            vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptBugTitleBorder", 1, true)
         )
-        assert.is_truthy(vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptBugTitle", 1, true))
+        assert.is_truthy(vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptBugTitleBorder", 1, true))
     end)
 
     it("supports context token highlighting, completion, and expansion in composer fields", function()

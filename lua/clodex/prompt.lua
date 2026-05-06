@@ -154,6 +154,12 @@ end
 
 ---@param kind? Clodex.PromptCategory|string
 ---@return string
+function M.title_border_group(kind)
+    return M.title_group(kind) .. "Border"
+end
+
+---@param kind? Clodex.PromptCategory|string
+---@return string
 function M.kind_name_group(kind)
     local suffix = KIND_NAME_GROUP_SUFFIX[M.categories.get(kind).id] or KIND_NAME_GROUP_SUFFIX.todo
     return "ClodexPrompt" .. suffix

@@ -103,7 +103,7 @@ function Creator:open_block(owner, block_field, win_field, id, buf, win_opts)
     if win and block:is_valid() then
         block:update()
         if self.state and self.state.kind then
-            local prompt_hl = Prompt.title_group(self.state.kind)
+            local prompt_hl = Prompt.title_border_group(self.state.kind)
             Helpers.update_winhl(win.win, { FloatBorder = prompt_hl, FloatTitle = prompt_hl })
         end
     end
@@ -1312,6 +1312,7 @@ end
 -- Apply theme
 function Creator:apply_prompt_theme()
     local prompt_hl = Prompt.title_group(self.state.kind)
+    local border_hl = Prompt.title_border_group(self.state.kind)
     self.panel:set_accent(prompt_hl)
     local windows = {
         self.project_win,
@@ -1325,7 +1326,7 @@ function Creator:apply_prompt_theme()
     }
     for _, win in ipairs(windows) do
         if win and win.valid and win:valid() then
-            Helpers.update_winhl(win.win, { FloatBorder = prompt_hl, FloatTitle = prompt_hl })
+            Helpers.update_winhl(win.win, { FloatBorder = border_hl, FloatTitle = border_hl })
         end
     end
     if self.project_win and self.project_win:valid() then
@@ -1351,7 +1352,7 @@ function Creator:apply_focus_highlight(win, inactive_hl)
     if not win or not win.valid or not win:valid() then
         return
     end
-    local border_hl = Prompt.title_group(self.state.kind)
+    local border_hl = Prompt.title_border_group(self.state.kind)
     Helpers.update_winhl(win.win, {
         FloatBorder = border_hl,
         FloatTitle = border_hl,
