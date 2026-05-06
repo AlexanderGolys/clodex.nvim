@@ -239,7 +239,6 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
         end
         vim.list_extend(actions, {
             Helpers.footer_item("C-s", "plan"),
-            Helpers.footer_item("C-q", "queue"),
             Helpers.footer_item("C-.", "implement"),
             Helpers.footer_item("C-S-."),
             Helpers.footer_item("C-c", "chat"),
