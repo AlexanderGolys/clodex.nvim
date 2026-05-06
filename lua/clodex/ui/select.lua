@@ -363,7 +363,7 @@ local function configure_prompt_context_completeopt(buf)
   local seen = {} ---@type table<string, boolean>
 
   for _, option in ipairs(options) do
-    if option ~= "noinsert" and option ~= "" and not seen[option] then
+    if option ~= "noinsert" and option ~= "noselect" and option ~= "" and not seen[option] then
       seen[option] = true
       filtered[#filtered + 1] = option
     end
@@ -402,7 +402,6 @@ function M.prompt_context_complete(findstart, base)
         matches[#matches + 1] = {
           word = item.token,
           abbr = item.label,
-          menu = item.detail,
           info = expansion,
         }
       end

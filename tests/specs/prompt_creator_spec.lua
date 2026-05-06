@@ -835,6 +835,7 @@ describe("clodex.ui.prompt_creator", function()
         local words = vim.tbl_map(function(item)
             return item.word
         end, items)
+        local completeopt = vim.split(vim.bo[body_buf].completeopt, ",", { plain = true })
 
         for _, token in ipairs({
             "&file",
@@ -847,6 +848,11 @@ describe("clodex.ui.prompt_creator", function()
             "&all_diagnostics",
         }) do
             assert.is_true(vim.tbl_contains(words, token), token)
+        end
+        assert.is_false(vim.tbl_contains(completeopt, "noinsert"))
+        assert.is_false(vim.tbl_contains(completeopt, "noselect"))
+        for _, item in ipairs(items) do
+            assert.is_nil(item.menu)
         end
 
         local body_ampersand
