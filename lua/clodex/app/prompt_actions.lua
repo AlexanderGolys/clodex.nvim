@@ -1,5 +1,6 @@
 local Backend = require("clodex.backend")
 local Prompt = require("clodex.prompt")
+local PromptContext = require("clodex.prompt.context")
 local PromptCreator = require("clodex.ui.prompt_creator")
 local notify = require("clodex.util.notify")
 local ui = require("clodex.ui.select")
@@ -187,7 +188,8 @@ end
 function PromptActions:open_creator(project, opts)
     opts = opts or {}
     local category = Prompt.categories.is_valid(opts.category) and Prompt.categories.get(opts.category).id or "todo"
-    local draft = opts.initial_draft or selection_default_draft(category, opts.context)
+    local context = opts.context or PromptContext.capture({ project = project })
+    local draft = opts.initial_draft or selection_default_draft(category, context)
     local current_tab = self.app.current_tab and self.app:current_tab() or nil
     local active_project_root = opts.active_project_root or current_tab and current_tab.active_project_root or nil
     local projects = self.app.projects_for_queue_workspace and self.app:projects_for_queue_workspace(active_project_root)
@@ -197,7 +199,7 @@ function PromptActions:open_creator(project, opts)
         project = project,
         projects = projects,
         active_project_root = active_project_root,
-        context = opts.context,
+        context = context,
         initial_kind = category,
         initial_draft = draft,
         submit_actions = opts.submit_actions or SUBMIT_ACTIONS,

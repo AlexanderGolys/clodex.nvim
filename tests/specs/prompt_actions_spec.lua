@@ -3,18 +3,22 @@ describe("clodex.app.prompt_actions", function()
     local original_ui
     local original_creator
     local original_notify
+    local original_context
     local creator_calls
     local pick_text_calls
     local picked_project
+    local captured_projects
 
     before_each(function()
         package.loaded["clodex.app.prompt_actions"] = nil
         original_ui = package.loaded["clodex.ui.select"]
         original_creator = package.loaded["clodex.ui.prompt_creator"]
         original_notify = package.loaded["clodex.util.notify"]
+        original_context = package.loaded["clodex.prompt.context"]
         creator_calls = {}
         pick_text_calls = 0
         picked_project = nil
+        captured_projects = {}
 
         package.loaded["clodex.ui.select"] = {
             pick_project = function(_projects, _opts, on_choice)
@@ -34,6 +38,16 @@ describe("clodex.app.prompt_actions", function()
             notify = function() end,
             warn = function() end,
         }
+        package.loaded["clodex.prompt.context"] = {
+            capture = function(opts)
+                captured_projects[#captured_projects + 1] = opts and opts.project or nil
+                return {
+                    relative_path = "lua/captured.lua",
+                    project_root = opts and opts.project and opts.project.root or nil,
+                    cursor_row = 12,
+                }
+            end,
+        }
 
         PromptActions = require("clodex.app.prompt_actions")
     end)
@@ -43,6 +57,7 @@ describe("clodex.app.prompt_actions", function()
         package.loaded["clodex.ui.select"] = original_ui
         package.loaded["clodex.ui.prompt_creator"] = original_creator
         package.loaded["clodex.util.notify"] = original_notify
+        package.loaded["clodex.prompt.context"] = original_context
     end)
 
     it("seeds the unified creator from the selected range", function()
@@ -79,6 +94,34 @@ describe("clodex.app.prompt_actions", function()
             title = "Restructure the implementation",
             details = "&selection",
         }, creator_calls[1].initial_draft)
+        assert.are.same({}, captured_projects)
+    end)
+
+    it("captures editor context by default when opening the creator", function()
+        local actions = PromptActions.new({
+            queue_actions = {
+                add_project_todo = function() end,
+            },
+            queue_workspace = {
+                prompt_title_width = function()
+                    return 80
+                end,
+            },
+        })
+        local project = {
+            name = "Demo",
+            root = "/tmp/demo",
+        }
+
+        actions:open_creator(project)
+
+        assert.are.equal(1, #creator_calls)
+        assert.are.same(project, captured_projects[1])
+        assert.are.same({
+            relative_path = "lua/captured.lua",
+            project_root = "/tmp/demo",
+            cursor_row = 12,
+        }, creator_calls[1].context)
     end)
 
     it("opens the bug creator when adding a bug todo", function()
