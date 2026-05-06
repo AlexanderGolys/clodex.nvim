@@ -247,7 +247,7 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
         })
         return {
             {
-                Helpers.footer_item("S-Tab", "move focus"),
+                Helpers.footer_item("S-Tab"),
                 Helpers.footer_item("C-v", "image"),
             },
             actions,
@@ -255,7 +255,7 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
     end
 
     local row_one = {
-        Helpers.footer_item({ "Tab", "↑/↓" }, "move focus", " or "),
+        Helpers.footer_item({ "Tab", "↑/↓" }, nil, " or "),
         Helpers.footer_item({ "←/→", "h/l" }, "kind", " or "),
     }
     if has_multiple_projects then
