@@ -13,6 +13,7 @@
 ---@field creator_max_height integer
 ---@field creator_screen_margin_cols integer
 ---@field creator_screen_margin_rows integer
+---@field compact_editor_width integer
 ---@field creator_panel_gap_cols integer
 ---@field tab_row_height integer
 ---@field title_gap_rows integer
@@ -52,6 +53,7 @@ return {
     creator_max_height = 32,
     creator_screen_margin_cols = 6,
     creator_screen_margin_rows = 4,
+    compact_editor_width = 80,
     creator_panel_gap_cols = 2,
     tab_row_height = 2,
     title_gap_rows = 2,

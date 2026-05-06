@@ -6,6 +6,7 @@ local PromptSubmit = require("clodex.prompt.submit")
 local Extmark = require("clodex.ui.extmark")
 local UiBlock = require("clodex.ui.panel.block")
 local UiPanel = require("clodex.ui.panel.panel")
+local Frame = require("clodex.ui.prompt_creator.frame")
 local Helpers = require("clodex.ui.prompt_creator.helpers")
 local LAYOUT = require("clodex.ui.prompt_creator.layout_config")
 local ui_select = require("clodex.ui.select")
@@ -523,16 +524,14 @@ end
 function Creator:total_width()
     local width = self:editor_size()
     local base_width = self.state.image_path and LAYOUT.base_width_with_image or LAYOUT.base_width_without_image
-    return math.min(
-        width - LAYOUT.creator_screen_margin_cols,
-        base_width + self:project_panel_width() + LAYOUT.creator_panel_gap_cols
-    )
+    local available_width = math.max(width - LAYOUT.creator_screen_margin_cols, LAYOUT.min_window_offset)
+    return math.min(available_width, base_width + self:project_panel_width() + LAYOUT.creator_panel_gap_cols)
 end
 
 ---@return integer
 function Creator:total_height()
     local _, height = self:editor_size()
-    return math.min(height - LAYOUT.creator_screen_margin_rows, LAYOUT.creator_max_height)
+    return math.min(math.max(height - LAYOUT.creator_screen_margin_rows, LAYOUT.min_window_offset), LAYOUT.creator_max_height)
 end
 
 ---@return integer
@@ -542,20 +541,53 @@ end
 
 ---@return integer
 function Creator:project_background_width()
-    local left, _, right = self:creator_frame_bounds()
-    if left and right then
-        return (right - left) + LAYOUT.prompt_background_margin + LAYOUT.prompt_background_margin_right
-    end
-    return self:total_width() + LAYOUT.creator_background_margin_cols + LAYOUT.prompt_background_margin_right
+    local rect = self:project_background_rect()
+    return rect.width
 end
 
 ---@return integer
 function Creator:project_background_height()
-    local _, top, _, bottom = self:creator_frame_bounds()
-    if top and bottom then
-        return (bottom - top) + LAYOUT.prompt_background_margin + LAYOUT.prompt_background_margin_bottom
+    local rect = self:project_background_rect()
+    return rect.height
+end
+
+---@return { row: integer, col: integer, width: integer, height: integer }
+function Creator:project_background_rect()
+    local max_width, max_height = self:editor_size()
+    local picker_left = self:project_col() - LAYOUT.min_window_offset
+    local picker_right = self:project_col() + self:project_list_width() + LAYOUT.min_window_offset
+    local content_left = self:content_frame_col()
+    local content_right = self:content_frame_col() + self:content_frame_width()
+    local footer_right = self:content_col() + self:content_width() + LAYOUT.min_window_offset
+    local right = math.max(picker_right, content_right, footer_right)
+    if self.state.image_path then
+        right = math.max(right, self:preview_col() + self:preview_width() + LAYOUT.min_window_offset)
     end
-    return self:total_height() + LAYOUT.prompt_background_margin + LAYOUT.prompt_background_margin_bottom
+
+    local left = math.min(picker_left, content_left)
+    local top = self:kind_row()
+    local bottom = math.max(
+        self:project_row() + self:project_height() + LAYOUT.min_window_offset,
+        self:footer_row() + LAYOUT.tab_row_height,
+        self:body_row() + self:body_height() + LAYOUT.min_window_offset
+    )
+
+    local width = (right - left) + LAYOUT.prompt_background_margin + LAYOUT.prompt_background_margin_right
+    local height = (bottom - top) + LAYOUT.prompt_background_margin + LAYOUT.prompt_background_margin_bottom
+    local row = top - LAYOUT.prompt_background_margin
+    local col = left - LAYOUT.prompt_background_margin
+
+    width = Helpers.clamp(width, LAYOUT.min_window_offset, max_width)
+    height = Helpers.clamp(height, LAYOUT.min_window_offset, max_height)
+    row = math.max(row, 0)
+    col = math.max(col, 0)
+
+    return {
+        row = row,
+        col = col,
+        width = width,
+        height = height,
+    }
 end
 
 ---@return integer
@@ -563,17 +595,22 @@ function Creator:preview_width()
     if not self.state.image_path then
         return 0
     end
+    local max_preview_width = self:total_width()
+        - self:project_panel_width()
+        - LAYOUT.creator_panel_gap_cols
+        - LAYOUT.content_min_width
+        - LAYOUT.creator_panel_gap_cols
     return Helpers.clamp(
         math.floor(self:total_width() * LAYOUT.preview_width_ratio),
         LAYOUT.preview_min_width,
-        LAYOUT.preview_max_width
+        math.max(LAYOUT.preview_min_width, math.min(LAYOUT.preview_max_width, max_preview_width))
     )
 end
 
 ---@return integer
 function Creator:left_width()
     local preview_width = self:preview_width()
-    local width = self:total_width() - preview_width
+    local width = math.max(self:total_width() - preview_width, LAYOUT.min_window_offset)
     return preview_width > 0 and width - LAYOUT.creator_panel_gap_cols or width
 end
 
@@ -590,10 +627,18 @@ end
 
 ---@return integer
 function Creator:content_width()
-    return math.max(
-        self:left_width() - self:project_panel_width() - LAYOUT.creator_panel_gap_cols,
-        LAYOUT.content_min_width
-    )
+    local available_width = self:left_width() - self:project_panel_width() - LAYOUT.creator_panel_gap_cols
+    local editor_width = self:editor_size()
+    if editor_width >= LAYOUT.compact_editor_width then
+        return math.max(available_width, LAYOUT.content_min_width)
+    end
+    if available_width <= LAYOUT.min_window_offset then
+        return LAYOUT.min_window_offset
+    end
+    if available_width < LAYOUT.content_min_width then
+        return available_width
+    end
+    return math.max(available_width, LAYOUT.content_min_width)
 end
 
 ---@return integer
@@ -712,32 +757,7 @@ end
 
 ---@return integer?, integer?, integer?, integer?
 function Creator:creator_frame_bounds()
-    local windows = {
-        self.project_win,
-        self.kind_win,
-        self.variant_win,
-        self.footer_win,
-        self.preview_win,
-        self.layout and self.layout.title_win or nil,
-        self.layout and self.layout.body_win or nil,
-        self.layout and self.layout.preview_win or nil,
-    }
-    local left, top, right, bottom
-    for _, win in ipairs(windows) do
-        if win and win:valid() then
-            local config = vim.api.nvim_win_get_config(win.win)
-            local border = Helpers.window_border_padding(win)
-            local frame_left = config.col - border
-            local frame_top = config.row - border
-            local frame_right = config.col + config.width + border
-            local frame_bottom = config.row + config.height + border
-            left = left and math.min(left, frame_left) or frame_left
-            top = top and math.min(top, frame_top) or frame_top
-            right = right and math.max(right, frame_right) or frame_right
-            bottom = bottom and math.max(bottom, frame_bottom) or frame_bottom
-        end
-    end
-    return left, top, right, bottom
+    return Frame.bounds(self)
 end
 
 ---@return integer
@@ -757,14 +777,12 @@ end
 
 ---@return integer
 function Creator:project_background_row()
-    local _, top = self:creator_frame_bounds()
-    return top and top - LAYOUT.prompt_background_margin or self:top_row() - LAYOUT.creator_background_margin_rows
+    return self:project_background_rect().row
 end
 
 ---@return integer
 function Creator:project_background_col()
-    local left = self:creator_frame_bounds()
-    return left and left - LAYOUT.prompt_background_margin or self:left_col() - LAYOUT.creator_background_margin_cols
+    return self:project_background_rect().col
 end
 
 ---@param buf integer
@@ -1112,8 +1130,9 @@ end
 -- Render background
 function Creator:render_project_background()
     local lines = {}
-    local line = string.rep(" ", self:project_background_width())
-    for _ = 1, self:project_background_height() do
+    local rect = self:project_background_rect()
+    local line = string.rep(" ", rect.width)
+    for _ = 1, rect.height do
         lines[#lines + 1] = line
     end
     vim.bo[self.project_bg_buf].modifiable = true
@@ -1126,40 +1145,19 @@ function Creator:refresh_project_background()
         return
     end
     self.project_bg_win = self.panel.background:open()
-    self.panel.background:update()
-    if self.project_bg_win and self.project_bg_win:valid() then
-        local config = vim.api.nvim_win_get_config(self.project_bg_win.win)
-        config.row = self:project_background_row()
-        config.col = self:project_background_col()
-        config.width = self:project_background_width()
-        config.height = self:project_background_height()
-        vim.api.nvim_win_set_config(self.project_bg_win.win, config)
+    if not self.project_bg_win or not self.project_bg_win:valid() then
+        return
     end
+
+    local rect = self:project_background_rect()
+    self.panel.background:set_position({ row = rect.row, col = rect.col })
+    self.panel.background:set_size({ width = rect.width, height = rect.height })
     self:render_project_background()
 end
 
 ---@return boolean
 function Creator:has_window_in_current_tab()
-    local current_tab = vim.api.nvim_get_current_tabpage()
-    local windows = {
-        self.project_win,
-        self.kind_win,
-        self.variant_win,
-        self.footer_win,
-        self.preview_win,
-        self.layout and self.layout.title_win or nil,
-        self.layout and self.layout.body_win or nil,
-        self.layout and self.layout.preview_win or nil,
-    }
-    for _, win in ipairs(windows) do
-        if win and win:valid() then
-            local ok, tabpage = pcall(vim.api.nvim_win_get_tabpage, win.win)
-            if ok and tabpage == current_tab then
-                return true
-            end
-        end
-    end
-    return false
+    return Frame.has_window_in_current_tab(self)
 end
 
 function Creator:refresh_current_tab_background()
@@ -1324,21 +1322,9 @@ function Creator:apply_prompt_theme()
     local prompt_hl = Prompt.title_group(self.state.kind)
     local border_hl = Prompt.title_border_group(self.state.kind)
     self.panel:set_accent(prompt_hl)
-    local windows = {
-        self.project_win,
-        self.kind_win,
-        self.footer_win,
-        self.variant_win,
-        self.preview_win,
-        self.layout and self.layout.title_win or nil,
-        self.layout and self.layout.body_win or nil,
-        self.layout and self.layout.preview_win or nil,
-    }
-    for _, win in ipairs(windows) do
-        if win and win.valid and win:valid() then
-            Helpers.update_winhl(win.win, { FloatBorder = border_hl, FloatTitle = border_hl })
-        end
-    end
+    Frame.each_valid_window(self, function(win)
+        Helpers.update_winhl(win.win, { FloatBorder = border_hl, FloatTitle = border_hl })
+    end)
     if self.project_win and self.project_win:valid() then
         Helpers.hide_window_cursor(self.project_win.win, "ClodexPromptEditorNormal")
     end

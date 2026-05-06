@@ -2,6 +2,7 @@ local KindRegistry = require("clodex.prompt.kind_registry")
 local Prompt = require("clodex.prompt")
 local Extmark = require("clodex.ui.extmark")
 local ui_select = require("clodex.ui.select")
+local util = require("clodex.util")
 local ui_win = require("clodex.ui.win")
 
 local Helpers = {}
@@ -12,7 +13,7 @@ local Helpers = {}
 ---@param maximum integer
 ---@return integer
 function Helpers.clamp(value, minimum, maximum)
-    return math.min(math.max(value, minimum), maximum)
+    return util.clamp(value, minimum, maximum)
 end
 
 -- Create buffer
@@ -33,7 +34,10 @@ function Helpers.window_border_padding(win)
         return 0
     end
     local border = win.opts.border
-    return border == nil or border == "none" and 0 or 1
+    if border == nil or border == "none" then
+        return 0
+    end
+    return 1
 end
 
 -- Close buffers

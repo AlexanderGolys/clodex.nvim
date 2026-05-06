@@ -1940,8 +1940,8 @@ describe("clodex.ui.prompt_creator", function()
         )
         assert.are.equal(left - 1, background_config.col)
         assert.are.equal(top - 1, background_config.row)
-        assert.are.equal((right - left) + 3, background_config.width)
-        assert.are.equal((bottom - top) + 3, background_config.height)
+        assert.are.equal(math.min((right - left) + 3, vim.o.columns), background_config.width)
+        assert.are.equal(math.min((bottom - top) + 3, vim.o.lines), background_config.height)
         assert.are.equal(70, background_config.zindex)
         assert.are.equal(71, picker_config.zindex)
         assert.are.equal(71, footer_config.zindex)
@@ -1952,6 +1952,58 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(background_config.col < title_config.col)
         assert.is_true(background_config.col + background_config.width > body_config.col + body_config.width)
         assert.is_true(footer_config.col + footer_config.width <= background_config.col + background_config.width)
+    end)
+
+    it("keeps creator windows displayable on compact editor grids", function()
+        local old_columns = vim.o.columns
+        local old_lines = vim.o.lines
+        vim.o.columns = 72
+        vim.o.lines = 20
+
+        local ok, err = pcall(function()
+            creator = Creator.open({
+                app = {
+                    config = {
+                        get = function()
+                            return {
+                                storage = { workspaces_dir = "/tmp" },
+                            }
+                        end,
+                    },
+                },
+                project = { name = "Alpha", root = "/tmp/alpha" },
+                projects = {
+                    { name = "Alpha", root = "/tmp/alpha" },
+                    { name = "Beta", root = "/tmp/beta" },
+                },
+                initial_kind = "bug",
+                initial_draft = {
+                    image_path = "/tmp/clipboard.png",
+                },
+                on_submit = function() end,
+            })
+
+            local wins = {
+                creator.project_bg_win,
+                creator.project_win,
+                creator.kind_win,
+                creator.variant_win,
+                creator.footer_win,
+                creator.preview_win,
+                creator.layout.title_win,
+                creator.layout.body_win,
+            }
+            for _, win in ipairs(wins) do
+                assert.is_true(win:valid())
+                local config = vim.api.nvim_win_get_config(win.win)
+                assert.is_true(config.width > 0)
+                assert.is_true(config.height > 0)
+            end
+        end)
+
+        vim.o.columns = old_columns
+        vim.o.lines = old_lines
+        assert.is_true(ok, err)
     end)
 
     it("resizes the panel background after dynamic creator blocks are added", function()
@@ -1996,8 +2048,8 @@ describe("clodex.ui.prompt_creator", function()
         local left, top, right, bottom = creator:creator_frame_bounds()
         assert.are.equal(left - 1, background_config.col)
         assert.are.equal(top - 1, background_config.row)
-        assert.are.equal((right - left) + 3, background_config.width)
-        assert.are.equal((bottom - top) + 3, background_config.height)
+        assert.are.equal(math.min((right - left) + 3, vim.o.columns), background_config.width)
+        assert.are.equal(math.min((bottom - top) + 3, vim.o.lines), background_config.height)
         assert.is_true(background_config.col < preview_config.col)
         assert.is_true(background_config.row < variant_config.row)
         assert.is_true(background_config.col + background_config.width > preview_config.col + preview_config.width)

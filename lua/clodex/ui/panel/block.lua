@@ -204,8 +204,17 @@ end
 
 function Block:update()
     if self:is_valid() and self.win.update then
+        local win_api = ui_win()
         self.win.opts = vim.tbl_deep_extend("force", self.win.opts or {}, self.win_opts)
         self.win:update()
+        if win_api.configure then
+            win_api.configure(self.win.win, {
+                view = self.win_opts.view,
+                theme = self.win_opts.theme,
+                theme_overrides = self.win_opts.theme_overrides,
+                wo = self.win_opts.wo,
+            })
+        end
         apply_zindex(self.win, self.win_opts.zindex)
         apply_accent(self.win, self.accent)
     end

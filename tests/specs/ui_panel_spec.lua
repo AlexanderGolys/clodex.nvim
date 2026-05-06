@@ -2,6 +2,7 @@ describe("clodex.ui.panel", function()
     local original_ui_win
     local Panel
     local opened_windows
+    local configured_windows
 
     before_each(function()
         package.loaded["clodex.ui.panel"] = nil
@@ -11,6 +12,7 @@ describe("clodex.ui.panel", function()
 
         original_ui_win = package.loaded["clodex.ui.win"]
         opened_windows = {}
+        configured_windows = {}
 
         package.loaded["clodex.ui.win"] = {
             create_buffer = function(opts)
@@ -28,7 +30,12 @@ describe("clodex.ui.panel", function()
                     vim.api.nvim_win_close(win, true)
                 end
             end,
-            configure = function() end,
+            configure = function(win, opts)
+                configured_windows[#configured_windows + 1] = {
+                    win = win,
+                    opts = vim.deepcopy(opts or {}),
+                }
+            end,
             open = function(opts)
                 local object = {
                     buf = opts.buf,
@@ -214,5 +221,36 @@ describe("clodex.ui.panel", function()
 
         assert.are.equal("editor", block.win.opts.relative)
         assert.are.equal(20, vim.api.nvim_win_get_width(block:winid()))
+    end)
+
+    it("reapplies Clodex window styling when updating a block", function()
+        local panel = Panel.new({
+            id = "demo",
+            background = {
+                id = "background",
+                win = {
+                    width = 14,
+                    height = 5,
+                    row = 0,
+                    col = 0,
+                    view = "footer",
+                    theme = "prompt_footer",
+                    theme_overrides = {
+                        normal = "ClodexPromptEditorFooter",
+                        end_of_buffer = "ClodexPromptEditorFooter",
+                    },
+                },
+            },
+        })
+
+        panel:open()
+        panel.background:set_size({ width = 20 })
+
+        local last = configured_windows[#configured_windows]
+        assert.are.equal(panel.background:winid(), last.win)
+        assert.are.equal("footer", last.opts.view)
+        assert.are.equal("prompt_footer", last.opts.theme)
+        assert.are.equal("ClodexPromptEditorFooter", last.opts.theme_overrides.normal)
+        assert.are.equal("ClodexPromptEditorFooter", last.opts.theme_overrides.end_of_buffer)
     end)
 end)

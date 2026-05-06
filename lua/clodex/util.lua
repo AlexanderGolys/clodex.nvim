@@ -1,5 +1,19 @@
 local M = {}
 
+---@param value integer
+---@param minimum integer
+---@param maximum integer
+---@return integer
+function M.clamp(value, minimum, maximum)
+    value = math.floor(value or 0)
+    minimum = minimum or 0
+    maximum = maximum or minimum
+    if maximum < minimum then
+        minimum, maximum = maximum, minimum
+    end
+    return math.min(math.max(value, minimum), maximum)
+end
+
 local SWAPFILE_ERROR_CODE = "E325"
 
 local random_seeded = false
