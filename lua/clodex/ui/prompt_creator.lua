@@ -1474,7 +1474,48 @@ function Creator:ensure_shell_windows()
 end
 
 -- Preview fallback
-function Creator:render_preview_fallback()
+function Creator:open_image_preview_window()
+    self.preview_win = self:open_block(self, "preview_block", "preview_win", "image_preview", self.preview_buf, {
+        enter = false,
+        border = "rounded",
+        zindex = LAYOUT.prompt_content_zindex,
+        title = " Clipboard Image ",
+        title_pos = "center",
+        width = function()
+            return self:preview_width()
+        end,
+        height = function()
+            return self:preview_height()
+        end,
+        row = function()
+            return self:preview_row()
+        end,
+        col = function()
+            return self:preview_col()
+        end,
+        view = "wrapped_text",
+        theme = "prompt_footer",
+    })
+end
+
+function Creator:apply_preview_keymaps()
+    if not self.preview_buf or vim.b[self.preview_buf].clodex_prompt_keymaps_applied then
+        return
+    end
+    self:apply_common_keymaps(self.preview_buf)
+    vim.b[self.preview_buf].clodex_prompt_keymaps_applied = true
+end
+
+---@param opts? { replace_buffer?: boolean }
+function Creator:render_preview_fallback(opts)
+    if opts and opts.replace_buffer then
+        self:remove_block("image_preview")
+        self.preview_block = nil
+        self.preview_win = nil
+        self.preview_buf = Helpers.prompt_buffer("scratch")
+        self:open_image_preview_window()
+        self:apply_preview_keymaps()
+    end
     if not self.preview_buf or not vim.api.nvim_buf_is_valid(self.preview_buf) then
         return
     end
@@ -1502,32 +1543,9 @@ function Creator:render_preview()
     if self.preview_block and self.preview_block:is_valid() then
         self.preview_win = self.preview_block.win
     else
-        self.preview_win = self:open_block(self, "preview_block", "preview_win", "image_preview", self.preview_buf, {
-            enter = false,
-            border = "rounded",
-            zindex = LAYOUT.prompt_content_zindex,
-            title = " Clipboard Image ",
-            title_pos = "center",
-            width = function()
-                return self:preview_width()
-            end,
-            height = function()
-                return self:preview_height()
-            end,
-            row = function()
-                return self:preview_row()
-            end,
-            col = function()
-                return self:preview_col()
-            end,
-            view = "wrapped_text",
-            theme = "prompt_footer",
-        })
+        self:open_image_preview_window()
     end
-    if not vim.b[self.preview_buf].clodex_prompt_keymaps_applied then
-        self:apply_common_keymaps(self.preview_buf)
-        vim.b[self.preview_buf].clodex_prompt_keymaps_applied = true
-    end
+    self:apply_preview_keymaps()
 
     local ok, Snacks = pcall(require, "snacks")
     local terminal_env = ok
@@ -1563,7 +1581,7 @@ function Creator:render_preview()
             if self.preview_placement == placement then
                 self.preview_placement = nil
             end
-            self:render_preview_fallback()
+            self:render_preview_fallback({ replace_buffer = true })
         end, 1500)
         return
     end

@@ -2146,6 +2146,7 @@ describe("clodex.ui.prompt_creator", function()
 
     it("falls back when image preview rendering does not become ready", function()
         local closed = false
+        local placement_buf
         package.loaded["snacks"] = {
             input = { input = function() end },
             picker = {
@@ -2163,13 +2164,21 @@ describe("clodex.ui.prompt_creator", function()
                     return true
                 end,
                 placement = {
-                    new = function()
+                    new = function(buf)
+                        placement_buf = buf
                         return {
                             ready = function()
                                 return false
                             end,
                             close = function()
                                 closed = true
+                                vim.defer_fn(function()
+                                    if vim.api.nvim_buf_is_valid(buf) then
+                                        vim.bo[buf].modifiable = true
+                                        vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "still loading" })
+                                        vim.bo[buf].modifiable = false
+                                    end
+                                end, 20)
                             end,
                         }
                     end,
@@ -2202,10 +2211,11 @@ describe("clodex.ui.prompt_creator", function()
         assert(
             vim.wait(2500, function()
                 local lines = vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false)
-                return closed and lines[1] == "# Clipboard image"
+                return closed and creator.preview_buf ~= placement_buf and lines[1] == "# Clipboard image"
             end, 20),
             "timed out waiting for image preview fallback"
         )
+        assert.are.same({ "still loading" }, vim.api.nvim_buf_get_lines(placement_buf, 0, -1, false))
 
         package.loaded["snacks"] = nil
     end)
