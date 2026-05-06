@@ -159,12 +159,6 @@ function M.kind_name_group(kind)
     return "ClodexPrompt" .. suffix
 end
 
----@param kind? Clodex.PromptCategory|string
----@return string
-function M.focus_border_group(kind)
-    return M.title_group(kind) .. "FocusBorder"
-end
-
 ---@param opts { title: string, details?: string, max_width?: integer }
 ---@return Clodex.Prompt.NormalizeResult
 function M.normalize_title(opts)

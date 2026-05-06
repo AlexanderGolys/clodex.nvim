@@ -268,66 +268,6 @@ ClodexPromptExplainTitleActive = {
       bg = { from = "Type", attr = "fg" },
       bold = true,
     },
--- &&&ClodexPromptImprovementTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptImprovementTitleFocusBorder = {
-      fg = { from = "@constructor" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
--- &&&ClodexPromptBugTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptBugTitleFocusBorder = {
-      fg = { from = "DiagnosticError" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
--- &&&ClodexPromptNotWorkingTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptNotWorkingTitleFocusBorder = {
-      fg = { from = "DiagnosticError", adjust = 0.18 },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
--- &&&ClodexPromptFixTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptFixTitleFocusBorder = {
-      fg = { from = { "Normal", "NormalFloat" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
--- &&&ClodexPromptFeatureTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptFeatureTitleFocusBorder = {
-      fg = { from = "Function" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
--- &&&ClodexPromptRestructureTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptRestructureTitleFocusBorder = {
-      fg = { from = "String" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
--- &&&ClodexPromptVisionTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptVisionTitleFocusBorder = {
-      fg = { from = "PreProc" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
--- &&&ClodexPromptCleanupTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptCleanupTitleFocusBorder = {
-      fg = { from = "Comment" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
--- &&&ClodexPromptDocsTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptDocsTitleFocusBorder = {
-      fg = { from = "Special" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
--- &&&ClodexPromptExplainTitleFocusBorder&&&Lorem Ipsum&&&
-ClodexPromptExplainTitleFocusBorder = {
-      fg = { from = "Type" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      bold = true,
-    },
 -- &&&ClodexPromptSourceTab&&&Lorem Ipsum&&&
 ClodexPromptSourceTab = {
       fg = { from = { "Comment", "Normal" } },
@@ -339,12 +279,6 @@ ClodexPromptSourceTabActive = {
       fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
       bg = { from = { "Comment", "Normal" }, attr = "fg" },
       bold = true,
-    },
--- &&&ClodexPromptFocusActive&&&Lorem Ipsum&&&
-ClodexPromptFocusActive = {
-      fg = { from = { "NormalFloat", "Normal" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.18 },
-      blend = 0,
     },
 -- &&&ClodexPromptPreviewText&&&Lorem Ipsum&&&
 ClodexPromptPreviewText = {

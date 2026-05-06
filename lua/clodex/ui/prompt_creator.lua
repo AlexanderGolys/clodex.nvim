@@ -36,7 +36,6 @@ local RESET_AFTER_SUBMIT_ACTIONS = {}
 
 local TAB_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-tabs")
 local FOOTER_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-footer")
-local PROMPT_ACTIVE_NORMAL = "ClodexPromptFocusActive"
 local PROMPT_EDITOR_NORMAL = "ClodexPromptEditorNormal"
 local PROMPT_FOOTER_NORMAL = "ClodexPromptEditorFooter"
 
@@ -1352,15 +1351,13 @@ function Creator:apply_focus_highlight(win, inactive_hl)
     if not win or not win.valid or not win:valid() then
         return
     end
-    local active = vim.api.nvim_get_current_win() == win.win
-    local normal_hl = active and PROMPT_ACTIVE_NORMAL or inactive_hl
-    local border_hl = active and Prompt.focus_border_group(self.state.kind) or Prompt.title_group(self.state.kind)
+    local border_hl = Prompt.title_group(self.state.kind)
     Helpers.update_winhl(win.win, {
         FloatBorder = border_hl,
         FloatTitle = border_hl,
-        Normal = normal_hl,
-        NormalFloat = normal_hl,
-        NormalNC = normal_hl,
+        Normal = inactive_hl,
+        NormalFloat = inactive_hl,
+        NormalNC = inactive_hl,
     })
 end
 
