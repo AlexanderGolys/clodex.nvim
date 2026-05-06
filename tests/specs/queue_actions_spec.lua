@@ -148,6 +148,14 @@ describe("clodex.app.queue_actions", function()
             kind = "bug",
         })
 
+        local original_terminal_ui = package.loaded["clodex.terminal.ui"]
+        local chrome_refresh_count = 0
+        package.loaded["clodex.terminal.ui"] = {
+            refresh_all_chrome = function()
+                chrome_refresh_count = chrome_refresh_count + 1
+            end,
+        }
+
         local authoritative
         local session = {
             set_active_prompt_title = function(self, title, kind, opts)
@@ -182,6 +190,7 @@ describe("clodex.app.queue_actions", function()
         assert.are.equal("Authoritative prompt title", session.active_prompt_title)
         assert.are.equal("bug", session.active_prompt_kind)
         assert.is_true(authoritative)
+        assert.are.equal(1, chrome_refresh_count)
 
         fs.remove(active_path)
 
@@ -189,6 +198,9 @@ describe("clodex.app.queue_actions", function()
         assert.is_nil(session.active_prompt_title)
         assert.is_nil(session.active_prompt_kind)
         assert.is_nil(authoritative)
+        assert.are.equal(2, chrome_refresh_count)
+
+        package.loaded["clodex.terminal.ui"] = original_terminal_ui
     end)
 
     it("moves an implemented item back to queued when the source queue is specified", function()

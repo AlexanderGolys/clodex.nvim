@@ -27,6 +27,13 @@ local COMMIT_ICON = "󰜘 "
 local QueueActions = {}
 QueueActions.__index = QueueActions
 
+local function refresh_terminal_chrome()
+    local ok, terminal_ui = pcall(require, "clodex.terminal.ui")
+    if ok and terminal_ui and type(terminal_ui.refresh_all_chrome) == "function" then
+        terminal_ui.refresh_all_chrome()
+    end
+end
+
 ---@class Clodex.AppQueueActions.AddTodoOpts
 ---@field queue? Clodex.QueueName
 ---@field implement? boolean
@@ -252,6 +259,7 @@ function QueueActions:poll_active_prompt_titles()
     end
 
     if changed then
+        refresh_terminal_chrome()
         pcall(vim.cmd.redrawstatus)
     end
     return changed
