@@ -264,7 +264,16 @@ end
 ---@param project Clodex.Project
 ---@param timestamp? integer
 function Details:touch_activity(project, timestamp)
-    return
+    local project_root = normalize_root(project.root)
+    local metadata, snapshot = load_metadata_snapshot(self, project_root)
+    local next_snapshot = snapshot or self:compute(project)
+    local touched_at = tonumber(timestamp) or os.time()
+
+    next_snapshot.last_file_modified_at = touched_at
+    metadata.captured_at = touched_at
+    metadata.snapshot = vim.deepcopy(next_snapshot)
+    write_metadata(project_root, metadata)
+    cache_snapshot(self, project_root, next_snapshot, touched_at)
 end
 
 ---@param project Clodex.Project

@@ -46,4 +46,29 @@ describe("clodex.project.details", function()
 
         fs.remove(root)
     end)
+
+    it("resets the project activity timestamp without dropping cached details", function()
+        local root = vim.fn.tempname()
+        fs.ensure_dir(root)
+        fs.write_file(fs.join(root, "README.md"), "# Demo\n")
+        local project = {
+            name = "Demo",
+            root = root,
+        }
+        local details = Details.new(Config.new():setup({}))
+
+        details:set_icon(project, "*")
+        details:touch_activity(project, 123456)
+
+        local cached = details:get_cached(project)
+        assert.are.equal(123456, cached.last_file_modified_at)
+        assert.are.equal("*", cached.project_icon)
+
+        local reloaded = Details.new(Config.new():setup({})):get_cached(project)
+        assert.are.equal(123456, reloaded.last_file_modified_at)
+        assert.are.equal("*", reloaded.project_icon)
+
+        details:delete(root)
+        fs.remove(root)
+    end)
 end)
