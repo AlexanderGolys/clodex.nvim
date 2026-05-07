@@ -133,14 +133,14 @@ require("clodex").setup({
     },
 })
 ```
-
+a
 Set `terminal.prefer_native_statusline = false` to leave Codex terminal statusline and winbar handling to your global UI configuration. The default keeps Clodex's native terminal chrome enabled and disables lualine for `clodex_terminal` buffers when lualine is loaded.
 
 ## Prompt kinds
 
 - `improvement` (`todo`)
 - `bug`
-- `fix` (`freeform`)
+- `fix` (`freeform`) 
 - `feature`
 - `restructure` (`refactor`)
 - `vision` (`idea`)
@@ -177,7 +177,7 @@ Bug prompt accents and queue commit ids prefer Neovim's `DiagnosticError` color,
 
 Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the selected range.
 
-Clodex terminal buffers map `<localleader>s` in normal and terminal mode to insert `$<prompt_execution.skill_name>` into the CLI without submitting it. From normal mode inside the CLI window, the mapping returns to terminal input after inserting the skill trigger.
+Clodex terminal buffers map `<localleader>s` in normal and terminal mode to insert `$<prompt_execution.skill_name>` into the CLI and submit it. From normal mode inside the CLI window, the mapping returns to terminal input after sending the skill trigger.
 
 The main queue workspace panel uses the shared Clodex UI panel shell, with project, queue, and footer panes owned as one panel. Opening the panel from insert mode returns Neovim to normal mode automatically, selects the current tab's active project, and selects that project's first queued prompt when one exists. When implementing from the workspace with no existing project session, Clodex closes the workspace and opens the project terminal before dispatching the prompt so the new CLI receives the prompt in the project session. Project file counts use tracked Git files when available, so checked-in files are counted even if they also match local ignore patterns. Project detail rows use cached metadata while moving the project selection, so selecting a project does not refresh its displayed last-edit time by itself. Language summaries count Rust projects through `Cargo.toml` and `.rs` files, and skip HTML and CSS files as project language signals. Queue filtering matches prompt titles, body text, details, full prompt text, and queue labels. Clicking either main panel pane moves focus to that pane, even when the click lands on empty panel space. Its panel cursor highlights match the pane backgrounds so the text cursor stays hidden while selection highlights show the active row. Project rows color the current tab's active project with the current-project accent, and color projects with any open background or other-tab session with the active-session accent even when that session is not the current tab target.
 

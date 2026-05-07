@@ -247,6 +247,48 @@ describe("clodex.app.queue_actions", function()
         package.loaded["clodex.terminal.ui"] = original_terminal_ui
     end)
 
+    it("does not continue the queue before MCP has claimed the submitted prompt", function()
+        local send_count = 0
+        local session = {
+            active_prompt_title = "Submitted prompt",
+            active_prompt_kind = "todo",
+            active_prompt_authoritative = nil,
+            set_active_prompt_title = function(self, title, kind, opts)
+                self.active_prompt_title = title
+                self.active_prompt_kind = kind
+                self.active_prompt_authoritative = title and opts and opts.authoritative == true or nil
+            end,
+            send = function()
+                send_count = send_count + 1
+            end,
+        }
+        actions.app.config = {
+            get = function()
+                return {
+                    storage = {
+                        workspaces_dir = workspace_root,
+                    },
+                }
+            end,
+        }
+        actions.app.registry = {
+            list = function()
+                return { project }
+            end,
+        }
+        actions.app.terminals = {
+            project_session = function(_, root)
+                if root == project.root then
+                    return session
+                end
+            end,
+        }
+
+        assert.is_true(actions:poll_active_prompt_titles())
+        assert.is_nil(session.active_prompt_title)
+        assert.are.equal(0, send_count)
+    end)
+
     it("moves an implemented item back to queued when the source queue is specified", function()
         local item = queue:add_todo(project, {
             title = "fix prompt flow",

@@ -472,15 +472,19 @@ describe("clodex.terminal.session", function()
         vim.defer_fn = original_defer_fn
     end)
 
-    it("inserts the configured prompt skill without submitting it", function()
+    it("inserts and submits the configured prompt skill", function()
         local sent = {}
         local original_chansend = vim.fn.chansend
+        local original_defer_fn = vim.defer_fn
         vim.fn.chansend = function(job_id, text)
             sent[#sent + 1] = {
                 job_id = job_id,
                 text = text,
             }
             return #text
+        end
+        vim.defer_fn = function(fn)
+            fn()
         end
 
         local session = Session.new({
@@ -502,9 +506,15 @@ describe("clodex.terminal.session", function()
                 job_id = 123,
                 text = "$custom-skill",
             },
+            {
+                job_id = 123,
+                text = "\r",
+            },
         }, sent)
+        assert.is_true(session.awaiting_response)
 
         vim.fn.chansend = original_chansend
+        vim.defer_fn = original_defer_fn
     end)
 
     it("attaches prompt skill insertion maps in normal and terminal mode", function()

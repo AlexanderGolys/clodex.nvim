@@ -223,6 +223,15 @@ local function send_terminal_payload(self, payload, error_message)
 end
 
 ---@param self Clodex.TerminalSession
+local function submit_terminal_input(self)
+    vim.defer_fn(function()
+        if self.job_id then
+            pcall(vim.fn.chansend, self.job_id, "\r")
+        end
+    end, 40)
+end
+
+---@param self Clodex.TerminalSession
 local function attach_termclose_handler(self)
     vim.api.nvim_create_autocmd("TermClose", {
         buffer = self.buf,
@@ -714,7 +723,12 @@ function Session:insert_prompt_skill()
     if skill_name == "" then
         return false
     end
-    return send_terminal_payload(self, ("$%s"):format(skill_name), "Failed to insert prompt skill into session at %s")
+    if not send_terminal_payload(self, ("$%s"):format(skill_name), "Failed to insert prompt skill into session at %s") then
+        return false
+    end
+    self.awaiting_response = true
+    submit_terminal_input(self)
+    return true
 end
 
 ---@param text string
@@ -733,11 +747,7 @@ function Session:dispatch_prompt(text)
 
     self.awaiting_response = true
 
-    vim.defer_fn(function()
-        if self.job_id then
-            pcall(vim.fn.chansend, self.job_id, "\r")
-        end
-    end, 40)
+    submit_terminal_input(self)
     return true
 end
 

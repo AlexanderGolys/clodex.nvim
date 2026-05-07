@@ -39,7 +39,7 @@
 
 
 local HLGroups = {
-    bug = { "DiagnosticError", "@float" },
+    bug = { "@float", "DiagnosticError"},
     float_win = { "NormalFloat", "Pmenu", "Normal" },
     not_working = { "@variable.builtin", "@error", "DiagnosticError" },
     improvement = { "@constructor", "Function", "Identifier" },
