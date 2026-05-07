@@ -21,6 +21,7 @@ local ui = require("clodex.ui.select")
 ---@field kind? Clodex.PromptCategory
 ---@field image_path? string
 ---@field completion_target? Clodex.QueueName
+---@field start_mode? "plan"
 
 ---@class Clodex.AppPromptActions
 ---@field app Clodex.App
@@ -31,6 +32,7 @@ local SUBMIT_ACTIONS = {
     { value = "save", label = "plan", key = "s", insert_key = "<C-s>", reset_key = "S" },
     { value = "queue", label = "queue", key = "<CR>", insert_key = "<C-q>" },
     { value = "exec", label = "implement", key = ".", insert_key = "<C-.>", reset_key = "<S-.>", reset_insert_key = "<C-S-.>" },
+    { value = "plan_exec", label = "plan impl", key = "p", insert_key = "<C-p>" },
     { value = "chat", label = "chat", key = "c", insert_key = "<C-c>" },
 }
 
@@ -43,6 +45,14 @@ local function queue_submit_opts(action, backend)
             queue = "queued",
             implement = true,
             run_mode = Backend.supports_direct_exec(backend) and "exec" or "interactive",
+        }
+    end
+    if action == "plan_exec" then
+        return {
+            queue = "queued",
+            implement = true,
+            run_mode = "interactive",
+            start_mode = "plan",
         }
     end
     if action == "queue" then

@@ -49,6 +49,19 @@ describe("clodex.workspace.queue", function()
         assert.matches("^[0-9a-f%-]+$", item.id)
     end)
 
+    it("preserves Plan-mode start metadata on queued items", function()
+        local queue = Queue.new(workspace_root)
+        local item = queue:add_todo(project, {
+            title = "Plan before coding",
+            queue = "queued",
+            start_mode = "plan",
+        })
+
+        local _, _, saved = queue:find_item(project, item.id)
+
+        assert.are.equal("plan", saved.start_mode)
+    end)
+
     it("stores ask prompts as a first-class queue kind", function()
         local item = queue:add_todo(project, {
             title = "ask about the parser",

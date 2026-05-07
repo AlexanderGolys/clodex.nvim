@@ -102,6 +102,43 @@ describe("clodex.app.queue_actions", function()
         assert.are.equal(("dispatch %s"):format(item.id), dispatched_prompt)
     end)
 
+    it("sends the Plan mode command before dispatching a Plan-mode queued item", function()
+        local sent = {}
+        local dispatched_prompt
+        local session = {
+            send = function(_, text)
+                sent[#sent + 1] = text
+                return true
+            end,
+            set_active_prompt_title = function() end,
+            dispatch_prompt = function(_, prompt)
+                dispatched_prompt = prompt
+                return true
+            end,
+        }
+        actions.app.terminals = {
+            ensure_project_session = function()
+                return session
+            end,
+        }
+        actions.app.execution = {
+            dispatch_prompt = function(_, _, item)
+                return ("dispatch %s"):format(item.id)
+            end,
+        }
+
+        local item = queue:add_todo(project, {
+            title = "Plan first",
+            queue = "queued",
+            kind = "todo",
+            start_mode = "plan",
+        })
+
+        assert.is_true(actions:dispatch_item(project, item))
+        assert.are.same({ "/plan" }, sent)
+        assert.are.equal(("dispatch %s"):format(item.id), dispatched_prompt)
+    end)
+
     it("resumes the saved session when dispatching a not-working queued item", function()
         local seen_opts
         local dispatched_prompt

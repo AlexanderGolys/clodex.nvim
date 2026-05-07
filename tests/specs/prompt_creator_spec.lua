@@ -696,7 +696,9 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_nil(table.concat(insert_lines, "\n"):find("implement+reset", 1, true))
         assert.is_truthy(table.concat(normal_lines, "\n"):find("S", 1, true))
         assert.is_truthy(table.concat(normal_lines, "\n"):find(". / S-.: implement", 1, true))
+        assert.is_truthy(table.concat(normal_lines, "\n"):find("p: plan impl", 1, true))
         assert.is_truthy(table.concat(insert_lines, "\n"):find("C-. / C-S-.: implement", 1, true))
+        assert.is_truthy(table.concat(insert_lines, "\n"):find("C-p: plan impl", 1, true))
         assert.is_nil(table.concat(normal_lines, "\n"):find("M", 1, true))
     end)
 
@@ -964,6 +966,7 @@ describe("clodex.ui.prompt_creator", function()
         local has_reset_implement_action = false
         local has_legacy_implement_action = false
         local has_legacy_reset_implement_action = false
+        local has_plan_implement_action = false
         local has_insert_left_switch = false
         local has_insert_right_switch = false
 
@@ -984,6 +987,8 @@ describe("clodex.ui.prompt_creator", function()
                 has_implement_action = true
             elseif map.lhs == "<S-.>" then
                 has_reset_implement_action = true
+            elseif map.lhs == "p" then
+                has_plan_implement_action = true
             elseif map.lhs == "m" then
                 has_legacy_implement_action = true
             elseif map.lhs == "M" then
@@ -1010,6 +1015,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(has_insert_right_switch)
         assert.is_true(has_implement_action)
         assert.is_true(has_reset_implement_action)
+        assert.is_true(has_plan_implement_action)
         assert.is_false(has_legacy_implement_action)
         assert.is_false(has_legacy_reset_implement_action)
         assert.is_false(has_old_left_switch)
@@ -2572,6 +2578,37 @@ describe("clodex.ui.prompt_creator", function()
 
         wait_for(function()
             return submitted_actions[2] == "exec" and creator.footer_win == nil and creator.layout == nil
+        end)
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Insert plan mode",
+                details = "Submit from insert mode in Plan mode",
+            },
+            on_submit = function(_, action)
+                submitted_actions[#submitted_actions + 1] = action
+                return { id = "queued-item" }
+            end,
+        })
+
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-p>", "i")
+
+        wait_for(function()
+            return submitted_actions[3] == "plan_exec" and creator.footer_win == nil and creator.layout == nil
         end)
     end)
 

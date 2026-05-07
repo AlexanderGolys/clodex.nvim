@@ -14,6 +14,7 @@ local util = require("clodex.util")
 ---@field details? string
 ---@field prompt string
 ---@field execution_instructions? string
+---@field start_mode? "plan"
 ---@field completion_target? Clodex.QueueName
 ---@field image_path? string
 ---@field created_at string
@@ -198,6 +199,9 @@ local function normalize_item(item)
     sanitize_history_metadata(item)
     if type(item.execution_instructions) ~= "string" or vim.trim(item.execution_instructions) == "" then
         item.execution_instructions = nil
+    end
+    if item.start_mode ~= "plan" then
+        item.start_mode = nil
     end
     if type(item.image_path) ~= "string" or vim.trim(item.image_path) == "" then
         item.image_path = nil
@@ -390,7 +394,7 @@ function Queue:find_item(project, item_id, expected_queue)
 end
 
 ---@param project Clodex.Project
----@param spec { title: string, details?: string, queue?: Clodex.QueueName, kind?: Clodex.PromptCategory, image_path?: string, execution_instructions?: string, completion_target?: Clodex.QueueName }
+---@param spec { title: string, details?: string, queue?: Clodex.QueueName, kind?: Clodex.PromptCategory, image_path?: string, execution_instructions?: string, start_mode?: "plan", completion_target?: Clodex.QueueName }
 ---@return Clodex.QueueItem
 function Queue:add_todo(project, spec)
     local queue_name = KNOWN_QUEUES[spec.queue] and spec.queue or "planned"
@@ -404,6 +408,7 @@ function Queue:add_todo(project, spec)
         details = details,
         prompt = title .. (details and ("\n\n" .. details) or ""),
         execution_instructions = spec.execution_instructions,
+        start_mode = spec.start_mode,
         completion_target = spec.completion_target,
         image_path = spec.image_path and vim.trim(spec.image_path) or nil,
         created_at = timestamp,

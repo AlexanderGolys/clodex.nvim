@@ -35,6 +35,7 @@ end
 ---@field queue? Clodex.QueueName
 ---@field implement? boolean
 ---@field run_mode? "interactive"|"exec"
+---@field start_mode? "plan"
 
 local PREVIOUS_QUEUE = {
     queued = "planned",
@@ -185,6 +186,16 @@ local function resume_session_id_for_item(actions, item)
     return session.id
 end
 
+---@param session Clodex.TerminalSession
+---@param item Clodex.QueueItem
+---@return boolean
+local function prepare_session_start_mode(session, item)
+    if item.start_mode ~= "plan" then
+        return true
+    end
+    return session:send("/plan")
+end
+
 ---@param app Clodex.AppQueueActions.Host
 ---@return Clodex.AppQueueActions
 function QueueActions.new(app)
@@ -253,6 +264,10 @@ function QueueActions:dispatch_item(project, item)
         return false
     end
 
+    if not prepare_session_start_mode(session, item) then
+        notify.warn(("Could not start %s in Plan mode"):format(item.title))
+        return false
+    end
     session:set_active_prompt_title(item.title, item.kind)
     if not session:dispatch_prompt(self.app.execution:dispatch_prompt(project, item)) then
         session:set_active_prompt_title(nil)
@@ -409,6 +424,7 @@ function QueueActions:add_project_todo(project, spec, opts)
         kind = spec.kind,
         image_path = spec.image_path,
         completion_target = spec.completion_target,
+        start_mode = opts.start_mode,
         queue = queue_name,
     })
     if queue_name == "queued" then
