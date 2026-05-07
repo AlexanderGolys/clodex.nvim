@@ -249,7 +249,7 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
         })
         return {
             {
-                Helpers.footer_item("S-Tab"),
+                Helpers.footer_item({ "Tab", "S-Tab" }, nil, "/"),
                 Helpers.footer_item("C-v", "image"),
             },
             actions,

@@ -1206,6 +1206,10 @@ function Creator:apply_project_keymaps()
         self:focus_creator_default(false)
         return ""
     end, { buffer = self.project_buf, silent = true, expr = true })
+    vim.keymap.set("i", "<Tab>", function()
+        self:focus_creator_default(true)
+        return ""
+    end, { buffer = self.project_buf, silent = true, expr = true })
     vim.keymap.set("i", "<S-Tab>", function()
         self:focus_creator_last_slot(true)
         return ""
@@ -1683,6 +1687,10 @@ function Creator:apply_common_keymaps(buf)
     self:apply_mouse_keymap(buf)
     vim.keymap.set("n", "<Tab>", function()
         self:focus_creator_default(false)
+        return ""
+    end, { buffer = buf, silent = true, expr = true })
+    vim.keymap.set("i", "<Tab>", function()
+        self:focus_creator_default(true)
         return ""
     end, { buffer = buf, silent = true, expr = true })
     vim.keymap.set("i", "<S-Tab>", function()

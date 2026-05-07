@@ -84,6 +84,10 @@ function ClipboardPreviewLayout:apply_keymaps()
             self:focus_preview()
             return ""
         end, { buffer = self.title_buf, silent = true, expr = true })
+        vim.keymap.set("i", "<Tab>", function()
+            self:focus_preview()
+            return ""
+        end, { buffer = self.title_buf, silent = true, expr = true })
         vim.b[self.title_buf].clodex_prompt_keymaps_applied = true
     end
     if not vim.b[self.preview_buf].clodex_prompt_keymaps_applied then

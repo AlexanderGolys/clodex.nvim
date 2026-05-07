@@ -682,7 +682,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_truthy(table.concat(normal_lines, "\n"):find("Tab", 1, true))
         assert.is_nil(table.concat(normal_lines, "\n"):find("S-Tab", 1, true))
         assert.is_truthy(table.concat(insert_lines, "\n"):find("S-Tab", 1, true))
-        assert.is_nil(table.concat(insert_lines, "\n"):find("Tab/S-Tab", 1, true))
+        assert.is_truthy(table.concat(insert_lines, "\n"):find("Tab/S-Tab", 1, true))
         assert.is_nil(table.concat(normal_lines, "\n"):find("move focus", 1, true))
         assert.is_nil(table.concat(insert_lines, "\n"):find("move focus", 1, true))
         assert.is_nil(table.concat(normal_lines, "\n"):find("kind (insert)", 1, true))
@@ -1173,16 +1173,26 @@ describe("clodex.ui.prompt_creator", function()
 
         local title_insert_maps = vim.api.nvim_buf_get_keymap(creator.layout.title_buf, "i")
         local title_down
+        local title_tab
         for _, map in ipairs(title_insert_maps) do
-            assert.are_not.equal("<Tab>", map.lhs)
             if map.lhs == "<Down>" then
                 title_down = map.callback
+            elseif map.lhs == "<Tab>" then
+                title_tab = map.callback
             end
         end
         assert.is_function(title_down)
+        assert.is_function(title_tab)
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
         assert.are.equal("", title_down())
+
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+        end)
+
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        assert.are.equal("", title_tab())
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
@@ -1762,20 +1772,28 @@ describe("clodex.ui.prompt_creator", function()
 
         local title_insert_maps = vim.api.nvim_buf_get_keymap(creator.layout.title_buf, "i")
         local body_insert_maps = vim.api.nvim_buf_get_keymap(creator.layout.body_buf, "i")
+        local has_title_tab = false
+        local has_body_tab = false
         for _, map in ipairs(title_insert_maps) do
-            assert.are_not.equal("<Tab>", map.lhs)
+            if map.lhs == "<Tab>" then
+                has_title_tab = true
+            end
         end
         for _, map in ipairs(body_insert_maps) do
-            assert.are_not.equal("<Tab>", map.lhs)
+            if map.lhs == "<Tab>" then
+                has_body_tab = true
+            end
         end
+        assert.is_true(has_title_tab)
+        assert.is_true(has_body_tab)
 
-        trigger_buffer_mapping(creator.layout.title_buf, "<S-Tab>", "i")
+        trigger_buffer_mapping(creator.layout.title_buf, "<Tab>", "i")
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
         end)
 
-        trigger_buffer_mapping(creator.layout.body_buf, "<S-Tab>", "i")
+        trigger_buffer_mapping(creator.layout.body_buf, "<Tab>", "i")
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.title_win.win
