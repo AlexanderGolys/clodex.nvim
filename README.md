@@ -159,7 +159,7 @@ Bug prompt accents and queue commit ids prefer Neovim's `DiagnosticError` color,
 ## Commands
 
 - `:Clodex[ panel|cli|term|chat|history|backend [codex|opencode]|header]`
-- `:ClodexDebug[ panel|mini|reload]`
+- `:ClodexDebug[ panel|mini|reload]` (`reload` also runs `:Lazy reload clodex.nvim` when Lazy is available)
 - `:ClodexProject add [name]`
 - `:ClodexProject readme`
 - `:ClodexProject todo`

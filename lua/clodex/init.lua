@@ -98,6 +98,13 @@ local function current_config()
     return vim.deepcopy(instance.config:get() or {})
 end
 
+local function reload_lazy_plugin()
+    if vim.fn.exists(":Lazy") ~= 2 then
+        return
+    end
+    pcall(vim.cmd, "Lazy reload clodex.nvim")
+end
+
 ---@param opts? Clodex.Config.Values|{}
 function M.setup(opts)
     app():setup(opts)
@@ -127,6 +134,7 @@ end
 function M.debug_reload()
     local opts = current_config()
 
+    reload_lazy_plugin()
     for key in pairs(package.loaded) do
         if key:match("^clodex") then
             package.loaded[key] = nil
