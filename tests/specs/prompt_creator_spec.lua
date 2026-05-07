@@ -695,8 +695,9 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_nil(table.concat(normal_lines, "\n"):find("implement+reset", 1, true))
         assert.is_nil(table.concat(insert_lines, "\n"):find("implement+reset", 1, true))
         assert.is_truthy(table.concat(normal_lines, "\n"):find("S", 1, true))
-        assert.is_truthy(table.concat(normal_lines, "\n"):find("M", 1, true))
-        assert.is_truthy(table.concat(insert_lines, "\n"):find("C-S-.", 1, true))
+        assert.is_truthy(table.concat(normal_lines, "\n"):find(". / S-.: implement", 1, true))
+        assert.is_truthy(table.concat(insert_lines, "\n"):find("C-. / C-S-.: implement", 1, true))
+        assert.is_nil(table.concat(normal_lines, "\n"):find("M", 1, true))
     end)
 
     it("matches prompt border and footer keymap colors to the active kind", function()
@@ -960,6 +961,9 @@ describe("clodex.ui.prompt_creator", function()
         local has_l_switch = false
         local has_old_left_switch = false
         local has_implement_action = false
+        local has_reset_implement_action = false
+        local has_legacy_implement_action = false
+        local has_legacy_reset_implement_action = false
         local has_insert_left_switch = false
         local has_insert_right_switch = false
 
@@ -976,8 +980,14 @@ describe("clodex.ui.prompt_creator", function()
                 has_h_switch = true
             elseif map.lhs == "l" then
                 has_l_switch = true
-            elseif map.lhs == "m" then
+            elseif map.lhs == "." then
                 has_implement_action = true
+            elseif map.lhs == "<S-.>" then
+                has_reset_implement_action = true
+            elseif map.lhs == "m" then
+                has_legacy_implement_action = true
+            elseif map.lhs == "M" then
+                has_legacy_reset_implement_action = true
             elseif map.lhs == "<" then
                 has_old_left_switch = true
             end
@@ -999,6 +1009,9 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(has_insert_left_switch)
         assert.is_true(has_insert_right_switch)
         assert.is_true(has_implement_action)
+        assert.is_true(has_reset_implement_action)
+        assert.is_false(has_legacy_implement_action)
+        assert.is_false(has_legacy_reset_implement_action)
         assert.is_false(has_old_left_switch)
 
         vim.api.nvim_set_current_win(creator.footer_win.win)
@@ -2489,7 +2502,7 @@ describe("clodex.ui.prompt_creator", function()
             end,
         })
 
-        trigger_buffer_mapping(creator.layout.title_buf, "m", "n")
+        trigger_buffer_mapping(creator.layout.title_buf, ".", "n")
 
         wait_for(function()
             return submitted_actions[2] == "exec" and creator.footer_win == nil and creator.layout == nil
@@ -2600,7 +2613,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Reset prompt again" })
-        trigger_buffer_mapping(creator.layout.title_buf, "M", "n")
+        trigger_buffer_mapping(creator.layout.title_buf, "<S-.>", "n")
 
         wait_for(function()
             return submitted_actions[2] == "exec"
