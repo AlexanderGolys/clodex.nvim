@@ -66,6 +66,23 @@ local function resolve_prompt_category(category)
     return Prompt.categories.is_valid(category) and Prompt.categories.get(category).id or "todo"
 end
 
+---@param opts Clodex.AppQueueActions.AddTodoOpts?
+---@param spec Clodex.AppPromptActions.AddTodoSpec
+---@return Clodex.AppQueueActions.AddTodoOpts?
+local function apply_prompt_start_mode(opts, spec)
+    local kind = resolve_prompt_category(spec.kind)
+    if kind ~= "feature" then
+        return opts
+    end
+
+    opts = opts or {}
+    opts.start_mode = "plan"
+    if opts.implement then
+        opts.run_mode = "interactive"
+    end
+    return opts
+end
+
 ---@param app Clodex.App
 ---@param project Clodex.Project
 local function touch_project_activity(app, project)
@@ -136,7 +153,8 @@ function PromptActions:submit_prompt(project, spec, action)
         return self:send_direct_to_chat(project, Prompt.render(spec.title, spec.details))
     end
     local config = self.app.config and self.app.config.get and self.app.config:get() or nil
-    return self.app.queue_actions:add_project_todo(project, spec, queue_submit_opts(action, config and config.backend))
+    local opts = apply_prompt_start_mode(queue_submit_opts(action, config and config.backend), spec)
+    return self.app.queue_actions:add_project_todo(project, spec, opts)
 end
 
 ---@param opts? Clodex.AppPromptActions.ResolveOpts

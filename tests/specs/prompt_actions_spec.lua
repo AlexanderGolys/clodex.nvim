@@ -388,6 +388,76 @@ describe("clodex.app.prompt_actions", function()
         }, queued_opts)
     end)
 
+    it("starts feature prompt implementation in Plan mode by default", function()
+        local queued_opts
+        local actions = PromptActions.new({
+            config = {
+                get = function()
+                    return { backend = "codex" }
+                end,
+            },
+            queue_actions = {
+                add_project_todo = function(_, _, _, opts)
+                    queued_opts = opts
+                end,
+            },
+            queue_workspace = {
+                prompt_title_width = function()
+                    return 80
+                end,
+            },
+        })
+
+        actions:submit_prompt({
+            name = "Demo",
+            root = "/tmp/demo",
+        }, {
+            title = "Add import flow",
+            kind = "feature",
+        }, "exec")
+
+        assert.are.same({
+            queue = "queued",
+            implement = true,
+            run_mode = "interactive",
+            start_mode = "plan",
+        }, queued_opts)
+    end)
+
+    it("preserves Plan-mode start metadata when queueing feature prompts", function()
+        local queued_opts
+        local actions = PromptActions.new({
+            config = {
+                get = function()
+                    return { backend = "codex" }
+                end,
+            },
+            queue_actions = {
+                add_project_todo = function(_, _, _, opts)
+                    queued_opts = opts
+                end,
+            },
+            queue_workspace = {
+                prompt_title_width = function()
+                    return 80
+                end,
+            },
+        })
+
+        actions:submit_prompt({
+            name = "Demo",
+            root = "/tmp/demo",
+        }, {
+            title = "Add import flow",
+            kind = "feature",
+        }, "queue")
+
+        assert.are.same({
+            queue = "queued",
+            start_mode = "plan",
+        }, queued_opts)
+    end)
+
     it("closes the prompt creator after run now succeeds", function()
         local queued_project
         local queued_spec
