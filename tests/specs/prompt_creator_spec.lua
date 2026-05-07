@@ -407,7 +407,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.same({ "Real details", "Second line" }, vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false))
     end)
 
-    it("opens with the title focused in normal mode", function()
+    it("opens with the title focused in insert mode", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -427,7 +427,7 @@ describe("clodex.ui.prompt_creator", function()
         })
 
         assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
-        assert.is_false(creator:in_insert_mode())
+        assert.are.equal("insert", creator.layout.title_block.mode)
     end)
 
     it("keeps prompt panel highlights stable when focus moves", function()

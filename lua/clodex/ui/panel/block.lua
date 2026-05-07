@@ -280,7 +280,10 @@ function Block:focus(opts)
     self.focused = true
     vim.api.nvim_set_current_win(self.win.win)
     if opts and opts.insert then
+        self.mode = "insert"
         vim.cmd.startinsert()
+    else
+        self.mode = "normal"
     end
     if self.on_focus then
         self.on_focus(self)

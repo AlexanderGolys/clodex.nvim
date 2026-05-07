@@ -1826,7 +1826,7 @@ function Creator.open(opts)
     creator:render_kind_tabs()
     creator:render_variant_tabs()
     creator:render_footer()
-    creator:activate_layout({ area = "layout", slot = "title", insert = false })
+    creator:activate_layout({ area = "layout", slot = "title", insert = true })
     creator:refresh()
     return creator
 end
