@@ -111,18 +111,6 @@ end
 
 ---@param values Clodex.Config.Values
 ---@return string
-function M.codex_home(values)
-    return fs.join(runtime_root(values), "codex")
-end
-
----@param values Clodex.Config.Values
----@return string
-function M.codex_config_path(values)
-    return fs.join(M.codex_home(values), "config.toml")
-end
-
----@param values Clodex.Config.Values
----@return string
 function M.opencode_config_path(values)
     return fs.join(runtime_root(values), "opencode.json")
 end
@@ -211,26 +199,6 @@ function M.codex_config_args(values)
 end
 
 ---@param values Clodex.Config.Values
-local function write_codex_runtime(values)
-    local cmd = assert(M.server_cmd(values))
-    local lines = {
-        ("[mcp_servers.%s]"):format(SERVER_NAME),
-        ("command = %s"):format(toml_string(cmd[1])),
-    }
-
-    local server_cmd_args = server_args(values)
-    if #server_cmd_args > 0 then
-        lines[#lines + 1] = ("args = [%s]"):format(table.concat(server_cmd_args, ", "))
-    end
-    local workspace_dir = queue_workspace_dir(values)
-    if workspace_dir then
-        lines[#lines + 1] = ("env = { CLODEX_WORKSPACES_DIR = %s }"):format(toml_string(workspace_dir))
-    end
-
-    fs.write_file(M.codex_config_path(values), table.concat(lines, "\n") .. "\n")
-end
-
----@param values Clodex.Config.Values
 local function write_opencode_runtime(values)
     local cmd = assert(M.server_cmd(values))
     local command = { cmd[1] }
@@ -255,7 +223,6 @@ function M.sync_runtime(values)
         return
     end
 
-    write_codex_runtime(values)
     write_opencode_runtime(values)
 end
 

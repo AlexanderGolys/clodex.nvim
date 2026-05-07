@@ -2,6 +2,11 @@ local Prompt = require("clodex.prompt")
 local PromptContext = require("clodex.prompt.context")
 
 local M = {}
+local BUG_VARIANT_CLIPBOARD_ERROR = "clipboard_error"
+local BUG_VARIANT_CLIPBOARD_SCREENSHOT = "clipboard_screenshot"
+local BUG_DEFAULT_TITLE = "Investigate runtime error"
+local BUG_SCREENSHOT_MESSAGE =
+    "Explain the cause, implement a fix if needed, and mention any follow-up validation that should be run."
 
 ---@param path string
 ---@param primary boolean
@@ -30,21 +35,33 @@ local function trim_field(text)
 end
 
 ---@param state table
+---@return boolean
+local function bug_clipboard_error(state)
+    return state.kind == "bug" and state.variant == BUG_VARIANT_CLIPBOARD_ERROR
+end
+
+---@param state table
+---@return boolean
+local function bug_clipboard_screenshot(state)
+    return state.kind == "bug" and state.variant == BUG_VARIANT_CLIPBOARD_SCREENSHOT
+end
+
+---@param state table
 ---@return Clodex.AppPromptActions.AddTodoSpec?
 function M.build_spec(state)
     local title = trim_field(state.title)
     local details = expand_field(state.details, state.context)
     local image_path = state.image_path
 
-    if state.kind == "bug" and state.variant == "clipboard_error" then
+    if bug_clipboard_error(state) then
         local parts = {}
         local preview = state.preview_text and vim.trim(state.preview_text) or ""
         if preview ~= "" then
             parts[#parts + 1] = ("Bug message:\n```\n%s\n```"):format(preview)
         end
-        parts[#parts + 1] = "Explain the cause, implement a fix if needed, and mention any follow-up validation that should be run."
+        parts[#parts + 1] = BUG_SCREENSHOT_MESSAGE
         return {
-            title = title or "Investigate runtime error",
+            title = title or BUG_DEFAULT_TITLE,
             details = table.concat(parts, "\n\n"),
             kind = "bug",
             completion_target = "history",
@@ -53,7 +70,7 @@ function M.build_spec(state)
 
     local detail_parts = {} ---@type string[]
     if image_path then
-        detail_parts[#detail_parts + 1] = image_reference(image_path, state.kind == "bug" and state.variant == "clipboard_screenshot")
+        detail_parts[#detail_parts + 1] = image_reference(image_path, bug_clipboard_screenshot(state))
     end
     if details then
         detail_parts[#detail_parts + 1] = details
@@ -67,7 +84,7 @@ function M.build_spec(state)
         details = #detail_parts > 0 and table.concat(detail_parts, "\n\n") or nil,
         kind = state.kind,
         image_path = image_path,
-        completion_target = state.kind == "bug" and state.variant == "clipboard_screenshot" and "history" or nil,
+        completion_target = bug_clipboard_screenshot(state) and "history" or nil,
     }
 end
 

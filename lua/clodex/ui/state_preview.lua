@@ -5,6 +5,7 @@ local UiPanel = require("clodex.ui.panel").Panel
 local TextBlock = require("clodex.ui.text_block")
 local ui_win = require("clodex.ui.win")
 local fs = require("clodex.util.fs")
+local util = require("clodex.util")
 
 --- Defines the Clodex.StatePreview type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -68,13 +69,6 @@ end
 
 --- Ensures cursor indexes stay within a valid 1-based range.
 --- This is used by movement methods to avoid invalid cursor rows.
-local function clamp(index, max_value)
-  if max_value <= 0 then
-    return 1
-  end
-  return math.min(math.max(index, 1), max_value)
-end
-
 --- Normalizes values for display in text blocks.
 --- Booleans and nil values become stable labels for easier scanning.
 local function format_value(value)
@@ -628,7 +622,7 @@ function Preview:update_cursor()
     return
   end
 
-  local target_row = clamp(self.command_index, math.min(math.max(#self.commands, 1), line_count))
+  local target_row = util.clamp(self.command_index, 1, math.min(math.max(#self.commands, 1), line_count))
   vim.api.nvim_win_set_cursor(self.command_win, { target_row, 0 })
 end
 
@@ -692,7 +686,7 @@ end
 --- This keeps the command panel aligned with command registry state.
 function Preview:render_commands()
   self.commands = Commands.list()
-  self.command_index = clamp(self.command_index, #self.commands)
+  self.command_index = util.clamp(self.command_index, 1, #self.commands)
 
   local block = TextBlock.new()
   for _, command in ipairs(self.commands) do
@@ -904,7 +898,7 @@ function Preview:move_command_selection(delta)
   if #self.commands == 0 then
     return
   end
-  self.command_index = clamp(self.command_index + delta, #self.commands)
+  self.command_index = util.clamp(self.command_index + delta, 1, #self.commands)
   self:update_cursor()
 end
 

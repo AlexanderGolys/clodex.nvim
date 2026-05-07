@@ -1,14 +1,22 @@
 local M = {}
-local STATUSLINE_EXPR = "%!v:lua.require('clodex.terminal.ui').statusline()"
-local WINBAR_EXPR = "%!v:lua.require('clodex.terminal.ui').winbar()"
 
 local Backend = require("clodex.backend")
 local Prompt = require("clodex.prompt")
+
+local STATUSLINE_EXPR = "%!v:lua.require('clodex.terminal.ui').statusline()"
+local WINBAR_EXPR = "%!v:lua.require('clodex.terminal.ui').winbar()"
 
 local STATUSLINE_HL_PREFIX = "ClodexTerminalStatuslineDyn"
 local TITLE_HL_PREFIX = "ClodexTerminalTitleDyn"
 local WINDOW_HL_PREFIX = "ClodexTerminalWindowDyn"
 local TITLE_FG = "#00AA00"
+local TERMINAL_FILETYPE = "clodex_terminal"
+
+local STATUSLINE_HL_PREFIXES = {
+    STATUSLINE_HL_PREFIX,
+    TITLE_HL_PREFIX,
+    WINDOW_HL_PREFIX,
+}
 
 ---@param buf integer
 ---@param name string
@@ -34,18 +42,7 @@ local function highlight_hex(group, attr)
     return string.format("#%06X", hl[attr])
 end
 
----@param buf integer
----@return string?
-local function terminal_statusline_bg(buf)
-    return highlight_hex("StatusLine", "bg")
-        or buffer_color(buf, "terminal_color_background")
-        or buffer_color(buf, "terminal_color_0")
-        or highlight_hex("Normal", "bg")
-end
-
----@param buf integer
----@return string?
-local function terminal_window_bg(buf)
+local function terminal_background(buf)
     return highlight_hex("StatusLine", "bg")
         or buffer_color(buf, "terminal_color_background")
         or buffer_color(buf, "terminal_color_0")
@@ -80,8 +77,8 @@ end
 ---@param value string
 ---@return string
 local function color_key(value)
-    local cleaned = value:gsub("#", "")
-    return cleaned
+    local key = value:gsub("#", "")
+    return key
 end
 
 ---@param win integer
@@ -89,11 +86,11 @@ end
 ---@return string, string, string?, string, string
 local function ensure_terminal_highlights(win, session)
     local buf = vim.api.nvim_win_get_buf(win)
-    local bg = terminal_statusline_bg(buf)
+    local bg = terminal_background(buf)
     local fg = terminal_statusline_fg(buf)
     local title_fg = terminal_title_fg(session)
     if not bg or not fg then
-        return ("ClodexTerminalStatuslineActive"), ("ClodexTerminalStatusline"), nil, "DiagnosticOk", "DiagnosticOk"
+        return "ClodexTerminalStatuslineActive", "ClodexTerminalStatusline", nil, "DiagnosticOk", "DiagnosticOk"
     end
 
     local suffix = color_key(bg) .. "_" .. color_key(fg)
@@ -106,9 +103,9 @@ local function ensure_terminal_highlights(win, session)
     local title_active = TITLE_HL_PREFIX .. "Active_" .. title_suffix
     local title_inactive = TITLE_HL_PREFIX .. "Inactive_" .. title_suffix
     vim.api.nvim_set_hl(0, title_inactive, { fg = title_fg, bg = bg })
-    vim.api.nvim_set_hl(0, title_active, { fg = title_fg, bg = bg, bold = true })
+    vim.api.nvim_set_hl(0, title_active, { fg = title_fg, bg = bg})
 
-    local window_bg = terminal_window_bg(buf)
+    local window_bg = terminal_background(buf)
     local window_fg = terminal_window_fg(buf)
     if not window_bg or not window_fg then
         return active, inactive, nil, title_active, title_inactive
@@ -118,17 +115,26 @@ local function ensure_terminal_highlights(win, session)
     return active, inactive, window, title_active, title_inactive
 end
 
----@param win? integer
----@return Clodex.TerminalSession?
-local function current_session(win)
+---@return Clodex.App?
+local function clodex_instance()
     local ok, app = pcall(require, "clodex.app")
     if not ok then
         return nil
     end
-    local instance = app.instance and app.instance() or nil
+    if not app or type(app.instance) ~= "function" then
+        return nil
+    end
+    return app.instance()
+end
+
+---@param win? integer
+---@return Clodex.TerminalSession?
+local function current_session(win)
+    local instance = clodex_instance()
     if not instance or not instance.terminals then
         return nil
     end
+
     local target = win
     if type(target) ~= "number" or not vim.api.nvim_win_is_valid(target) then
         target = vim.api.nvim_get_current_win()
@@ -138,19 +144,17 @@ end
 
 ---@return boolean
 local function use_clodex_terminal_chrome()
-    local ok, app = pcall(require, "clodex.app")
-    if not ok then
-        return true
-    end
-    local instance = app.instance and app.instance() or nil
+    local instance = clodex_instance()
     if not instance or not instance.config then
         return true
     end
+
     local config = instance.config:get()
     return Backend.normalize(config.backend) == "codex"
         and (not config.terminal or config.terminal.prefer_native_statusline ~= false)
 end
 
+---@return integer?
 local function current_window()
     local win = vim.api.nvim_get_current_win()
     return vim.api.nvim_win_is_valid(win) and win or nil
@@ -165,10 +169,12 @@ local function evaluated_window()
     return current_window()
 end
 
+---@param win integer
+---@return boolean
 local function clodex_terminal_window(win)
     return type(win) == "number"
         and vim.api.nvim_win_is_valid(win)
-        and vim.bo[vim.api.nvim_win_get_buf(win)].filetype == "clodex_terminal"
+        and vim.bo[vim.api.nvim_win_get_buf(win)].filetype == TERMINAL_FILETYPE
 end
 
 ---@param win integer
@@ -185,23 +191,34 @@ local function set_win_option(win, name, value)
     vim.api.nvim_set_option_value(name, value, { scope = "local", win = win })
 end
 
+---@param win? integer
+---@return integer|nil
+local function resolve_window(win)
+    if type(win) == "number" and vim.api.nvim_win_is_valid(win) then
+        return win
+    end
+    return current_window()
+end
+
 ---@param win integer
 local function clear_window_chrome(win)
     if not vim.api.nvim_win_is_valid(win) then
         return
     end
+
     if win_option(win, "statusline") == STATUSLINE_EXPR then
         set_win_option(win, "statusline", "")
     end
     if win_option(win, "winbar") == WINBAR_EXPR then
         set_win_option(win, "winbar", "")
     end
+
     local winhl = win_option(win, "winhl")
-    if winhl:find(STATUSLINE_HL_PREFIX, 1, true) ~= nil
-        or winhl:find(TITLE_HL_PREFIX, 1, true) ~= nil
-        or winhl:find(WINDOW_HL_PREFIX, 1, true) ~= nil
-    then
-        set_win_option(win, "winhl", "")
+    for _, prefix in ipairs(STATUSLINE_HL_PREFIXES) do
+        if winhl:find(prefix, 1, true) ~= nil then
+            set_win_option(win, "winhl", "")
+            return
+        end
     end
 end
 
@@ -224,23 +241,34 @@ end
 
 ---@param win? integer
 function M.apply_window(win)
-    local target = win
+    local target = resolve_window(win)
+    if not target then
+        return
+    end
+
     if not clodex_terminal_window(target) then
         clear_window_chrome(target)
         return
     end
+
     if not use_clodex_terminal_chrome() then
         clear_window_chrome(target)
         return
     end
+
     set_win_option(target, "statusline", STATUSLINE_EXPR)
     set_win_option(target, "winbar", WINBAR_EXPR)
     apply_terminal_window_highlights(target)
 end
 
+---@param win? integer
 ---@return string
 function M.statusline(win)
     local target = type(win) == "number" and win or evaluated_window()
+    if not target then
+        return ""
+    end
+
     local session = current_session(target)
     if not session then
         return ""
@@ -248,6 +276,7 @@ function M.statusline(win)
     return session:statusline_text(target)
 end
 
+---@param win? integer
 ---@return string
 function M.winbar(win)
     local target = type(win) == "number" and win or evaluated_window()
@@ -261,11 +290,7 @@ end
 
 ---@param win? integer
 function M.refresh_chrome(win)
-    local target = win
-    if type(target) ~= "number" or not vim.api.nvim_win_is_valid(target) then
-        target = current_window()
-    end
-    M.apply_window(target)
+    M.apply_window(resolve_window(win))
 end
 
 function M.refresh_all_chrome()

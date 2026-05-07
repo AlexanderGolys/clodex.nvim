@@ -3,6 +3,8 @@ local fs = require("clodex.util.fs")
 local notify = require("clodex.util.notify")
 
 local M = {}
+local PROMPT_ASSET_DIRNAME = "prompt-assets"
+local PNG_EXTENSION = "png"
 
 local function is_absolute_path(path)
     path = fs.normalize(path)
@@ -25,7 +27,7 @@ end
 ---@param category Clodex.PromptCategory
 ---@return string
 function M.asset_dir(workspaces_dir, project_root, category)
-    return fs.join(storage_root(workspaces_dir, project_root), "prompt-assets", category)
+    return fs.join(storage_root(workspaces_dir, project_root), PROMPT_ASSET_DIRNAME, category)
 end
 
 ---@param workspaces_dir string
@@ -44,7 +46,7 @@ end
 ---@param category Clodex.PromptCategory
 ---@return string?
 function M.save_clipboard_image(workspaces_dir, project_root, category)
-    local image_path = M.asset_path(workspaces_dir, project_root, category, "png")
+    local image_path = M.asset_path(workspaces_dir, project_root, category, PNG_EXTENSION)
     if not clipboard.save_image(image_path) then
         notify.warn("No PNG image found in the clipboard")
         return nil

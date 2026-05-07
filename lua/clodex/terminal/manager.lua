@@ -137,6 +137,37 @@ local function use_clodex_terminal_chrome(config)
         and (not config.terminal or config.terminal.prefer_native_statusline ~= false)
 end
 
+local function normalized_root(root)
+    if type(root) ~= "string" or root == "" then
+        return nil
+    end
+    return fs.normalize(root)
+end
+
+---@param sessions table<string, Clodex.TerminalSession>
+---@return string[]
+local function sorted_root_keys(sessions)
+    local keys = vim.tbl_keys(sessions)
+    table.sort(keys)
+    return keys
+end
+
+---@param session Clodex.TerminalSession
+---@param root string
+---@return boolean
+local function session_matches_project_root(session, root)
+    return session ~= nil
+        and session.kind == "project"
+        and session.project_root ~= nil
+        and fs.normalize(session.project_root) == root
+end
+
+---@param session Clodex.TerminalSession
+---@return boolean
+local function session_has_window_or_job(session)
+    return (session and (session:is_running() or session:buf_valid())) or false
+end
+
 ---@param config Clodex.Config.Values
 ---@param execution? Clodex.Workspace.Execution
 ---@return Clodex.TerminalManager
@@ -180,8 +211,7 @@ function Manager:sessions()
         sessions[#sessions + 1] = self.free_session
     end
 
-    local roots = vim.tbl_keys(self.project_sessions)
-    table.sort(roots)
+    local roots = sorted_root_keys(self.project_sessions)
     for _, root in ipairs(roots) do
         sessions[#sessions + 1] = self.project_sessions[root]
     end
@@ -239,10 +269,10 @@ end
 
 ---@param root string
 function Manager:destroy_project_session(root)
-    if type(root) ~= "string" then
+    root = normalized_root(root)
+    if not root then
         return
     end
-    root = fs.normalize(root)
     local session = self.project_sessions[root]
     if not session then
         return
@@ -268,10 +298,10 @@ end
 ---@param root string
 ---@return Clodex.TerminalSession?
 function Manager:project_session(root)
-    if type(root) ~= "string" or root == "" then
+    root = normalized_root(root)
+    if not root then
         return nil
     end
-    root = fs.normalize(root)
     return self.project_sessions[root]
 end
 
@@ -280,41 +310,37 @@ end
 ---@param root string
 ---@return boolean
 function Manager:is_project_session_running(root)
-    if type(root) ~= "string" or root == "" then
+    root = normalized_root(root)
+    if not root then
         return false
     end
-
-    local normalized_root = fs.normalize(root)
-    local session = self:project_session(normalized_root)
-    return session ~= nil and session_running_for_project(session, normalized_root)
+    local session = self:project_session(root)
+    return session ~= nil and session_running_for_project(session, root)
 end
 
 ---@param root string
 ---@return boolean
 function Manager:is_project_session_open(root)
-    if type(root) ~= "string" or root == "" then
+    root = normalized_root(root)
+    if not root then
         return false
     end
 
-    local normalized_root = fs.normalize(root)
-    local session = self:project_session(normalized_root)
-    return session ~= nil
-        and session.kind == "project"
-        and session.project_root ~= nil
-        and fs.normalize(session.project_root) == normalized_root
-        and (session:is_running() or session:buf_valid())
+    local session = self:project_session(root)
+    return session_matches_project_root(session, root)
+        and session_has_window_or_job(session)
 end
 
 ---@param root string
 ---@return boolean
 function Manager:is_project_session_working(root)
-    if type(root) ~= "string" or root == "" then
+    root = normalized_root(root)
+    if not root then
         return false
     end
 
-    local normalized_root = fs.normalize(root)
-    local session = self:project_session(normalized_root)
-    return session ~= nil and session_running_for_project(session, normalized_root) and session:is_working()
+    local session = self:project_session(root)
+    return session ~= nil and session_running_for_project(session, root) and session:is_working()
 end
 
 ---@param buf integer
@@ -715,9 +741,7 @@ function Manager:snapshot()
         ret[#ret + 1] = self.free_session:snapshot()
     end
 
-    local roots = vim.tbl_keys(self.project_sessions)
-    table.sort(roots)
-    for _, root in ipairs(roots) do
+    for _, root in ipairs(sorted_root_keys(self.project_sessions)) do
         ret[#ret + 1] = self.project_sessions[root]:snapshot()
     end
 
@@ -728,9 +752,7 @@ end
 function Manager:persistence_specs()
     local specs = {} ---@type Clodex.TerminalSession.Spec[]
 
-    local roots = vim.tbl_keys(self.project_sessions)
-    table.sort(roots)
-    for _, root in ipairs(roots) do
+    for _, root in ipairs(sorted_root_keys(self.project_sessions)) do
         local session = self.project_sessions[root]
         if session and session:is_running() then
             specs[#specs + 1] = {

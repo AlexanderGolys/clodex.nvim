@@ -22,7 +22,7 @@ describe("clodex.mcp", function()
         assert.is_true(Mcp.is_available(values))
     end)
 
-    it("writes persistent codex runtime config for an enabled MCP server", function()
+    it("passes Codex MCP config args while inheriting the user Codex home", function()
         local runtime_dir = temp_dir()
         local values = Config.new():setup({
             mcp = {
@@ -32,9 +32,6 @@ describe("clodex.mcp", function()
             },
         })
         local env = Backend.cli_env(values)
-        local file = assert(io.open(Mcp.codex_config_path(values), "rb"))
-        local content = file:read("*a")
-        file:close()
 
         assert.are.same({
             "codex",
@@ -45,17 +42,7 @@ describe("clodex.mcp", function()
                 values.storage.workspaces_dir
             ),
         }, Backend.cli_cmd(values))
-        assert.are.equal(Mcp.codex_home(values), env.CODEX_HOME)
-        assert.matches("%[mcp_servers%.clodex%]", content)
-        assert.matches('command = "cargo"', content)
-        assert.is_truthy(content:find(
-            ('args = ["run", "--bin", "clodex-mcp", "--workspace-dir", "%s"]'):format(
-                values.storage.workspaces_dir
-            ),
-            1,
-            true
-        ))
-        assert.matches("CLODEX_WORKSPACES_DIR", content)
+        assert.is_nil(env)
 
         fs.remove(runtime_dir)
     end)
@@ -82,9 +69,6 @@ describe("clodex.mcp", function()
         })
         local cli_cmd = Backend.cli_cmd(values)
         Backend.cli_env(values)
-        local file = assert(io.open(Mcp.codex_config_path(values), "rb"))
-        local content = file:read("*a")
-        file:close()
 
         assert.are.same({
             "codex",
@@ -95,12 +79,6 @@ describe("clodex.mcp", function()
                 workspaces_dir
             ),
         }, cli_cmd)
-        assert.is_truthy(content:find(
-            ('"--workspace-dir", "%s"'):format(workspaces_dir),
-            1,
-            true
-        ))
-        assert.is_nil(content:find(".clodex/workspaces", 1, true))
 
         fs.remove(runtime_dir)
         fs.remove(workspaces_dir)
@@ -163,7 +141,7 @@ describe("clodex.mcp", function()
         })
 
         assert.are.same(Backend.cli_cmd(values), spec.cmd)
-        assert.are.equal(Mcp.codex_home(values), spec.env.CODEX_HOME)
+        assert.is_nil(spec.env)
         assert.are.equal("snacks", spec.terminal_provider)
 
         fs.remove(values.mcp.runtime_dir)
@@ -335,7 +313,7 @@ describe("clodex.mcp", function()
 
         assert.are_not.same(first, second)
         assert.is_true(first.destroyed)
-        assert.are.equal(Mcp.codex_home(codex_values), first.env.CODEX_HOME)
+        assert.is_nil(first.env)
         assert.are.equal(Mcp.opencode_config_path(opencode_values), second.env.OPENCODE_CONFIG)
 
         fs.remove(codex_values.mcp.runtime_dir)

@@ -21,6 +21,18 @@ local Bookmarks = {}
 Bookmarks.__index = Bookmarks
 
 local DATA_VERSION = 1
+local MARKER_NAMESPACE = "clodex-project-bookmarks"
+
+---@param value integer?
+---@param fallback integer
+---@return integer
+local function clamp_line(value, fallback)
+    local normalized = tonumber(value) or fallback
+    if normalized < 1 then
+        return 1
+    end
+    return normalized
+end
 
 local function now()
     return os.date("!%Y-%m-%dT%H:%M:%SZ")
@@ -77,7 +89,7 @@ end
 ---@return Clodex.ProjectBookmarks
 function Bookmarks.new()
     local self = setmetatable({}, Bookmarks)
-    self.ns = vim.api.nvim_create_namespace("clodex-project-bookmarks")
+    self.ns = vim.api.nvim_create_namespace(MARKER_NAMESPACE)
     self.attached = {}
     return self
 end
@@ -118,18 +130,21 @@ end
 function Bookmarks:add(project, spec)
     local data = self:load(project)
     local timestamp = now()
+    local path = relative_path(project, spec.path)
+    local line = clamp_line(spec.line, 1)
+
     local bookmark = {
         id = vim.fn.sha256(table.concat({
             project.root,
-            spec.path,
-            tostring(spec.line),
-            spec.title,
+            path,
+            tostring(line),
+            vim.trim(spec.title or ""),
             timestamp,
         }, "\n")):sub(1, 16),
-        path = relative_path(project, spec.path),
-        line = math.max(spec.line, 1),
-        title = vim.trim(spec.title),
-        description = vim.trim(spec.description),
+        path = path,
+        line = line,
+        title = vim.trim(spec.title or ""),
+        description = vim.trim(spec.description or ""),
         created_at = timestamp,
         updated_at = timestamp,
     }
@@ -144,9 +159,10 @@ end
 function Bookmarks:update_line(project, bookmark_id, line)
     local data = self:load(project)
     local changed = false
+    local next_line = clamp_line(line, 1)
     for _, bookmark in ipairs(data.bookmarks) do
-        if bookmark.id == bookmark_id and bookmark.line ~= line then
-            bookmark.line = math.max(line, 1)
+        if bookmark.id == bookmark_id and bookmark.line ~= next_line then
+            bookmark.line = next_line
             bookmark.updated_at = now()
             changed = true
             break
@@ -178,9 +194,10 @@ function Bookmarks:preview_lines(project, bookmark)
         "",
         "```",
     }
+
     if fs.is_file(path) then
         local file_lines = vim.fn.readfile(path)
-        local start_line = math.max(bookmark.line - 2, 1)
+        local start_line = clamp_line(bookmark.line - 2, 1)
         local end_line = math.min(bookmark.line + 2, #file_lines)
         for idx = start_line, end_line do
             local prefix = idx == bookmark.line and ">" or " "
@@ -189,6 +206,7 @@ function Bookmarks:preview_lines(project, bookmark)
     else
         lines[#lines + 1] = "(file missing)"
     end
+
     lines[#lines + 1] = "```"
     return lines
 end
@@ -202,7 +220,7 @@ function Bookmarks:jump(project, bookmark)
     if not result.ok then
         return result
     end
-    local line = math.max(bookmark.line, 1)
+    local line = clamp_line(bookmark.line, 1)
     vim.api.nvim_win_set_cursor(0, { line, 0 })
     vim.cmd.normal({ args = { "zz" }, bang = true })
     return result
@@ -214,6 +232,7 @@ function Bookmarks:decorate_buffer(project, buf)
     if not vim.api.nvim_buf_is_valid(buf) then
         return
     end
+
     local path = fs.normalize(vim.api.nvim_buf_get_name(buf))
     if path == "" or not fs.is_relative_to(path, project.root) then
         vim.api.nvim_buf_clear_namespace(buf, self.ns, 0, -1)
@@ -224,7 +243,10 @@ function Bookmarks:decorate_buffer(project, buf)
     local marks = {} ---@type table<string, integer>
     vim.api.nvim_buf_clear_namespace(buf, self.ns, 0, -1)
     for _, bookmark in ipairs(self:list_for_path(project, path)) do
-        local line = math.max(bookmark.line - 1, 0)
+        local line = bookmark.line - 1
+        if line < 0 then
+            line = 0
+        end
         if line < vim.api.nvim_buf_line_count(buf) then
             marks[bookmark.id] = vim.api.nvim_buf_set_extmark(buf, self.ns, line, 0, {
                 line_hl_group = "ClodexBookmarkLine",
@@ -236,6 +258,7 @@ function Bookmarks:decorate_buffer(project, buf)
             })
         end
     end
+
     self.attached[buf] = {
         project_root = project.root,
         marks = marks,
@@ -249,6 +272,7 @@ function Bookmarks:sync_buffer(registry, buf)
     if not attached or not vim.api.nvim_buf_is_valid(buf) then
         return
     end
+
     local project = registry:get(attached.project_root)
     if not project then
         self.attached[buf] = nil

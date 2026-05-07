@@ -86,6 +86,16 @@ local function focus_picker_list(picker)
   end
 end
 
+---@param focus_target fun()
+local function focus_with_retry(focus_target)
+  vim.schedule(function()
+    focus_target()
+    vim.defer_fn(function()
+      focus_target()
+    end, 20)
+  end)
+end
+
 ---@class Clodex.UiSelect.MultilineAction
 ---@field value string
 ---@field label string
@@ -267,12 +277,8 @@ function M.select(items, opts, on_choice)
     },
   }, vim.deepcopy(opts.snacks or {}))
   local picker = SnacksSelect.select(items, opts, on_choice)
-
-  vim.schedule(function()
+  focus_with_retry(function()
     focus_picker_list(picker)
-    vim.defer_fn(function()
-      focus_picker_list(picker)
-    end, 20)
   end)
 
   return picker
@@ -311,11 +317,8 @@ function M.input(opts, on_confirm)
     end, { buf = true })
   end
 
-  vim.schedule(function()
+  focus_with_retry(function()
     focus_input_window(win)
-    vim.defer_fn(function()
-      focus_input_window(win)
-    end, 20)
   end)
 
   return win

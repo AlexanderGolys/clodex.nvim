@@ -4,6 +4,26 @@ local fs = require("clodex.util.fs")
 local git = require("clodex.util.git")
 local notify = require("clodex.util.notify")
 
+local FINISHED_MESSAGE = "Direct Codex run finished for %s: %s"
+local NOT_UPDATED_MESSAGE = "Direct Codex run finished for %s but did not update the implemented item automatically: %s"
+local FAILED_MESSAGE = "Direct Codex run failed for %s: %s (exit %d)"
+
+local RUN_OUTPUT_SCHEMA = {
+    type = "object",
+    additionalProperties = false,
+    properties = {
+        summary = {
+            type = "string",
+            description = "One short sentence summarizing the outcome or blocker.",
+        },
+        response = {
+            type = "string",
+            description = "Natural-language response for the user. Markdown is allowed.",
+        },
+    },
+    required = { "summary", "response" },
+}
+
 ---@class Clodex.ExecutionRunner
 ---@field app Clodex.App
 ---@field config Clodex.Config.Values
@@ -26,14 +46,6 @@ local function run_dir(execution, project, item)
     return fs.join(execution:project_execution_dir(project), "runs", item.id)
 end
 
----@param text string?
----@return string
-local function trim_block(text)
-    text = tostring(text or ""):gsub("\r\n", "\n"):gsub("\r", "\n")
-    text = text:gsub("^%s+", ""):gsub("%s+$", "")
-    return text
-end
-
 ---@param path string
 ---@return table?
 local function read_json_file(path)
@@ -41,23 +53,20 @@ local function read_json_file(path)
     return type(decoded) == "table" and decoded or nil
 end
 
----@return table
-local function output_schema()
-    return {
-        type = "object",
-        additionalProperties = false,
-        properties = {
-            summary = {
-                type = "string",
-                description = "One short sentence summarizing the outcome or blocker.",
-            },
-            response = {
-                type = "string",
-                description = "Natural-language response for the user. Markdown is allowed.",
-            },
-        },
-        required = { "summary", "response" },
-    }
+local function run_finished_message(project, item)
+    return FINISHED_MESSAGE:format(project.name, item.title)
+end
+
+local function run_not_updated_message(project, item)
+    return NOT_UPDATED_MESSAGE:format(project.name, item.title)
+end
+
+local function run_failed_message(project, item, code)
+    return FAILED_MESSAGE:format(project.name, item.title, code)
+end
+
+local function uses_prompt_skill(execution)
+    return execution and execution.uses_prompt_skill and execution:uses_prompt_skill()
 end
 
 ---@param message table?
@@ -76,22 +85,23 @@ end
 ---@param output_path string
 ---@return string[]
 local function build_command(project, item, schema_path, output_path)
-    local cmd = {}
-    cmd[#cmd + 1] = "exec"
-    cmd[#cmd + 1] = "--cd"
-    cmd[#cmd + 1] = project.root
-    cmd[#cmd + 1] = "--skip-git-repo-check"
-    cmd[#cmd + 1] = "--full-auto"
-    cmd[#cmd + 1] = "--ephemeral"
-    cmd[#cmd + 1] = "--output-schema"
-    cmd[#cmd + 1] = schema_path
-    cmd[#cmd + 1] = "--output-last-message"
-    cmd[#cmd + 1] = output_path
+    local cmd = {
+        "exec",
+        "--cd",
+        project.root,
+        "--skip-git-repo-check",
+        "--full-auto",
+        "--ephemeral",
+        "--output-schema",
+        schema_path,
+        "--output-last-message",
+        output_path,
+    }
     if item.image_path and fs.is_file(item.image_path) then
-        cmd[#cmd + 1] = "--image"
-        cmd[#cmd + 1] = item.image_path
+        table.insert(cmd, "--image")
+        table.insert(cmd, item.image_path)
     end
-    cmd[#cmd + 1] = "-"
+    table.insert(cmd, "-")
     return cmd
 end
 
@@ -126,15 +136,16 @@ end
 ---@param project Clodex.Project
 ---@param item Clodex.QueueItem
 ---@param summary string?
+---@return boolean
 function Runner:complete_item(project, item, summary)
     local queue_name = self.app.queue:find_item(project, item.id)
     if queue_name ~= "implemented" then
-        return
+        return false
     end
 
     local fallback_summary = vim.trim(summary or "")
     if fallback_summary == "" then
-        return
+        return false
     end
 
     self.app.queue:update_implemented_item(project, item.id, {
@@ -147,6 +158,7 @@ function Runner:complete_item(project, item, summary)
     end
     self.app.queue_actions:remember_workspace_revision(project)
     History.append_prompt_resolved(project.name, item.title, fallback_summary)
+    return true
 end
 
 ---@param project Clodex.Project
@@ -159,26 +171,18 @@ function Runner:handle_completion(project, item, result, run_dir, output_path)
     fs.remove(run_dir)
 
     if result.code == 0 then
-        if self.app.execution and self.app.execution.uses_prompt_skill and self.app.execution:uses_prompt_skill() then
-            notify.notify(("Direct Codex run finished for %s: %s"):format(project.name, item.title))
+        if uses_prompt_skill(self.app.execution) then
+            notify.notify(run_finished_message(project, item))
         else
             local summary = response_summary(message)
-            self:complete_item(project, item, summary)
-            if self.app.queue:find_item(project, item.id) == "implemented" then
-                notify.warn(
-                    ("Direct Codex run finished for %s but did not update the implemented item automatically: %s"):format(
-                        project.name,
-                        item.title
-                    )
-                )
+            if self:complete_item(project, item, summary) then
+                notify.notify(run_finished_message(project, item))
             else
-                notify.notify(("Direct Codex run finished for %s: %s"):format(project.name, item.title))
+                notify.warn(run_not_updated_message(project, item))
             end
         end
     else
-        notify.error(
-            ("Direct Codex run failed for %s: %s (exit %d)"):format(project.name, item.title, result.code)
-        )
+        notify.error(run_failed_message(project, item, result.code))
     end
 
     self.app.project_details_store:touch_activity(project)
@@ -213,10 +217,11 @@ function Runner:start(project, item)
         notify.warn(("Cannot run empty prompt for %s"):format(project.name))
         return false
     end
+
     local cmd = Backend.cli_cmd(self.config)
     vim.list_extend(cmd, build_command(project, item, schema_path, output_path))
 
-    fs.write_json(schema_path, output_schema())
+    fs.write_json(schema_path, RUN_OUTPUT_SCHEMA)
 
     local ok, system = pcall(vim.system, cmd, {
         cwd = project.root,

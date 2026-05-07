@@ -117,6 +117,23 @@ local function terminal_job_id(buf)
     end
 end
 
+---@param self Clodex.TerminalSession
+---@return integer?
+local function current_running_job(self)
+    if self.job_id and vim.fn.jobwait({ self.job_id }, 0)[1] == -1 then
+        return self.job_id
+    end
+
+    if not self:buf_valid() then
+        return nil
+    end
+
+    local job_id = terminal_job_id(self.buf)
+    if job_id and vim.fn.jobwait({ job_id }, 0)[1] == -1 then
+        return job_id
+    end
+end
+
 ---@param session Clodex.TerminalSession
 ---@return string
 local function window_title_text(session)
@@ -131,6 +148,76 @@ local function sync_terminal_title(session)
     if session.buf ~= nil and vim.api.nvim_buf_is_valid(session.buf) then
         vim.b[session.buf].term_title = window_title_text(session)
     end
+end
+
+---@param session Clodex.TerminalSession
+local function clear_non_authoritative_prompt(session)
+    if session.active_prompt_authoritative then
+        return
+    end
+    session.active_prompt_title = nil
+    session.active_prompt_kind = nil
+    sync_terminal_title(session)
+end
+
+---@param cmd string[]
+---@param opts { cwd?: string, env?: table<string, string> }
+---@param buf number
+---@return boolean, integer?
+local function start_terminal_for_provider(cmd, opts, buf, provider)
+    if provider == "term" then
+        return start_with_term(cmd, opts, buf)
+    end
+
+    local ok, terminal = pcall(start_with_snacks, cmd, opts, buf)
+    local job_id = ok and terminal_job_id(buf) or nil
+    local started = ok and terminal ~= nil and type(job_id) == "number" and job_id > 0
+    return started, job_id
+end
+
+---@param self Clodex.TerminalSession
+---@return boolean
+local function is_opencode_backend(self)
+    if type(self.cmd) ~= "table" then
+        return false
+    end
+    for _, arg in ipairs(self.cmd) do
+        if type(arg) == "string" and arg:match("opencode") then
+            return true
+        end
+    end
+    return false
+end
+
+---@param text string
+---@return string
+local function bracketed_paste(text)
+    return ("\027[200~%s\027[201~"):format(text)
+end
+
+local function normalize_prompt_text(self, text)
+    local normalized = text:gsub("\r\n", "\n"):gsub("\r", "\n")
+    if is_opencode_backend(self) then
+        return normalized
+    end
+    return bracketed_paste(normalized)
+end
+
+---@param self Clodex.TerminalSession
+---@param payload string
+---@param error_message string
+---@return boolean
+local function send_terminal_payload(self, payload, error_message)
+    if not self:ensure_started() or not self.job_id then
+        return false
+    end
+
+    local ok = pcall(vim.fn.chansend, self.job_id, payload)
+    if not ok then
+        notify.error(error_message:format(self.cwd))
+        return false
+    end
+    return true
 end
 
 ---@param self Clodex.TerminalSession
@@ -461,42 +548,28 @@ end
 --- This gate keeps callers safe before continuing higher-level state transitions.
 ---@return boolean
 function Session:is_running()
-    if self.job_id and vim.fn.jobwait({ self.job_id }, 0)[1] == -1 then
-        return true
+    local job_id = current_running_job(self)
+    if not job_id then
+        self.job_id = nil
+        return false
     end
 
-    if self:buf_valid() then
-        local job_id = terminal_job_id(self.buf)
-        if job_id and vim.fn.jobwait({ job_id }, 0)[1] == -1 then
-            self.job_id = job_id
-            return true
-        end
-    end
-
-    self.job_id = nil
-    return false
+    self.job_id = job_id
+    return true
 end
 
 ---@return boolean
 function Session:is_working()
     if not self:is_running() then
         self.awaiting_response = false
-        if not self.active_prompt_authoritative then
-            self.active_prompt_title = nil
-            self.active_prompt_kind = nil
-            sync_terminal_title(self)
-        end
+        clear_non_authoritative_prompt(self)
         return false
     end
 
     local line = self:last_cli_line()
     if is_idle_line(line) then
         self.awaiting_response = false
-        if not self.active_prompt_authoritative then
-            self.active_prompt_title = nil
-            self.active_prompt_kind = nil
-            sync_terminal_title(self)
-        end
+        clear_non_authoritative_prompt(self)
         return false
     end
 
@@ -570,21 +643,10 @@ function Session:ensure_started()
     self.archived_line_count = 0
     self:update_buffer_state()
 
-    local job_id
-    local started
-    if self.terminal_provider == "term" then
-        started, job_id = start_with_term(self.cmd, {
-            cwd = self.cwd,
-            env = self.env,
-        }, self.buf)
-    else
-        local ok, terminal = pcall(start_with_snacks, self.cmd, {
-            cwd = self.cwd,
-            env = self.env,
-        }, self.buf)
-        job_id = ok and self.buf and terminal_job_id(self.buf) or nil
-        started = ok and terminal ~= nil and type(job_id) == "number" and job_id > 0
-    end
+    local started, job_id = start_terminal_for_provider(self.cmd, {
+        cwd = self.cwd,
+        env = self.env,
+    }, self.buf, self.terminal_provider)
     if not started or type(job_id) ~= "number" or job_id <= 0 then
         self.job_id = nil
         if self:buf_valid() then
@@ -624,36 +686,11 @@ function Session:send(text)
     if text == "" then
         return false
     end
-    if not self:ensure_started() or not self.job_id then
-        return false
-    end
-
-    local ok = pcall(vim.fn.chansend, self.job_id, text .. "\n")
-    if not ok then
-        notify.error(("Failed to send prompt to Codex session at %s"):format(self.cwd))
-        return false
-    end
-    return true
-end
-
-local function is_opencode_backend(self)
-    if type(self.cmd) ~= "table" then
-        return false
-    end
-    for _, arg in ipairs(self.cmd) do
-        if type(arg) == "string" and arg:match("opencode") then
-            return true
-        end
-    end
-    return false
+    return send_terminal_payload(self, text .. "\n", "Failed to send prompt to Codex session at %s")
 end
 
 ---@param text string
 ---@return string
-local function bracketed_paste(text)
-    return ("\027[200~%s\027[201~"):format(text)
-end
-
 ---@param text string
 ---@return boolean
 function Session:dispatch_prompt(text)
@@ -661,20 +698,8 @@ function Session:dispatch_prompt(text)
     if text == "" then
         return false
     end
-    if not self:ensure_started() or not self.job_id then
-        return false
-    end
-
-    local opencode = is_opencode_backend(self)
-    local normalized
-    if opencode then
-        normalized = text:gsub("\r\n", "\n")
-    else
-        normalized = bracketed_paste(text:gsub("\r\n", "\n"):gsub("\r", "\n"))
-    end
-    local ok = pcall(vim.fn.chansend, self.job_id, normalized)
-    if not ok then
-        notify.error(("Failed to send prompt to session at %s"):format(self.cwd))
+    local normalized = normalize_prompt_text(self, text)
+    if not send_terminal_payload(self, normalized, "Failed to send prompt to session at %s") then
         return false
     end
 

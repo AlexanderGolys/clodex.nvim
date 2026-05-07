@@ -50,6 +50,12 @@ local function queue_submit_opts(action, backend)
     end
 end
 
+---@param category Clodex.PromptCategory?
+---@return Clodex.PromptCategory
+local function resolve_prompt_category(category)
+    return Prompt.categories.is_valid(category) and Prompt.categories.get(category).id or "todo"
+end
+
 ---@param app Clodex.App
 ---@param project Clodex.Project
 local function touch_project_activity(app, project)
@@ -166,28 +172,26 @@ end
 ---@param callback fun(project: Clodex.Project, category: Clodex.PromptCategory)
 function PromptActions:pick_target(opts, callback)
     opts = opts or {}
-    local category = Prompt.categories.is_valid(opts.category) and Prompt.categories.get(opts.category).id or "todo"
+    local category = resolve_prompt_category(opts.category)
     local project = self:resolve_project(opts)
     if project then
         callback(project, category)
         return
     end
 
-    if not project then
-        self:pick_project(nil, function(selected_project)
-            if not selected_project then
-                return
-            end
-            callback(selected_project, category)
-        end)
-    end
+    self:pick_project(nil, function(selected_project)
+        if not selected_project then
+            return
+        end
+        callback(selected_project, category)
+    end)
 end
 
 ---@param project Clodex.Project
 ---@param opts? { category?: Clodex.PromptCategory, context?: Clodex.PromptContext.Capture, initial_draft?: table, submit_actions?: Clodex.UiSelect.MultilineAction[], lock_kind?: boolean, mode?: "new"|"edit", active_project_root?: string, on_submit?: fun(spec: Clodex.AppPromptActions.AddTodoSpec, action?: string, project?: Clodex.Project), on_close?: fun(creator: Clodex.PromptCreator) }
 function PromptActions:open_creator(project, opts)
     opts = opts or {}
-    local category = Prompt.categories.is_valid(opts.category) and Prompt.categories.get(opts.category).id or "todo"
+    local category = resolve_prompt_category(opts.category)
     local context = opts.context or PromptContext.capture({ project = project })
     local draft = opts.initial_draft or selection_default_draft(category, context)
     local current_tab = self.app.current_tab and self.app:current_tab() or nil

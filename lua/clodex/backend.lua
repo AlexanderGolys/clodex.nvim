@@ -75,17 +75,14 @@ function Backend.cli_env(config, _target)
         return nil
     end
 
-    Mcp.sync_runtime(config)
-
     if Backend.normalize(config.backend) == "opencode" then
+        Mcp.sync_runtime(config)
         return {
             OPENCODE_CONFIG = Mcp.opencode_config_path(config),
         }
     end
 
-    return {
-        CODEX_HOME = Mcp.codex_home(config),
-    }
+    return nil
 end
 
 return Backend

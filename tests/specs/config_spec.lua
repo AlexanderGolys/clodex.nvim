@@ -137,6 +137,32 @@ describe("clodex.config", function()
             assert.are.equal(0x606060, adjusted.bg)
         end)
 
+        it("uses literal colors as final highlight fallbacks", function()
+            vim.api.nvim_set_hl(0, "ConfigSpecNoColor", {})
+
+            Config.apply_highlights({
+                highlights = {
+                    groups = {
+                        ConfigSpecLiteralFallback = {
+                            bg = {
+                                {
+                                    from = "ConfigSpecNoColor",
+                                    attr = "bg",
+                                },
+                                {
+                                    from = "#20242c",
+                                    adjust = 0.25,
+                                },
+                            },
+                        },
+                    },
+                },
+            })
+
+            local fallback = vim.api.nvim_get_hl(0, { name = "ConfigSpecLiteralFallback", link = false })
+            assert.are.equal(0x585b61, fallback.bg)
+        end)
+
         it("gives notworking prompt titles a distinct red from bug titles", function()
             vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222" })
 

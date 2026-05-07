@@ -1,6 +1,7 @@
 local M = {}
 
 local TERMINAL_FILETYPE = "clodex_terminal"
+local DISABLED_FILETYPE_SECTIONS = { "statusline", "winbar" }
 
 ---@param values string[]|nil
 ---@param value string
@@ -12,6 +13,22 @@ local function append_unique(values, value)
     end
     values[#values + 1] = value
     return true
+end
+
+---@param value string
+---@param disabled table
+---@param sections string[]
+---@return boolean
+local function append_terminal_filetype(value, disabled, sections)
+    local changed = false
+    for _, section in ipairs(sections) do
+        local section_values = vim.deepcopy(disabled[section] or {})
+        if append_unique(section_values, value) then
+            disabled[section] = section_values
+            changed = true
+        end
+    end
+    return changed
 end
 
 ---@return table?
@@ -46,12 +63,8 @@ function M.ensure_terminal_disabled(enabled)
     local config = state.config
     config.options = config.options or {}
     local disabled = vim.deepcopy(config.options.disabled_filetypes or {})
-    disabled.statusline = vim.deepcopy(disabled.statusline or {})
-    disabled.winbar = vim.deepcopy(disabled.winbar or {})
 
-    local changed = false
-    changed = append_unique(disabled.statusline, TERMINAL_FILETYPE) or changed
-    changed = append_unique(disabled.winbar, TERMINAL_FILETYPE) or changed
+    local changed = append_terminal_filetype(TERMINAL_FILETYPE, disabled, DISABLED_FILETYPE_SECTIONS)
     if not changed then
         return false
     end

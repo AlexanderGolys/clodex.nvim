@@ -15,28 +15,34 @@ local Project = {}
 Project.__index = Project
 
 ---@param record Clodex.Project.Record
+---@return string, string
+local function normalize_record(record)
+    assert(type(record.name) == "string" and record.name ~= "", "project name is required")
+    assert(type(record.root) == "string" and record.root ~= "", "project root is required")
+    return vim.trim(record.name), fs.normalize(record.root)
+end
+
+---@param record Clodex.Project.Record
 ---@return Clodex.Project
 function Project.new(record)
-  assert(type(record.name) == "string" and record.name ~= "", "project name is required")
-  assert(type(record.root) == "string" and record.root ~= "", "project root is required")
-
-  local self = setmetatable({}, Project)
-  self.name = vim.trim(record.name)
-  self.root = fs.normalize(record.root)
-  return self
+    local name, root = normalize_record(record)
+    return setmetatable({
+        name = name,
+        root = root,
+    }, Project)
 end
 
 ---@return Clodex.Project.Record
 function Project:to_record()
-  return {
-    name = self.name,
-    root = self.root,
-  }
+    return {
+        name = self.name,
+        root = self.root,
+    }
 end
 
 ---@return string
 function Project:display_name()
-  return self.name
+    return self.name
 end
 
 return Project

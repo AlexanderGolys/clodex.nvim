@@ -262,7 +262,9 @@ function Creator.new(opts)
                 theme_overrides = {
                     normal = "ClodexPromptEditorFooter",
                     normal_nc = "ClodexPromptEditorFooter",
+                    normal_float = "ClodexPromptEditorFooter",
                     end_of_buffer = "ClodexPromptEditorFooter",
+                    winblend = 0,
                 },
             },
         },

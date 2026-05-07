@@ -7,6 +7,7 @@ local UiPanel = require("clodex.ui.panel").Panel
 local ui = require("clodex.ui.select")
 local ui_win = require("clodex.ui.win")
 local notify = require("clodex.util.notify")
+local util = require("clodex.util")
 
 --- Defines the Clodex.QueueWorkspace.QueueRow type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -112,6 +113,7 @@ local PROJECT_WINDOW_MIN_WIDTH = 24
 local QUEUE_WINDOW_MIN_WIDTH = 32
 local QUEUE_WORKSPACE_MIN_CONTENT_WIDTH = PROJECT_WINDOW_MIN_WIDTH + QUEUE_WINDOW_MIN_WIDTH
 local PROJECT_LAYOUT_PADDING = 2
+local FILTER_CLEAR_HELP_TEXT = "Press / to change the filter or Backspace to clear it"
 local PROJECT_INSERT_MODE_KEYS = {
     "i",
     "I",
@@ -158,13 +160,6 @@ local function window_buffer_line_count(win)
         return 0
     end
     return vim.api.nvim_buf_line_count(buf)
-end
-
-local function clamp(index, max_value)
-    if max_value <= 0 then
-        return 1
-    end
-    return math.min(math.max(index, 1), max_value)
 end
 
 ---@return integer
@@ -466,6 +461,18 @@ local function row_index(line, rows)
         end
     end
     return nil
+end
+
+---@param block Clodex.TextBlock
+---@param message string
+local function append_filter_empty_state(block, message)
+    block:append_line(message, {
+        Extmark.inline(0, 0, #message, "ClodexQueueItemMuted"),
+    })
+    block:append_line("")
+    block:append_line(FILTER_CLEAR_HELP_TEXT, {
+        Extmark.inline(0, 0, #FILTER_CLEAR_HELP_TEXT, "ClodexQueueItemMuted"),
+    })
 end
 
 local function resolve_size(total, value, minimum)
@@ -1722,14 +1729,14 @@ function Workspace:update_cursor()
         local row = self.project_item_rows[self.project_index] or 1
         local max_row = window_buffer_line_count(self.project_win)
         if max_row > 0 then
-            pcall(vim.api.nvim_win_set_cursor, self.project_win, { clamp(row, max_row), 0 })
+            pcall(vim.api.nvim_win_set_cursor, self.project_win, { util.clamp(row, 1, max_row), 0 })
         end
     end
     if win_valid(self.queue_win) then
         local selectable = self.queue_item_rows[self.queue_index] or 1
         local max_row = window_buffer_line_count(self.queue_win)
         if max_row > 0 then
-            pcall(vim.api.nvim_win_set_cursor, self.queue_win, { clamp(selectable, max_row), 0 })
+            pcall(vim.api.nvim_win_set_cursor, self.queue_win, { util.clamp(selectable, 1, max_row), 0 })
         end
     end
 end
@@ -1740,7 +1747,7 @@ function Workspace:move_selection(delta)
         if #self.projects == 0 then
             return
         end
-        local next_index = clamp(self.project_index + delta, #self.projects)
+        local next_index = util.clamp(self.project_index + delta, 1, #self.projects)
         if next_index ~= self.project_index then
             self.project_index = next_index
             self.queue_index = 1
@@ -1751,7 +1758,7 @@ function Workspace:move_selection(delta)
         if #self.queue_item_rows == 0 then
             return
         end
-        local next_index = clamp(self.queue_index + delta, #self.queue_item_rows)
+        local next_index = util.clamp(self.queue_index + delta, 1, #self.queue_item_rows)
         if next_index == self.queue_index then
             self:update_cursor()
             return
@@ -1784,7 +1791,7 @@ function Workspace:refresh(initial)
         self.queue_index = (summary and first_queue_item_index(summary, "queued")) or 1
     else
         local preserved_index = project_index_for_root(self.projects, selected_root)
-        self.project_index = preserved_index or clamp(self.project_index, #self.projects)
+        self.project_index = preserved_index or util.clamp(self.project_index, 1, #self.projects)
     end
 
     local row, col, project_width, queue_width, height, footer_height = self:layout()
@@ -1899,13 +1906,7 @@ function Workspace:render_projects()
 
     if block:is_empty() then
         if self.project_search ~= "" then
-            block:append_line("No projects match the current filter", {
-                Extmark.inline(0, 0, #"No projects match the current filter", "ClodexQueueItemMuted"),
-            })
-            block:append_line("")
-            block:append_line("Press / to change the filter or Backspace to clear it", {
-                Extmark.inline(0, 0, #"Press / to change the filter or Backspace to clear it", "ClodexQueueItemMuted"),
-            })
+            append_filter_empty_state(block, "No projects match the current filter")
         else
             block:append_line("No projects configured")
             block:append_line("")
@@ -2063,18 +2064,7 @@ function Workspace:render_queue()
 
         if not rendered_items then
             if self.queue_search ~= "" then
-                block:append_line("No prompts match the current filter", {
-                    Extmark.inline(0, 0, #"No prompts match the current filter", "ClodexQueueItemMuted"),
-                })
-                block:append_line("")
-                block:append_line("Press / to change the filter or Backspace to clear it", {
-                    Extmark.inline(
-                        0,
-                        0,
-                        #"Press / to change the filter or Backspace to clear it",
-                        "ClodexQueueItemMuted"
-                    ),
-                })
+                append_filter_empty_state(block, "No prompts match the current filter")
             else
                 block:append_line("No prompts queued for this project", {
                     Extmark.inline(0, 0, #"No prompts queued for this project", "ClodexQueueItemMuted"),
@@ -2086,7 +2076,7 @@ function Workspace:render_queue()
     if #self.queue_item_rows == 0 then
         self.queue_index = 1
     else
-        self.queue_index = clamp(self.queue_index, #self.queue_item_rows)
+        self.queue_index = util.clamp(self.queue_index, 1, #self.queue_item_rows)
     end
 
     local selected_row = self.queue_item_rows[self.queue_index]
@@ -2620,7 +2610,7 @@ function Workspace:delete_project()
             end
             self.app.project_actions:perform_project_removal(project)
             self.projects = self:filtered_projects()
-            self.project_index = clamp(self.project_index, #self.projects)
+            self.project_index = util.clamp(self.project_index, 1, #self.projects)
             self.queue_index = 1
             self:refresh()
             clear_open_suppression_later(self)

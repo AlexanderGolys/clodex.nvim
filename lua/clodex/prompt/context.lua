@@ -44,9 +44,6 @@ local unpack_values = require("clodex.util").unpack_values
 ---@class Clodex.PromptContext
 local M = {}
 local CONTEXT_NOTE_PREFIX = "[Inserted context from %s]"
-local current_buffer_diags
-local current_line_diags
-local project_diagnostics
 
 local TOKEN_SPECS = {
     {
@@ -91,6 +88,86 @@ local TOKEN_SPECS = {
     },
 }
 
+local current_buffer_diags
+local current_line_diags
+local project_diagnostics
+
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function has_relative_path(context)
+    return context ~= nil and context.relative_path ~= nil and context.relative_path ~= ""
+end
+
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function has_cursor(context)
+    return context ~= nil and context.cursor_row ~= nil
+end
+
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function has_buffer(context)
+    return context ~= nil and context.buf ~= nil
+end
+
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function has_selection(context)
+    return has_relative_path(context) and context.selection_text ~= nil and vim.trim(context.selection_text) ~= ""
+end
+
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function has_visible_buffer_range(context)
+    return has_relative_path(context) and context.visible_start ~= nil and context.visible_end ~= nil
+end
+
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function has_word(context)
+    return has_relative_path(context)
+        and has_cursor(context)
+        and type(context.current_word) == "string"
+        and vim.trim(context.current_word) ~= ""
+end
+
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function has_line_diagnostics(context)
+    return has_buffer(context)
+        and has_cursor(context)
+        and #current_line_diags(context) > 0
+end
+
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function has_buffer_diagnostics(context)
+    return has_buffer(context)
+        and #current_buffer_diags(context) > 0
+end
+
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function has_project_diagnostics(context)
+    return context ~= nil
+        and context.project_root ~= nil
+        and #project_diagnostics(context) > 0
+end
+
+---@type table<string, fun(context: Clodex.PromptContext.Capture?): boolean>
+local token_availability = {
+    ["&file"] = has_relative_path,
+    ["&line"] = function(context)
+        return has_relative_path(context) and has_cursor(context)
+    end,
+    ["&selection"] = has_selection,
+    ["&visible_buff"] = has_visible_buffer_range,
+    ["&word"] = has_word,
+    ["&diagnostic"] = has_line_diagnostics,
+    ["&buff_diagnostics"] = has_buffer_diagnostics,
+    ["&all_diagnostics"] = has_project_diagnostics,
+}
+
 ---@param token string
 ---@return boolean
 local function is_prompt_token(token)
@@ -106,41 +183,11 @@ end
 ---@param context Clodex.PromptContext.Capture
 ---@return boolean
 local function token_available(token, context)
-    if token == "&file" then
-        return context.relative_path ~= nil and context.relative_path ~= ""
+    local is_available = token_availability[token]
+    if is_available == nil then
+        return false
     end
-    if token == "&line" then
-        return context.relative_path ~= nil and context.relative_path ~= "" and context.cursor_row ~= nil
-    end
-    if token == "&selection" then
-        return context.relative_path ~= nil
-            and context.relative_path ~= ""
-            and context.selection_text ~= nil
-            and vim.trim(context.selection_text) ~= ""
-    end
-    if token == "&visible_buff" then
-        return context.relative_path ~= nil
-            and context.relative_path ~= ""
-            and context.visible_start ~= nil
-            and context.visible_end ~= nil
-    end
-    if token == "&word" then
-        return context.relative_path ~= nil
-            and context.relative_path ~= ""
-            and context.cursor_row ~= nil
-            and type(context.current_word) == "string"
-            and vim.trim(context.current_word) ~= ""
-    end
-    if token == "&diagnostic" then
-        return context.buf ~= nil and context.cursor_row ~= nil and #current_line_diags(context) > 0
-    end
-    if token == "&buff_diagnostics" then
-        return context.buf ~= nil and #current_buffer_diags(context) > 0
-    end
-    if token == "&all_diagnostics" then
-        return context.project_root ~= nil and #project_diagnostics(context) > 0
-    end
-    return false
+    return is_available(context)
 end
 
 ---@param token string
@@ -278,13 +325,13 @@ end
 
 ---@param context Clodex.PromptContext.Capture
 ---@return vim.Diagnostic[]
-current_buffer_diags = function(context)
+function current_buffer_diags(context)
     return vim.diagnostic.get(context.buf)
 end
 
 ---@param context Clodex.PromptContext.Capture
 ---@return vim.Diagnostic[]
-current_line_diags = function(context)
+function current_line_diags(context)
     if context.buf == nil or context.cursor_row == nil then
         return {}
     end
@@ -293,7 +340,7 @@ end
 
 ---@param context Clodex.PromptContext.Capture
 ---@return vim.Diagnostic[]
-project_diagnostics = function(context)
+function project_diagnostics(context)
     local diags = {} ---@type vim.Diagnostic[]
     for _, diag in ipairs(vim.diagnostic.get(nil)) do
         local path = diag.bufnr and vim.api.nvim_buf_get_name(diag.bufnr) or ""

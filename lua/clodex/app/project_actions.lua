@@ -22,6 +22,11 @@ local function set_project_icon(self, project, icon)
     details:set_icon(project, icon)
 end
 
+local function touch_project_state(self, project)
+    self.app.project_details_store:touch_activity(project)
+    self.app:refresh_views()
+end
+
 --- Coordinates project-scoped actions for registry entries and tab focus.
 --- Project creation, selection, deletion, and terminal lifecycle are routed through this module.
 ---@class Clodex.AppProjectActions
@@ -70,8 +75,7 @@ local function open_project_file(self, project, path, default_lines)
 
     self:activate_project(project.root)
     edit_if_safe(path)
-    self.app.project_details_store:touch_activity(project)
-    self.app:refresh_views()
+    touch_project_state(self, project)
 end
 
 ---@param project Clodex.Project
@@ -179,8 +183,7 @@ function ProjectActions:pick_project_icon(project, on_done)
         end
         if choice.value == "remove" then
             set_project_icon(self, project, nil)
-            self.app.project_details_store:touch_activity(project)
-            self.app:refresh_views()
+            touch_project_state(self, project)
             notify.notify(("Removed custom icon for %s"):format(project.name))
             if on_done then
                 on_done(nil)
@@ -206,8 +209,7 @@ function ProjectActions:pick_project_icon(project, on_done)
                     return
                 end
                 set_project_icon(self, project, icon)
-                self.app.project_details_store:touch_activity(project)
-                self.app:refresh_views()
+                touch_project_state(self, project)
                 notify.notify(("Updated icon for %s to %s"):format(project.name, icon))
                 if on_done then
                     on_done(icon)
@@ -226,6 +228,13 @@ local function current_or_target_project(self, project)
     end
     local target = self.app:resolve_target(self.app:current_tab())
     return target.kind == "project" and target.project or nil
+end
+
+---@param self Clodex.AppProjectActions
+---@param project? Clodex.Project
+---@return Clodex.Project?
+local function resolve_current_project(self, project)
+    return ensure_project(current_or_target_project(self, project))
 end
 
 ---@param path string
@@ -342,7 +351,7 @@ function ProjectActions:activate_project_session(project)
     end
 
     self:activate_project(project.root)
-    self.app.project_details_store:touch_activity(project)
+    touch_project_state(self, project)
     notify.notify(("Activated Codex session for %s"):format(project.name))
     return session
 end
@@ -374,8 +383,7 @@ function ProjectActions:open_project_workspace_target(project)
         kind = "project",
         project = project,
     })
-    self.app.project_details_store:touch_activity(project)
-    self.app:refresh_views()
+    touch_project_state(self, project)
 end
 
 --- Opens the current project's README in the active window.
@@ -432,11 +440,8 @@ end
 
 ---@param project? Clodex.Project
 function ProjectActions:toggle_project_cheatsheet_preview(project)
-    project = current_or_target_project(self, project)
-    project = ensure_project(project)
-    if not project then
-        return
-    end
+    project = resolve_current_project(self, project)
+    if not project then return end
 
     self.cheatsheet_preview:toggle({
         title = ("%s Cheatsheet"):format(project.name),
@@ -446,11 +451,8 @@ end
 
 ---@param project? Clodex.Project
 function ProjectActions:add_project_cheatsheet_item(project)
-    project = current_or_target_project(self, project)
-    project = ensure_project(project)
-    if not project then
-        return
-    end
+    project = resolve_current_project(self, project)
+    if not project then return end
 
     ui.input({
         prompt = ("Cheatsheet item for %s"):format(project.name),
@@ -464,7 +466,7 @@ function ProjectActions:add_project_cheatsheet_item(project)
         local lines = self.app.project_cheatsheet:read_lines(project)
         lines[#lines + 1] = ("- %s"):format(value)
         fs.write_file(path, table.concat(lines, "\n") .. "\n")
-        self.app.project_details_store:touch_activity(project)
+        touch_project_state(self, project)
         notify.notify(("Added cheatsheet item for %s"):format(project.name))
         if self.cheatsheet_preview:is_open() then
             self.cheatsheet_preview:show({
@@ -472,17 +474,13 @@ function ProjectActions:add_project_cheatsheet_item(project)
                 lines = self.app.project_cheatsheet:read_lines(project),
             })
         end
-        self.app:refresh_views()
     end)
 end
 
 ---@param project? Clodex.Project
 function ProjectActions:open_project_notes_picker(project)
-    project = current_or_target_project(self, project)
-    project = ensure_project(project)
-    if not project then
-        return
-    end
+    project = resolve_current_project(self, project)
+    if not project then return end
 
     local notes = self.app.project_notes:list(project)
     if #notes == 0 then
@@ -511,18 +509,14 @@ function ProjectActions:open_project_notes_picker(project)
         end
         self:activate_project(project.root)
         edit_if_safe(note.path)
-        self.app.project_details_store:touch_activity(project)
-        self.app:refresh_views()
+        touch_project_state(self, project)
     end)
 end
 
 ---@param project? Clodex.Project
 function ProjectActions:create_project_note(project)
-    project = current_or_target_project(self, project)
-    project = ensure_project(project)
-    if not project then
-        return
-    end
+    project = resolve_current_project(self, project)
+    if not project then return end
 
     ui.input({
         prompt = ("New note for %s"):format(project.name),
@@ -534,19 +528,15 @@ function ProjectActions:create_project_note(project)
         local path = self.app.project_notes:create(project, title)
         self:activate_project(project.root)
         edit_if_safe(path)
-        self.app.project_details_store:touch_activity(project)
+        touch_project_state(self, project)
         notify.notify(("Created project note for %s: %s"):format(project.name, title))
-        self.app:refresh_views()
     end)
 end
 
 ---@param project? Clodex.Project
 function ProjectActions:add_project_bookmark(project)
-    project = current_or_target_project(self, project)
-    project = ensure_project(project)
-    if not project then
-        return
-    end
+    project = resolve_current_project(self, project)
+    if not project then return end
 
     local path = fs.normalize(vim.api.nvim_buf_get_name(0))
     if not path_is_bookmarkable(path) or not fs.is_relative_to(path, project.root) then
@@ -577,20 +567,16 @@ function ProjectActions:add_project_bookmark(project)
                 description = description,
             })
             self.app.project_bookmarks:decorate_buffer(project, vim.api.nvim_get_current_buf())
-            self.app.project_details_store:touch_activity(project)
+            touch_project_state(self, project)
             notify.notify(("Added bookmark for %s: %s"):format(project.name, bookmark.title))
-            self.app:refresh_views()
         end)
     end)
 end
 
 ---@param project? Clodex.Project
 function ProjectActions:open_project_bookmarks_picker(project)
-    project = current_or_target_project(self, project)
-    project = ensure_project(project)
-    if not project then
-        return
-    end
+    project = resolve_current_project(self, project)
+    if not project then return end
 
     local bookmarks = self.app.project_bookmarks:list(project)
     if #bookmarks == 0 then
@@ -626,7 +612,7 @@ function ProjectActions:open_project_bookmarks_picker(project)
             return
         end
         self.app.project_bookmarks:decorate_buffer(project, vim.api.nvim_get_current_buf())
-        self.app.project_details_store:touch_activity(project)
+        touch_project_state(self, project)
     end)
 end
 
@@ -690,8 +676,7 @@ function ProjectActions:set_current_project(project)
             return
         end
     end
-    self.app.project_details_store:touch_activity(project)
-    self.app:refresh_views()
+    touch_project_state(self, project)
     notify.notify(("Set current project to %s"):format(project.name))
 end
 
@@ -721,9 +706,10 @@ function ProjectActions:toggle()
     self.app.terminals:show_in_tab(state, session)
 
     if target.kind == "project" then
-        self.app.project_details_store:touch_activity(target.project)
+        touch_project_state(self, target.project)
+    else
+        self.app:refresh_views()
     end
-    self.app:refresh_views()
 end
 
 ---@param value? string|Clodex.Project
@@ -898,7 +884,7 @@ function ProjectActions:remove_project(value)
         return
     end
     if type(value) == "string" and value ~= "" then
-        self:perform_project_removal(nil)
+        notify.warn("Project not found")
         return
     end
 

@@ -265,12 +265,12 @@ function M.open(opts)
   opts.view = nil
   opts.theme = nil
   opts.theme_overrides = nil
-    local resolved = Snacks.win.resolve({
-        position = "float",
-        relative = "editor",
-        show = true,
-        -- Clodex uses this helper for dedicated float views whose buffers should not
-        -- be "fixed" by Snacks buffer-swapping autocommands.
+  local resolved = Snacks.win.resolve({
+    position = "float",
+    relative = "editor",
+    show = true,
+    -- Clodex uses this helper for dedicated float views whose buffers should not
+    -- be "fixed" by Snacks buffer-swapping autocommands.
     fixbuf = false,
   }, style, opts)
   resolved = normalize_zindex(resolved)

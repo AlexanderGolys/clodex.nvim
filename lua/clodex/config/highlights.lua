@@ -1,11 +1,15 @@
+-- @@@clodex.hl
+
+---@alias Clodex.Config.HighlightColorSource string|integer
+
 --- Highlight color source definition that can map through existing highlight groups.
 ---@class Clodex.Config.HighlightColorRef
----@field from string|string[]
+---@field from Clodex.Config.HighlightColorSource|Clodex.Config.HighlightColorSource[]
 ---@field attr? "fg"|"bg"|"sp"
 ---@field adjust? number
 
 --- Accepted color type for a highlight field.
----@alias Clodex.Config.HighlightColor string|integer|Clodex.Config.HighlightColorRef
+---@alias Clodex.Config.HighlightColor string|integer|Clodex.Config.HighlightColorRef|Clodex.Config.HighlightColor[]
 
 --- Complete description of one Neovim highlight group.
 ---@class Clodex.Config.HighlightSpec
@@ -32,18 +36,43 @@
 
 --- Default highlight definitions bundled with clodex.
 ---@type Clodex.Config.Highlights
+
+
+local HLGroups = {
+    bug = { "@float", "DiagnosticError" },
+    float_win = { "NormalFloat", "Pmenu", "Normal" },
+    not_working = {"DiagnosticError", "@error", "@variable.builtin" },
+    improvement = { "@constructor", "Function", "Identifier" },
+    fix = { "@symbol", "Function", "Identifier" },
+}
+
+
+local function float_win_bg(adjust)
+    if adjust ~= nil then
+        return {
+            { from = HLGroups.float_win, attr = "bg", adjust = adjust },
+            { from = "#101010", adjust = adjust },
+        }
+    end
+    return {
+        { from = HLGroups.float_win, attr = "bg" },
+        "#101010",
+    }
+end
+
+
 local M = {
   groups = {
 -- &&&ClodexQueueNormal&&&Lorem Ipsum&&&
     ClodexQueueNormal = {
       fg = { from = { "NormalFloat", "Normal" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       blend = 0,
     },
 -- &&&ClodexQueueFocusActive&&&Lorem Ipsum&&&
 ClodexQueueFocusActive = {
       fg = { from = { "NormalFloat", "Normal" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
+      bg = float_win_bg(-0.28),
       blend = 0,
     },
 -- &&&ClodexQueueFocusInactive&&&Lorem Ipsum&&&
@@ -81,29 +110,29 @@ ClodexPromptTodoKindName = {
     },
 -- &&&ClodexPromptBugTitle&&&Lorem Ipsum&&&
 ClodexPromptBugTitle = {
-      fg = { from = "DiagnosticError" },
+      fg = { from = HLGroups.bug },
     },
 -- &&&ClodexPromptBugKindName&&&Lorem Ipsum&&&
 ClodexPromptBugKindName = {
-      fg = { from = "DiagnosticError" },
+      fg = { from = HLGroups.bug },
       bold = true,
     },
 -- &&&ClodexPromptNotWorkingTitle&&&Lorem Ipsum&&&
 ClodexPromptNotWorkingTitle = {
-      fg = { from = "DiagnosticError", adjust = 0.18 },
+      fg = { from = HLGroups.not_working },
     },
 -- &&&ClodexPromptNotWorkingKindName&&&Lorem Ipsum&&&
 ClodexPromptNotWorkingKindName = {
-      fg = { from = "DiagnosticError", adjust = 0.18 },
+      fg = { from = HLGroups.not_working },
       bold = true,
     },
 -- &&&ClodexPromptFixTitle&&&Lorem Ipsum&&&
 ClodexPromptFixTitle = {
-      fg = { from = { "Normal", "NormalFloat" } },
+      fg = { from = HLGroups.fix },
     },
 -- &&&ClodexPromptFixKindName&&&Lorem Ipsum&&&
 ClodexPromptFixKindName = {
-      fg = { from = { "Normal", "NormalFloat" } },
+      fg = { from = HLGroups.fix },
       bold = true,
     },
 -- &&&ClodexPromptFreeformTitle&&&Lorem Ipsum&&&
@@ -195,66 +224,66 @@ ClodexPromptExplainKindName = {
 -- &&&ClodexPromptImprovementTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptImprovementTitleBorder = {
       fg = { from = { "@constructor", "Function", "Identifier" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptBugTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptBugTitleBorder = {
-      fg = { from = "DiagnosticError" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = { from = HLGroups.bug },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptNotWorkingTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptNotWorkingTitleBorder = {
-      fg = { from = "DiagnosticError", adjust = 0.18 },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = { from = HLGroups.not_working },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptFixTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptFixTitleBorder = {
-      fg = { from = { "Normal", "NormalFloat" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = { from = HLGroups.fix },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptFeatureTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptFeatureTitleBorder = {
       fg = { from = "Function" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptRestructureTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptRestructureTitleBorder = {
       fg = { from = "String" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptVisionTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptVisionTitleBorder = {
       fg = { from = "PreProc" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptCleanupTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptCleanupTitleBorder = {
       fg = { from = "Comment" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptDocsTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptDocsTitleBorder = {
       fg = { from = "Special" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptExplainTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptExplainTitleBorder = {
       fg = { from = "Type" },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptImprovementTitleActive&&&Lorem Ipsum&&&
 ClodexPromptImprovementTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = float_win_bg(),
       bg = { from = { "@constructor", "Function", "Identifier" }, attr = "fg" },
       bold = true,
     },
@@ -264,20 +293,22 @@ ClodexPromptTodoTitleActive = {
     },
 -- &&&ClodexPromptBugTitleActive&&&Lorem Ipsum&&&
 ClodexPromptBugTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "DiagnosticError", attr = "fg" },
+      fg = float_win_bg(),
+      bg = { from = HLGroups.bug, attr = "fg" },
       bold = true,
     },
+
 -- &&&ClodexPromptNotWorkingTitleActive&&&Lorem Ipsum&&&
 ClodexPromptNotWorkingTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = "DiagnosticError", attr = "fg", adjust = 0.18 },
+      fg = float_win_bg(),
+      bg = { from = HLGroups.not_working, attr = "fg" },
       bold = true,
     },
+
 -- &&&ClodexPromptFixTitleActive&&&Lorem Ipsum&&&
 ClodexPromptFixTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
-      bg = { from = { "Normal", "NormalFloat" }, attr = "fg" },
+      fg = float_win_bg(),
+      bg = { from = HLGroups.fix, attr = "fg" },
       bold = true,
     },
 -- &&&ClodexPromptFreeformTitleActive&&&Lorem Ipsum&&&
@@ -286,13 +317,13 @@ ClodexPromptFreeformTitleActive = {
     },
 -- &&&ClodexPromptFeatureTitleActive&&&Lorem Ipsum&&&
 ClodexPromptFeatureTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = float_win_bg(),
       bg = { from = "Function", attr = "fg" },
       bold = true,
     },
 -- &&&ClodexPromptRestructureTitleActive&&&Lorem Ipsum&&&
 ClodexPromptRestructureTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = float_win_bg(),
       bg = { from = "String", attr = "fg" },
       bold = true,
     },
@@ -302,7 +333,7 @@ ClodexPromptRefactorTitleActive = {
     },
 -- &&&ClodexPromptVisionTitleActive&&&Lorem Ipsum&&&
 ClodexPromptVisionTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = float_win_bg(),
       bg = { from = "PreProc", attr = "fg" },
       bold = true,
     },
@@ -312,31 +343,31 @@ ClodexPromptIdeaTitleActive = {
     },
 -- &&&ClodexPromptCleanupTitleActive&&&Lorem Ipsum&&&
 ClodexPromptCleanupTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = float_win_bg(),
       bg = { from = "Comment", attr = "fg" },
       bold = true,
     },
 -- &&&ClodexPromptDocsTitleActive&&&Lorem Ipsum&&&
 ClodexPromptDocsTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = float_win_bg(),
       bg = { from = "Special", attr = "fg" },
       bold = true,
     },
 -- &&&ClodexPromptExplainTitleActive&&&Lorem Ipsum&&&
 ClodexPromptExplainTitleActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = float_win_bg(),
       bg = { from = "Type", attr = "fg" },
       bold = true,
     },
 -- &&&ClodexPromptSourceTab&&&Lorem Ipsum&&&
 ClodexPromptSourceTab = {
       fg = { from = { "Comment", "Normal" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptSourceTabActive&&&Lorem Ipsum&&&
 ClodexPromptSourceTabActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      fg = float_win_bg(),
       bg = { from = { "Comment", "Normal" }, attr = "fg" },
       bold = true,
     },
@@ -346,7 +377,7 @@ ClodexPromptPreviewText = {
     },
 -- &&&ClodexPromptFixPreviewText&&&Lorem Ipsum&&&
 ClodexPromptFixPreviewText = {
-      fg = { from = { "Comment", "LineNr", "Normal" } },
+      fg = { from = HLGroups.fix },
     },
 -- &&&ClodexPromptFreeformPreviewText&&&Lorem Ipsum&&&
 ClodexPromptFreeformPreviewText = {
@@ -409,18 +440,18 @@ ClodexProjectRemoteDetached = {
     },
 -- &&&ClodexQueueSelectionActive&&&Lorem Ipsum&&&
 ClodexQueueSelectionActive = {
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = 0.10 },
+      bg = float_win_bg(0.10),
       blend = 0,
     },
 -- &&&ClodexQueueSelectionInactive&&&Lorem Ipsum&&&
 ClodexQueueSelectionInactive = {
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = 0.04 },
+      bg = float_win_bg(0.04),
       blend = 0,
     },
 -- &&&ClodexQueueCursorActive&&&Lorem Ipsum&&&
 ClodexQueueCursorActive = {
-      fg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
+      fg = float_win_bg(-0.28),
+      bg = float_win_bg(-0.28),
       blend = 0,
     },
 -- &&&ClodexQueueCursorInactive&&&Lorem Ipsum&&&
@@ -432,7 +463,7 @@ ClodexQueueCursorInactive = {
 -- &&&ClodexQueueActiveBorder&&&Lorem Ipsum&&&
 ClodexQueueActiveBorder = {
       fg = { from = { "Identifier", "FloatBorder" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg", adjust = -0.28 },
+      bg = float_win_bg(-0.28),
       bold = true,
     },
 -- &&&ClodexQueueInactiveBorder&&&Lorem Ipsum&&&
@@ -443,13 +474,13 @@ ClodexQueueInactiveBorder = {
 -- &&&ClodexPromptEditorNormal&&&Lorem Ipsum&&&
 ClodexPromptEditorNormal = {
       fg = { from = { "NormalFloat", "Normal" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       blend = 0,
     },
 -- &&&ClodexPromptEditorBorder&&&Lorem Ipsum&&&
 ClodexPromptEditorBorder = {
       fg = { from = { "Identifier", "FloatBorder" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexPromptEditorTitle&&&Lorem Ipsum&&&
@@ -464,7 +495,7 @@ ClodexPromptEditorSubtitle = {
 -- &&&ClodexPromptEditorFooter&&&Lorem Ipsum&&&
 ClodexPromptEditorFooter = {
       fg = { from = { "Comment", "LineNr" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
     },
 -- &&&ClodexPromptEditorHint&&&Lorem Ipsum&&&
 ClodexPromptEditorHint = {
@@ -495,7 +526,7 @@ ClodexTerminalStatuslineActive = {
 -- &&&ClodexConfirmButton&&&Lorem Ipsum&&&
 ClodexConfirmButton = {
       fg = { from = { "Comment", "Normal" } },
-      bg = { from = { "NormalFloat", "Pmenu", "Normal" }, attr = "bg" },
+      bg = float_win_bg(),
       bold = true,
     },
 -- &&&ClodexConfirmButtonActive&&&Lorem Ipsum&&&
@@ -607,7 +638,7 @@ ClodexStateCommandHint = {
     },
 -- &&&ClodexCommitId&&&Lorem Ipsum&&&
 ClodexCommitId = {
-      fg = { from = "DiagnosticError" },
+      fg = { from = "@variable.builtin" },
       bold = true,
     },
   },

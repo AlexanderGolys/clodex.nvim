@@ -1931,7 +1931,9 @@ describe("clodex.ui.prompt_creator", function()
 
         assert.are.equal("none", creator.project_bg_win.opts.border)
         assert.are.equal("ClodexPromptEditorFooter", creator.project_bg_win.opts.theme_overrides.normal)
+        assert.are.equal("ClodexPromptEditorFooter", creator.project_bg_win.opts.theme_overrides.normal_float)
         assert.are.equal("ClodexPromptEditorFooter", creator.project_bg_win.opts.theme_overrides.end_of_buffer)
+        assert.are.equal(0, creator.project_bg_win.opts.theme_overrides.winblend)
         assert.are.equal(creator:project_background_width(), background_config.width)
         assert.are.equal(creator:project_background_height(), background_config.height)
         assert.are.equal(

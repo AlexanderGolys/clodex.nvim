@@ -100,7 +100,6 @@ end
 ---@return Clodex.ProjectLanguageStat[]
 function LanguageProfile:dominant_languages(language_totals)
     local selected_file_count = 0
-    local selected_totals = language_totals
     for _, count in pairs(language_totals) do
         selected_file_count = selected_file_count + count
     end
@@ -109,7 +108,7 @@ function LanguageProfile:dominant_languages(language_totals)
     end
 
     local languages = {} ---@type Clodex.ProjectLanguageStat[]
-    for name, count in pairs(selected_totals) do
+    for name, count in pairs(language_totals) do
         languages[#languages + 1] = {
             name = name,
             files = count,

@@ -1,7 +1,6 @@
 local HighlightConfig = require("clodex.config.highlights")
 local Backend = require("clodex.backend")
 local fs = require("clodex.util.fs")
-
 --- Persistent plugin settings used to resolve workspace and project registry files.
 ---@class Clodex.Config.Storage
 ---@field projects_file string
@@ -270,7 +269,7 @@ end
 
 --- Loads a named highlight safely from Neovim and returns an empty spec on failure.
 ---@param name string
----@return vim.api.keyset.highlight
+---@return table
 local function get_hl(name)
     if type(name) ~= "string" or name == "" then
         return {}
@@ -284,6 +283,21 @@ local COLOR_CHANNEL_MAX = 255
 local RGB_SHIFT_RED = 16
 local RGB_SHIFT_GREEN = 8
 
+local HIGHLIGHT_COPY_KEYS = {
+    "blend",
+    "bold",
+    "italic",
+    "underline",
+    "undercurl",
+    "reverse",
+    "strikethrough",
+    "default",
+    "force",
+    "ctermfg",
+    "ctermbg",
+    "cterm",
+}
+
 ---@param value string|integer?
 ---@return integer?
 local function color_number(value)
@@ -294,6 +308,18 @@ local function color_number(value)
         return nil
     end
     return tonumber(value:sub(2), 16)
+end
+
+---@param value any
+---@return string|integer?
+local function color_literal(value)
+    if type(value) == "number" then
+        return value
+    end
+    if type(value) == "string" and color_number(value) then
+        return value
+    end
+    return nil
 end
 
 ---@param channel integer
@@ -339,14 +365,43 @@ local function resolve_color(value, attr)
         return nil
     end
 
+    if value.from == nil then
+        for _, candidate in ipairs(value) do
+            local resolved = resolve_color(candidate, attr)
+            if resolved ~= nil then
+                return resolved
+            end
+        end
+        return nil
+    end
+
     local source_attr = value.attr or attr
-    local sources = type(value.from) == "table" and value.from or { value.from }
-    for _, source in ipairs(sources) do
-        local resolved = get_hl(source)[source_attr]
+    ---@param source any
+    ---@return string|integer?
+    local function resolve_source(source)
+        local literal = color_literal(source)
+        if literal ~= nil then
+            return adjusted_color(literal, value.adjust)
+        end
+
+        local resolved = type(source) == "string" and get_hl(source)[source_attr] or nil
         if resolved ~= nil then
             return adjusted_color(resolved, value.adjust)
         end
     end
+
+    if vim.islist(value.from) then
+        local sources = value.from --[[@as (string|integer)[] ]]
+        for _, source in ipairs(sources) do
+            local resolved = resolve_source(source)
+            if resolved ~= nil then
+                return resolved
+            end
+        end
+        return nil
+    end
+
+    return resolve_source(value.from)
 end
 
 --- Normalizes one configured highlight description into `vim.api.nvim_set_hl` shape.
@@ -366,20 +421,7 @@ local function resolve_highlight_spec(spec)
     resolved.bg = resolve_color(spec.bg, "bg")
     resolved.sp = resolve_color(spec.sp, "sp")
 
-    for _, key in ipairs({
-        "blend",
-        "bold",
-        "italic",
-        "underline",
-        "undercurl",
-        "reverse",
-        "strikethrough",
-        "default",
-        "force",
-        "ctermfg",
-        "ctermbg",
-        "cterm",
-    }) do
+    for _, key in ipairs(HIGHLIGHT_COPY_KEYS) do
         if spec[key] ~= nil then
             resolved[key] = spec[key]
         end
@@ -389,22 +431,42 @@ local function resolve_highlight_spec(spec)
 end
 
 --- Merges nested dictionaries and scalar values while preserving explicit overrides.
----@generic T
----@param ... T
----@return T
+---@param ... any
+---@return any
 function Config.merge(...)
-    local ret = select(1, ...)
-    for index = 2, select("#", ...) do
+    local merged
+    local total = select("#", ...)
+
+    local function clone(value)
+        if type(value) ~= "table" then
+            return value
+        end
+        if not is_dict(value) then
+            return vim.deepcopy(value)
+        end
+        local copied = {} ---@type table
+        for key, nested in pairs(value) do
+            copied[key] = clone(nested)
+        end
+        return copied
+    end
+
+    for index = 1, total do
         local value = select(index, ...)
-        if is_dict(ret) and is_dict(value) then
-            for key, nested in pairs(value) do
-                ret[key] = Config.merge(ret[key], nested)
+        if value ~= nil then
+            if merged == nil then
+                merged = clone(value)
+            elseif is_dict(merged) and is_dict(value) then
+                for key, nested in pairs(value) do
+                    merged[key] = Config.merge(merged[key], nested)
+                end
+            else
+                merged = clone(value)
             end
-        elseif value ~= nil then
-            ret = value
         end
     end
-    return ret
+
+    return merged
 end
 
 ---@return Clodex.Config
@@ -414,7 +476,7 @@ function Config.new()
     return self
 end
 
---- Applies setup values, maps legacy highlight keys, and caches active values.
+--- Applies setup values and normalizes supported defaults.
 ---@param opts? table
 ---@return Clodex.Config.Values
 function Config:setup(opts)

@@ -62,6 +62,11 @@ local function mode(id, label, layout, opts)
     }
 end
 
+---@return Clodex.PromptCategoryModeDef
+local function custom_mode()
+    return mode("custom", "Custom", "composer")
+end
+
 ---@type Clodex.PromptCategoryDef[]
 local kinds = {
     {
@@ -72,7 +77,7 @@ local kinds = {
         aliases = { "improvement" },
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
         },
     },
     {
@@ -83,7 +88,7 @@ local kinds = {
         title_prefix = "Investigate runtime error",
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
             mode("clipboard_error", "Clipboard Error", "clipboard_preview", {
                 default_draft = function(_, category)
                     return {
@@ -121,7 +126,7 @@ local kinds = {
         aliases = { "fix", "adjustment" },
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
         },
     },
     {
@@ -131,7 +136,7 @@ local kinds = {
         default_title = "Add a new feature",
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
         },
     },
     {
@@ -142,7 +147,7 @@ local kinds = {
         aliases = { "restructure" },
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
         },
     },
     {
@@ -154,7 +159,7 @@ local kinds = {
         aliases = { "vision" },
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
         },
     },
     {
@@ -165,7 +170,7 @@ local kinds = {
         aliases = { "clean-up", "clean_up" },
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
         },
     },
     {
@@ -176,7 +181,7 @@ local kinds = {
         aliases = { "missing-docs", "missing_docs" },
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
         },
     },
     {
@@ -188,7 +193,7 @@ local kinds = {
         aliases = { "explain" },
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
         },
     },
     {
@@ -198,7 +203,7 @@ local kinds = {
         default_title = "Fix a previously implemented feature that is not working",
         default_mode = "custom",
         modes = {
-            mode("custom", "Custom", "composer"),
+            custom_mode(),
         },
     },
 }
@@ -245,7 +250,7 @@ end
 function M.modes(id)
     local category = M.get(id)
     local modes = category.modes or {
-        mode("custom", "Custom", "composer"),
+        custom_mode(),
     }
     return vim.deepcopy(modes)
 end
