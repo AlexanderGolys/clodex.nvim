@@ -149,7 +149,7 @@ struct CloseTaskArgs {
 }
 
 fn default_continue_next() -> bool {
-    true
+    false
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -437,7 +437,7 @@ fn tool_definitions() -> Vec<Value> {
         }),
         json!({
             "name": "close_task",
-            "description": "Close the active Clodex task and automatically return the next one when available.",
+            "description": "Close the active Clodex task without claiming the next queued item by default.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -447,7 +447,7 @@ fn tool_definitions() -> Vec<Value> {
                     "commit_id": { "type": "string" },
                     "continue_next": {
                         "type": "boolean",
-                        "description": "When false, close the active task without claiming the next queued task."
+                        "description": "When true, immediately claim and return the next queued task. Defaults to false so interactive clients can reset the session before continuing."
                     }
                 },
                 "required": ["project_root", "success", "comment"],
@@ -1681,6 +1681,19 @@ mod tests {
         let queued = load_queue(&root, "queued").expect("queued");
         assert_eq!(queued.len(), 1);
         assert_eq!(queued[0].id, "item-2");
+    }
+
+    #[test]
+    fn close_task_omits_continue_next_by_default() {
+        let args: CloseTaskArgs = parse_args(json!({
+            "project_root": "/tmp/project",
+            "success": true,
+            "comment": "finished",
+            "commit_id": "abc123"
+        }))
+        .expect("parse close args");
+
+        assert!(!args.continue_next);
     }
 
     #[test]

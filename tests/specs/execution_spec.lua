@@ -65,7 +65,7 @@ describe("clodex.workspace.execution", function()
         file:close()
 
         assert.are_not.equal("stale", content)
-        assert.matches("continue_next = false", content)
+        assert.matches("omit `continue_next` or set it to `false`", content)
 
         fs.remove(root)
     end)

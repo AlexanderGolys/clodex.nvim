@@ -26,10 +26,10 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
 7. For the current commit-based workflow, a successful close usually requires a focused git commit and a closure payload with `success`, `comment`, and `commit_id`.
    - Exception: `idea` prompts are planning-only. They should generate follow-up prompts or plans without changing code and should close with an empty `commit_id`.
 8. Call `close_task` after the work is finished:
-   - on success, use `success = true`, `continue_next = false`, a short completion comment, and the new `commit_id`
-   - on failure or blocker, use `success = false`, `continue_next = false`, and provide the blocker note in `comment`
+   - on success, use `success = true`, a short completion comment, and the new `commit_id`; omit `continue_next` or set it to `false`
+   - on failure or blocker, use `success = false` and provide the blocker note in `comment`; omit `continue_next` or set it to `false`
 9. Stop after the close-only response. Clodex.nvim will reset the interactive backend session with `/new` and launch the next `$prompt-nvim-clodex` turn when queued work remains.
-10. Compatibility note: older callers that omit `continue_next = false` may receive another task from `close_task`; only continue in the same loop when the tool response explicitly returns `status = task`.
+10. Compatibility note: callers that explicitly set `continue_next = true` may receive another task from `close_task`; only continue in the same loop when the tool response explicitly returns `status = task`.
 11. When a conversation in planning mode should produce a new follow-up prompt instead of immediate code changes, prefer the `create_prompt` MCP tool to add the new prompt directly to the project queue.
 12. Do not rely on internal queue-mutating helpers as part of the public workflow; the MCP loop itself owns task claiming, requeueing, completion, and exhaustion.
 13. Do not edit queue JSON files directly. Queue storage is MCP-managed local data and may live outside the project root.
