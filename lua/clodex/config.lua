@@ -62,6 +62,7 @@ local fs = require("clodex.util.fs")
 ---@field skills_dir? string # Project-local skill root relative to the project root unless absolute.
 ---@field skill_name string
 ---@field git_workflow Clodex.Config.GitWorkflowMode
+---@field review_after_completion boolean
 
 --- Session integration toggles for tab-scoped Clodex state.
 ---@class Clodex.Config.Session
@@ -199,6 +200,7 @@ local function defaults()
             skills_dir = fs.join(".codex", "skills"),
             skill_name = "prompt-nvim-clodex",
             git_workflow = "commit",
+            review_after_completion = false,
         },
         session = {
             persist_current_project = true,

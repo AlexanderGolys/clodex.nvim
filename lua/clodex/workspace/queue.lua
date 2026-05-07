@@ -24,6 +24,7 @@ local util = require("clodex.util")
 ---@field history_commit? string
 ---@field history_completed_at? string
 ---@field history_session? { backend: Clodex.Backend.Name, id: string }
+---@field review_requested_at? string
 
 --- Human-friendly queue summary assembled for UI and project-level diagnostics.
 ---@class Clodex.ProjectQueueSummary
@@ -394,7 +395,7 @@ function Queue:find_item(project, item_id, expected_queue)
 end
 
 ---@param project Clodex.Project
----@param spec { title: string, details?: string, queue?: Clodex.QueueName, kind?: Clodex.PromptCategory, image_path?: string, execution_instructions?: string, start_mode?: "plan", completion_target?: Clodex.QueueName }
+---@param spec { title: string, details?: string, queue?: Clodex.QueueName, kind?: Clodex.PromptCategory, image_path?: string, execution_instructions?: string, start_mode?: "plan", completion_target?: Clodex.QueueName, front?: boolean }
 ---@return Clodex.QueueItem
 function Queue:add_todo(project, spec)
     local queue_name = KNOWN_QUEUES[spec.queue] and spec.queue or "planned"
@@ -416,7 +417,11 @@ function Queue:add_todo(project, spec)
     })
 
     local items = self:queue(project, queue_name)
-    insert_queue_item(items, queue_name, item)
+    if queue_name == "queued" and spec.front then
+        table.insert(items, 1, item)
+    else
+        insert_queue_item(items, queue_name, item)
+    end
     save_queue_file(self.root_dir, project.root, queue_name, items)
     return item
 end
@@ -492,6 +497,7 @@ end
 ---  image_path?: string|false,
 ---  execution_instructions?: string|false,
 ---  completion_target?: Clodex.QueueName|false,
+---  review_requested_at?: string|false,
 ---}
 ---@return Clodex.QueueItem?
 function Queue:update_item(project, item_id, attrs)
@@ -543,6 +549,9 @@ function Queue:update_item(project, item_id, attrs)
                 end
                 if attrs.completion_target ~= nil then
                     item.completion_target = attrs.completion_target ~= false and attrs.completion_target or nil
+                end
+                if attrs.review_requested_at ~= nil then
+                    item.review_requested_at = attrs.review_requested_at ~= false and attrs.review_requested_at or nil
                 end
                 sanitize_history_metadata(item)
                 item.updated_at = iso_utc_now()

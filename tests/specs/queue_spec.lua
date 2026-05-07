@@ -219,6 +219,25 @@ describe("clodex.workspace.queue", function()
         assert.are.equal(second.id, queued[2].id)
     end)
 
+    it("can place urgent queued items before existing queued work", function()
+        local first = queue:add_todo(project, {
+            title = "first queued",
+            queue = "queued",
+            kind = "todo",
+        })
+        local review = queue:add_todo(project, {
+            title = "review first",
+            queue = "queued",
+            kind = "ask",
+            front = true,
+        })
+
+        local queued = queue:queue(project, "queued")
+
+        assert.are.equal(review.id, queued[1].id)
+        assert.are.equal(first.id, queued[2].id)
+    end)
+
     it("marks idea prompts as non-commit work", function()
         local Prompt = require("clodex.prompt")
 

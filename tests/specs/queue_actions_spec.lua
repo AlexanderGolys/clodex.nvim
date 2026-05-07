@@ -326,6 +326,91 @@ describe("clodex.app.queue_actions", function()
         assert.are.equal(0, send_count)
     end)
 
+    it("queues a review request before continuing after a completed prompt when enabled", function()
+        local original_defer_fn = vim.defer_fn
+        vim.defer_fn = function(fn)
+            fn()
+            return 0
+        end
+
+        local started_item_id
+        local sent = {}
+        local session = {
+            active_prompt_title = "Completed prompt",
+            active_prompt_kind = "todo",
+            active_prompt_authoritative = true,
+            set_active_prompt_title = function(self, title, kind, opts)
+                self.active_prompt_title = title
+                self.active_prompt_kind = kind
+                self.active_prompt_authoritative = title and opts and opts.authoritative == true or nil
+            end,
+            send = function(_, text)
+                sent[#sent + 1] = text
+                return true
+            end,
+        }
+        actions.app.config = {
+            get = function()
+                return {
+                    storage = {
+                        workspaces_dir = workspace_root,
+                    },
+                    prompt_execution = {
+                        review_after_completion = true,
+                    },
+                }
+            end,
+        }
+        actions.app.registry = {
+            list = function()
+                return { project }
+            end,
+        }
+        actions.app.terminals = {
+            project_session = function(_, root)
+                if root == project.root then
+                    return session
+                end
+            end,
+        }
+        actions.start_queued_item = function(_, _, item_id)
+            started_item_id = item_id
+            return true
+        end
+
+        local completed = queue:add_todo(project, {
+            title = "Implement feature",
+            details = "Make the app better",
+            queue = "queued",
+            kind = "todo",
+        })
+        queue:advance(project, completed.id)
+        queue:update_implemented_item(project, completed.id, {
+            summary = "Implemented the feature",
+            commit = "abc123",
+            completed_at = "2026-01-01T00:00:00Z",
+        })
+        queue:add_todo(project, {
+            title = "Existing queued work",
+            queue = "queued",
+            kind = "todo",
+        })
+
+        assert.is_true(actions:poll_active_prompt_titles())
+        vim.defer_fn = original_defer_fn
+
+        local implemented = queue:queue(project, "implemented")[1]
+        local queued = queue:queue(project, "queued")
+
+        assert.is_not_nil(implemented.review_requested_at)
+        assert.are.equal("Review changes for Implement feature", queued[1].title)
+        assert.are.equal("ask", queued[1].kind)
+        assert.are.equal("history", queued[1].completion_target)
+        assert.is_truthy(queued[1].details:find("abc123", 1, true))
+        assert.are.equal(queued[1].id, started_item_id)
+        assert.are.same({ "/new" }, sent)
+    end)
+
     it("moves an implemented item back to queued when the source queue is specified", function()
         local item = queue:add_todo(project, {
             title = "fix prompt flow",

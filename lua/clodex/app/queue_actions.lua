@@ -196,6 +196,89 @@ local function prepare_session_start_mode(session, item)
     return session:send("/plan")
 end
 
+---@return string
+local function iso_utc_now()
+    local timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    return type(timestamp) == "string" and timestamp or ""
+end
+
+---@param actions Clodex.AppQueueActions
+---@return boolean
+local function review_after_completion_enabled(actions)
+    local config = actions.app.config and actions.app.config.get and actions.app.config:get() or nil
+    if not config or not config.prompt_execution then
+        return false
+    end
+    return config.prompt_execution.review_after_completion == true
+end
+
+---@param item Clodex.QueueItem
+---@return boolean
+local function item_has_commits(item)
+    return type(item.history_commits) == "table" and #item.history_commits > 0
+end
+
+---@param item Clodex.QueueItem
+---@return string
+local function review_prompt_details(item)
+    local sections = {
+        "Review the changes made for the completed queued task. Focus on correctness, regressions, missing tests, documentation drift, and whether the implementation matches the original request.",
+    }
+
+    local original = { "## Completed Prompt" }
+    if vim.trim(item.title or "") ~= "" then
+        original[#original + 1] = ("**Title:** %s"):format(item.title)
+    end
+    if vim.trim(item.details or "") ~= "" then
+        original[#original + 1] = item.details
+    end
+    sections[#sections + 1] = table.concat(original, "\n\n")
+
+    if vim.trim(item.history_summary or "") ~= "" then
+        sections[#sections + 1] = "## Completion Summary\n\n" .. item.history_summary
+    end
+
+    if item_has_commits(item) then
+        local commits = {}
+        for _, commit in ipairs(item.history_commits) do
+            commits[#commits + 1] = ("- `%s`"):format(commit)
+        end
+        sections[#sections + 1] = "## Commits To Review\n\n" .. table.concat(commits, "\n")
+    end
+
+    sections[#sections + 1] =
+        "## Review Instructions\n\nUse a code-review stance. If the implementation is sound, close this review task with the reviewed commit id. If you find a problem, make the minimal fix or create a focused follow-up prompt."
+
+    return table.concat(sections, "\n\n")
+end
+
+---@param actions Clodex.AppQueueActions
+---@param project Clodex.Project
+---@return Clodex.QueueItem?
+local function create_completion_review_prompt(actions, project)
+    if not review_after_completion_enabled(actions) then
+        return nil
+    end
+
+    local item = actions.app.queue:queues(project).implemented[1]
+    if not item or item.review_requested_at or not item_has_commits(item) then
+        return nil
+    end
+
+    local review = actions.app.queue:add_todo(project, {
+        title = ("Review changes for %s"):format(item.title),
+        details = review_prompt_details(item),
+        kind = "ask",
+        queue = "queued",
+        completion_target = "history",
+        front = true,
+    })
+    actions.app.queue:update_item(project, item.id, {
+        review_requested_at = iso_utc_now(),
+    })
+    return review
+end
+
 ---@param app Clodex.AppQueueActions.Host
 ---@return Clodex.AppQueueActions
 function QueueActions.new(app)
@@ -213,6 +296,8 @@ local function continue_after_closed_task(actions, project, session)
     if actions.continuing_projects[project.root] then
         return
     end
+
+    create_completion_review_prompt(actions, project)
     local queued = actions.app.queue:queues(project).queued
     local next_item = queued[1]
     if not next_item then
