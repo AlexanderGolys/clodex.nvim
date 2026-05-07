@@ -22,6 +22,7 @@ local util = require("clodex.util")
 ---@field history_commits string[]
 ---@field history_commit? string
 ---@field history_completed_at? string
+---@field history_session? { backend: Clodex.Backend.Name, id: string }
 
 --- Human-friendly queue summary assembled for UI and project-level diagnostics.
 ---@class Clodex.ProjectQueueSummary
@@ -157,19 +158,33 @@ local function sanitize_history_metadata(item)
 
     if type(item.history_commits) ~= "table" then
         item.history_commits = {}
-        return
-    end
-
-    local commits = {} ---@type string[]
-    for _, commit in ipairs(item.history_commits) do
-        if type(commit) == "string" then
-            commit = vim.trim(commit)
-            if commit ~= "" then
-                commits[#commits + 1] = commit
+    else
+        local commits = {} ---@type string[]
+        for _, commit in ipairs(item.history_commits) do
+            if type(commit) == "string" then
+                commit = vim.trim(commit)
+                if commit ~= "" then
+                    commits[#commits + 1] = commit
+                end
             end
         end
+        item.history_commits = commits
     end
-    item.history_commits = commits
+
+    local session = type(item.history_session) == "table" and item.history_session or nil
+    local session_backend = session and type(session.backend) == "string" and vim.trim(session.backend) or nil
+    local session_id = session and type(session.id) == "string" and vim.trim(session.id) or nil
+    if session_backend ~= "codex" and session_backend ~= "opencode" then
+        session_backend = nil
+    end
+    if not session_backend or not session_id or session_id == "" then
+        item.history_session = nil
+    else
+        item.history_session = {
+            backend = session_backend,
+            id = session_id,
+        }
+    end
 end
 
 ---@param item any
@@ -467,6 +482,7 @@ end
 ---  history_summary?: string|false,
 ---  history_commits?: string[]|false,
 ---  history_completed_at?: string|false,
+---  history_session?: { backend: Clodex.Backend.Name, id: string }|false,
 ---  kind?: Clodex.PromptCategory,
 ---  image_path?: string|false,
 ---  execution_instructions?: string|false,
@@ -513,6 +529,9 @@ function Queue:update_item(project, item_id, attrs)
                 end
                 if attrs.history_completed_at ~= nil then
                     item.history_completed_at = attrs.history_completed_at ~= false and attrs.history_completed_at or nil
+                end
+                if attrs.history_session ~= nil then
+                    item.history_session = attrs.history_session ~= false and attrs.history_session or nil
                 end
                 if attrs.execution_instructions ~= nil then
                     item.execution_instructions = attrs.execution_instructions ~= false and attrs.execution_instructions or nil
@@ -563,7 +582,7 @@ end
 
 ---@param project Clodex.Project
 ---@param item_id string
----@param result { summary?: string|false, commit?: string|false, completed_at?: string|false }
+---@param result { summary?: string|false, commit?: string|false, completed_at?: string|false, session?: { backend: Clodex.Backend.Name, id: string }|false }
 ---@return Clodex.QueueItem?
 function Queue:update_implemented_item(project, item_id, result)
     local commits = nil ---@type string[]|false|nil
@@ -574,6 +593,7 @@ function Queue:update_implemented_item(project, item_id, result)
         history_summary = result.summary,
         history_commits = commits,
         history_completed_at = result.completed_at,
+        history_session = result.session,
     })
 end
 

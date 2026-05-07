@@ -169,6 +169,35 @@ describe("clodex.mcp", function()
         fs.remove(values.mcp.runtime_dir)
     end)
 
+    it("builds Codex resume commands for project TUI sessions", function()
+        local values = Config.new():setup({
+            mcp = {
+                enabled = true,
+                cmd = { "cargo", "run", "--bin", "clodex-mcp" },
+                runtime_dir = temp_dir(),
+            },
+        })
+        package.loaded["snacks.terminal"] = {
+            open = function()
+            end,
+        }
+        package.loaded["clodex.terminal.manager"] = nil
+        local Manager = require("clodex.terminal.manager")
+        local manager = Manager.new(values)
+        local spec = manager:session_spec({
+            kind = "project",
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            resume_session_id = "session-123",
+        })
+
+        assert.are.same(vim.list_extend(Backend.cli_cmd(values), { "resume", "session-123" }), spec.cmd)
+
+        fs.remove(values.mcp.runtime_dir)
+    end)
+
     it("applies persistent opencode config env to project TUI sessions", function()
         local values = Config.new():setup({
             backend = "opencode",
@@ -210,6 +239,32 @@ describe("clodex.mcp", function()
         assert.are.equal("term", spec.terminal_provider)
 
         fs.remove(values.mcp.runtime_dir)
+    end)
+
+    it("builds OpenCode resume commands for project TUI sessions", function()
+        local values = Config.new():setup({
+            backend = "opencode",
+            mcp = {
+                enabled = false,
+            },
+        })
+        package.loaded["snacks.terminal"] = {
+            open = function()
+            end,
+        }
+        package.loaded["clodex.terminal.manager"] = nil
+        local Manager = require("clodex.terminal.manager")
+        local manager = Manager.new(values)
+        local spec = manager:session_spec({
+            kind = "project",
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            resume_session_id = "session-123",
+        })
+
+        assert.are.same({ "opencode", "--session", "session-123" }, spec.cmd)
     end)
 
     it("restarts an existing project session when backend MCP env changes", function()

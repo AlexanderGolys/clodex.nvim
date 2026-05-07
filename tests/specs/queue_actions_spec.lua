@@ -102,6 +102,50 @@ describe("clodex.app.queue_actions", function()
         assert.are.equal(("dispatch %s"):format(item.id), dispatched_prompt)
     end)
 
+    it("resumes the saved session when dispatching a not-working queued item", function()
+        local seen_opts
+        local dispatched_prompt
+        local session = {
+            set_active_prompt_title = function() end,
+            dispatch_prompt = function(_, prompt)
+                dispatched_prompt = prompt
+                return true
+            end,
+        }
+        actions.app.config = {
+            get = function()
+                return { backend = "codex" }
+            end,
+        }
+        actions.app.terminals = {
+            ensure_project_session = function(_, _, opts)
+                seen_opts = opts
+                return session
+            end,
+        }
+        actions.app.execution = {
+            dispatch_prompt = function(_, _, item)
+                return ("dispatch %s"):format(item.id)
+            end,
+        }
+
+        local item = queue:add_todo(project, {
+            title = "Fix previous implementation",
+            queue = "queued",
+            kind = "notworking",
+        })
+        queue:update_item(project, item.id, {
+            history_session = {
+                backend = "codex",
+                id = "session-123",
+            },
+        })
+
+        assert.is_true(actions:start_queued_item(project, item.id, "interactive"))
+        assert.are.equal("session-123", seen_opts.resume_session_id)
+        assert.are.equal(("dispatch %s"):format(item.id), dispatched_prompt)
+    end)
+
     it("clears the active terminal prompt title when interactive dispatch fails", function()
         local titles = {}
         local session = {
@@ -249,6 +293,52 @@ describe("clodex.app.queue_actions", function()
         assert.are.equal(nil, moved.history_summary)
         assert.are.equal(nil, moved.history_completed_at)
         assert.are.equal(1, refresh_count)
+    end)
+
+    it("preserves saved session metadata when marking an item as not working", function()
+        local item = queue:add_todo(project, {
+            title = "fix prompt flow",
+            details = "return to queued",
+            queue = "queued",
+            kind = "todo",
+        })
+        queue:advance(project, item.id)
+        queue:update_implemented_item(project, item.id, {
+            summary = "implemented",
+            completed_at = "2026-01-01T00:00:00Z",
+            session = {
+                backend = "codex",
+                id = "session-123",
+            },
+        })
+
+        actions:rewind_queue_item(project, item.id, {
+            queue = "implemented",
+            mark_not_working = true,
+        })
+
+        local _, _, moved = queue:find_item(project, item.id)
+        assert.are.same({
+            backend = "codex",
+            id = "session-123",
+        }, moved.history_session)
+    end)
+
+    it("saves session metadata on implemented items", function()
+        local item = queue:add_todo(project, {
+            title = "fix prompt flow",
+            queue = "queued",
+            kind = "todo",
+        })
+        queue:advance(project, item.id)
+
+        local saved = actions:save_queue_item_session(project, item.id, "session-123", "opencode")
+
+        assert.is_not_false(saved)
+        assert.are.same({
+            backend = "opencode",
+            id = "session-123",
+        }, saved.history_session)
     end)
 
     it("moves a history item back to queued when marked as not working", function()

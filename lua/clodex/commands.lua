@@ -122,6 +122,12 @@ local DEBUG_ACTION = enum("action", {
     { value = "reload", desc = "Reload clodex modules" },
 })
 
+local SESSION_ACTION = enum("action", {
+    { value = "new", desc = "Start a new conversation in the active backend session" },
+    { value = "compact", desc = "Ask the active backend session to compact the current conversation" },
+    { value = "save", desc = "Save a session id on the focused implemented or history queue item" },
+})
+
 local PROJECT_ACTIONS = {
     { value = "add", desc = "Register the current workspace as a project", invoke = "ClodexProject add" },
     { value = "readme", desc = "Open the current project's README", invoke = "ClodexProject readme", method = "open_project_readme_file" },
@@ -468,6 +474,9 @@ local function top_level_palette_specs()
         { name = "ClodexDebug panel", desc = "Toggle the debug state panel", invoke = "ClodexDebug panel", keep_open = true },
         { name = "ClodexDebug mini", desc = "Toggle the compact debug panel", invoke = "ClodexDebug mini" },
         { name = "ClodexDebug reload", desc = "Reload clodex modules", invoke = "ClodexDebug reload" },
+        { name = "ClodexSession new", desc = "Start a new backend conversation", invoke = "ClodexSession new" },
+        { name = "ClodexSession compact", desc = "Compact the active backend conversation", invoke = "ClodexSession compact" },
+        { name = "ClodexSession save", desc = "Save a session id on the focused queue item", invoke = "ClodexSession save" },
     } ---@type Clodex.CommandSpec[]
 
     for _, action in ipairs(PROJECT_ACTIONS) do
@@ -606,6 +615,41 @@ local function registered_command_specs()
                 local method = PROJECT_ACTION_HANDLERS[action]
                 if method then
                     clodex[method]()
+                end
+            end,
+        },
+        {
+            name = "ClodexSession",
+            desc = "Run a backend session action",
+            nargs = "*",
+            complete = enum_completion(SESSION_ACTION, 1),
+            handler = function(command)
+                local clodex = require_clodex()
+                local token = command.fargs[1]
+                local action = token and resolve_enum(token, SESSION_ACTION, "ClodexSession") or "new"
+                if not action then
+                    return
+                end
+                if action == "new" then
+                    if not check_extra_args("ClodexSession", vim.list_slice(command.fargs, 2), "at most one action argument") then
+                        return
+                    end
+                    clodex.new_session()
+                elseif action == "compact" then
+                    if not check_extra_args("ClodexSession", vim.list_slice(command.fargs, 2), "at most one action argument") then
+                        return
+                    end
+                    clodex.compact_session()
+                elseif action == "save" then
+                    local session_id = command.fargs[2]
+                    if type(session_id) ~= "string" or session_id == "" then
+                        notify.error("ClodexSession: missing session id")
+                        return
+                    end
+                    if not check_extra_args("ClodexSession", vim.list_slice(command.fargs, 3), "one session id") then
+                        return
+                    end
+                    clodex.save_session(session_id)
                 end
             end,
         },

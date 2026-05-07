@@ -44,6 +44,9 @@ describe("clodex.commands", function()
             implement_next_queued_item = function() end,
             implement_all_queued_items = function() end,
             add_prompt = function() end,
+            new_session = function() end,
+            compact_session = function() end,
+            save_session = function() end,
         }
 
         package.loaded["clodex"] = fake_clodex
@@ -115,9 +118,23 @@ describe("clodex.commands", function()
         assert.is_not_nil(created.Clodex)
         assert.is_not_nil(created.ClodexDebug)
         assert.is_not_nil(created.ClodexProject)
+        assert.is_not_nil(created.ClodexSession)
         assert.is_nil(created["Clodex" .. "Todo"])
         assert.is_not_nil(created.ClodexPrompt)
         assert.is_true(created.ClodexPrompt.opts.range)
+    end)
+
+    it("routes session commands through the public API", function()
+        Commands.register()
+
+        local called
+        fake_clodex.save_session = function(session_id)
+            called = session_id
+        end
+
+        created.ClodexSession.handler({ args = "save session-123", fargs = { "save", "session-123" } })
+
+        assert.are.equal("session-123", called)
     end)
 
     it("offers enum and project completion for prompt commands", function()

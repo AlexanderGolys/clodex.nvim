@@ -28,6 +28,9 @@
 ---| "add_prompt"
 ---| "add_bug_todo"
 ---| "open_history"
+---| "new_session"
+---| "compact_session"
+---| "save_session"
 
 --- Defines the clodex type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -63,6 +66,9 @@ local PUBLIC_ACTIONS = {
     "add_prompt",
     "add_bug_todo",
     "open_history",
+    "new_session",
+    "compact_session",
+    "save_session",
 } ---@type Clodex.PublicAction[]
 
 local function app()
@@ -103,6 +109,19 @@ end
 
 for _, method in ipairs(PUBLIC_ACTIONS) do
     M[method] = call(method)
+end
+
+function M.new_session()
+    return app():send_session_command("/new")
+end
+
+function M.compact_session()
+    return app():send_session_command("/compact")
+end
+
+---@param session_id string
+function M.save_session(session_id)
+    return app():save_focused_queue_session(session_id)
 end
 
 function M.debug_reload()

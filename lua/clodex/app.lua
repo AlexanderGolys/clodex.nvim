@@ -79,6 +79,7 @@ end
 ---@field clear_active_project fun(self: Clodex.App)
 ---@field set_current_project fun(self: Clodex.App, project: Clodex.Project|string)
 ---@field add_project fun(self: Clodex.App)
+---@field send_session_command fun(self: Clodex.App, command: string): boolean
 
 --- Defines the Clodex.App.StateSnapshot type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -144,6 +145,7 @@ local FORWARDED_METHODS = {
     remove_project = { field = "project_actions", method = "remove_project" },
     maybe_offer_project = { field = "project_actions", method = "maybe_offer_project" },
     toggle_terminal_header = { field = "project_actions", method = "toggle_terminal_header" },
+    save_queue_item_session = { field = "queue_actions", method = "save_queue_item_session" },
 } ---@type table<string, Clodex.AppForwardSpec>
 
 ---@param field Clodex.AppForwardGroup
@@ -1127,6 +1129,41 @@ end
 
 for name, spec in pairs(FORWARDED_METHODS) do
     App[name] = forward(spec.field, spec.method)
+end
+
+---@param command string
+---@return boolean
+function App:send_session_command(command)
+    command = vim.trim(command or "")
+    if command == "" then
+        return false
+    end
+
+    local state = self:current_tab()
+    local target = self:resolve_target(state)
+    local session, replaced_key = self.terminals:get_session(target)
+    if replaced_key then
+        self.terminals:detach_session(replaced_key, self.tabs:list())
+    end
+    if not session then
+        self:refresh_views()
+        return false
+    end
+
+    self.terminals:show_in_tab(state, session)
+    local ok = session:send(command)
+    self:refresh_views()
+    return ok
+end
+
+---@param session_id string
+---@return boolean
+function App:save_focused_queue_session(session_id)
+    if self.queue_workspace and type(self.queue_workspace.save_selected_queue_item_session) == "function" then
+        return self.queue_workspace:save_selected_queue_item_session(session_id) ~= false
+    end
+    notify.warn("Open the queue workspace and focus an implemented or history item first")
+    return false
 end
 
 App.open_queue_workspace = function(self)

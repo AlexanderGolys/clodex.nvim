@@ -65,7 +65,7 @@ describe("clodex.workspace.execution", function()
         file:close()
 
         assert.are_not.equal("stale", content)
-        assert.matches("If `close_task` returns `status = done`, stop", content)
+        assert.matches("continue_next = false", content)
 
         fs.remove(root)
     end)
@@ -96,9 +96,9 @@ describe("clodex.workspace.execution", function()
             prompt = "Plan the feature",
         })
 
-        assert.are.equal("$prompt-nvim-clodex", todo_prompt)
-        assert.are.equal("$prompt-nvim-clodex", bug_prompt)
-        assert.are.equal("$prompt-nvim-clodex", vision_prompt)
+        assert.are.equal("$prompt-nvim-clodex\r", todo_prompt)
+        assert.are.equal("$prompt-nvim-clodex\r", bug_prompt)
+        assert.are.equal("$prompt-nvim-clodex\r", vision_prompt)
 
         fs.remove(root)
     end)

@@ -144,6 +144,12 @@ struct CloseTaskArgs {
     comment: Option<String>,
     #[serde(default)]
     commit_id: Option<String>,
+    #[serde(default = "default_continue_next")]
+    continue_next: bool,
+}
+
+fn default_continue_next() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -438,7 +444,11 @@ fn tool_definitions() -> Vec<Value> {
                     "project_root": { "type": "string" },
                     "success": { "type": "boolean" },
                     "comment": { "type": "string" },
-                    "commit_id": { "type": "string" }
+                    "commit_id": { "type": "string" },
+                    "continue_next": {
+                        "type": "boolean",
+                        "description": "When false, close the active task without claiming the next queued task."
+                    }
                 },
                 "required": ["project_root", "success", "comment"],
                 "additionalProperties": false,
@@ -532,6 +542,7 @@ fn close_task(args: CloseTaskArgs) -> AppResult<Value> {
         args.success,
         normalize_optional_string(args.comment),
         normalize_optional_string(args.commit_id),
+        args.continue_next,
     )
 }
 
@@ -694,6 +705,7 @@ fn close_contract() -> Value {
             "comment": "string",
             "commit_id": "string"
         },
+        "supports_continue_next": true,
         "success_behavior": {
             "move_to": "implemented"
         },
@@ -708,6 +720,7 @@ fn task_context(item: &QueueItem) -> Value {
     json!({
         "prior_commits": item.history_commits,
         "latest_comment": item.history_summary,
+        "prior_session": item.extra.get("history_session"),
     })
 }
 
@@ -921,6 +934,7 @@ fn close_active_task(
     success: bool,
     comment: Option<String>,
     commit_id: Option<String>,
+    continue_next: bool,
 ) -> AppResult<Value> {
     let active =
         load_active_state(project_root)?.ok_or_else(|| AppError::new("No active queue item"))?;
@@ -986,6 +1000,10 @@ fn close_active_task(
         closed_task_payload(&item, "queued", true)
     };
 
+    if !continue_next {
+        return Ok(close_only_response(project_root, closed_task)?);
+    }
+
     match claim_or_resume_item(project_root)? {
         TaskClaim::Task {
             item,
@@ -998,6 +1016,21 @@ fn close_active_task(
         }
         TaskClaim::Done => Ok(done_response(project_root, Some(closed_task))),
     }
+}
+
+fn close_only_response(project_root: &str, closed_task: Value) -> AppResult<Value> {
+    let queued_remaining = load_queue(project_root, "queued")?.len();
+    Ok(json!({
+        "status": "closed",
+        "project_root": project_root,
+        "message": if queued_remaining > 0 {
+            "Task closed. Queued tasks remain."
+        } else {
+            "Task closed. No queued tasks remain."
+        },
+        "queued_remaining": queued_remaining,
+        "closed_task": closed_task,
+    }))
 }
 
 fn queue_status_value(project_root: &str) -> AppResult<Value> {
@@ -1338,6 +1371,7 @@ mod tests {
             success: true,
             comment: Some("done".to_string()),
             commit_id: Some("abc123".to_string()),
+            continue_next: true,
         })
         .expect("close task");
 
@@ -1487,6 +1521,7 @@ mod tests {
             success: true,
             comment: Some("done".to_string()),
             commit_id: Some("abc123".to_string()),
+            continue_next: true,
         })
         .expect("close task");
 
@@ -1599,6 +1634,7 @@ mod tests {
             success: true,
             comment: Some("finished first".to_string()),
             commit_id: Some("abc123".to_string()),
+            continue_next: true,
         })
         .expect("close first task");
 
@@ -1610,6 +1646,41 @@ mod tests {
             .expect("next active item");
         assert_eq!(active.item_id, "item-2");
         assert_eq!(active.title.as_deref(), Some("second"));
+    }
+
+    #[test]
+    fn close_task_can_close_without_claiming_next_item() {
+        let (_dir, root) = project_root();
+        save_queue(
+            &root,
+            "queued",
+            &[
+                sample_item("item-1", "first"),
+                sample_item("item-2", "second"),
+            ],
+        )
+        .expect("save queued");
+
+        get_task(ProjectRootArgs {
+            project_root: root.clone(),
+        })
+        .expect("get first task");
+        let response = close_task(CloseTaskArgs {
+            project_root: root.clone(),
+            success: true,
+            comment: Some("finished first".to_string()),
+            commit_id: Some("abc123".to_string()),
+            continue_next: false,
+        })
+        .expect("close first task");
+
+        assert_eq!(response["status"], "closed");
+        assert_eq!(response["queued_remaining"], 1);
+        assert_eq!(response["closed_task"]["id"], "item-1");
+        assert!(load_active_state(&root).expect("active state").is_none());
+        let queued = load_queue(&root, "queued").expect("queued");
+        assert_eq!(queued.len(), 1);
+        assert_eq!(queued[0].id, "item-2");
     }
 
     #[test]
@@ -1677,6 +1748,7 @@ mod tests {
             success: false,
             comment: Some("tests failed".to_string()),
             commit_id: None,
+            continue_next: true,
         })
         .expect("close failed task");
 
@@ -1696,6 +1768,13 @@ mod tests {
         item.kind = "notworking".to_string();
         item.history_summary = Some("previous fix".to_string());
         item.history_commits = vec!["old123".to_string()];
+        item.extra.insert(
+            "history_session".to_string(),
+            json!({
+                "backend": "codex",
+                "id": "11111111-1111-1111-1111-111111111111",
+            }),
+        );
         save_queue(&root, "queued", &[item]).expect("save queued");
 
         let task = get_task(ProjectRootArgs {
@@ -1704,12 +1783,18 @@ mod tests {
         .expect("get task");
         assert_eq!(task["context"]["prior_commits"], json!(["old123"]));
         assert_eq!(task["context"]["latest_comment"], "previous fix");
+        assert_eq!(task["context"]["prior_session"]["backend"], "codex");
+        assert_eq!(
+            task["context"]["prior_session"]["id"],
+            "11111111-1111-1111-1111-111111111111"
+        );
 
         let closed = close_task(CloseTaskArgs {
             project_root: root.clone(),
             success: true,
             comment: Some("new fix".to_string()),
             commit_id: Some("new456".to_string()),
+            continue_next: true,
         })
         .expect("close task");
 
@@ -1734,6 +1819,7 @@ mod tests {
             success: false,
             comment: Some("tests failed".to_string()),
             commit_id: None,
+            continue_next: true,
         })
         .expect("close failed task");
 

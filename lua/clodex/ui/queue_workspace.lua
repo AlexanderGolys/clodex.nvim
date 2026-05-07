@@ -1544,6 +1544,13 @@ function Workspace:attach_keymaps()
         )
         map(
             buf,
+            "S",
+            when_focused("queue", function()
+                self:prompt_save_selected_queue_item_session()
+            end)
+        )
+        map(
+            buf,
             "p",
             when_focused("queue", function()
                 self:move_queue_item_to_project()
@@ -2464,6 +2471,45 @@ function Workspace:move_queue_item_to_project()
                 self:refresh()
             end)
         end)
+    end)
+end
+
+---@param session_id string
+---@return Clodex.QueueItem|false|nil
+function Workspace:save_selected_queue_item_session(session_id)
+    local project = self:selected_project()
+    local item, queue_name = self:selected_queue_item()
+    if not project or not item then
+        return
+    end
+    if queue_name ~= "implemented" and queue_name ~= "history" then
+        notify.warn("Only implemented or history items can store session ids")
+        return false
+    end
+    local saved = self.app.queue_actions:save_queue_item_session(project, item.id, session_id)
+    if saved then
+        self:refresh()
+    end
+    return saved
+end
+
+function Workspace:prompt_save_selected_queue_item_session()
+    local item, queue_name = self:selected_queue_item()
+    if not item then
+        return
+    end
+    if queue_name ~= "implemented" and queue_name ~= "history" then
+        notify.warn("Only implemented or history items can store session ids")
+        return
+    end
+    open_workspace_input(self, {
+        prompt = "Session id",
+        default = item.history_session and item.history_session.id or "",
+    }, function(value)
+        if value == nil then
+            return
+        end
+        self:save_selected_queue_item_session(value)
     end)
 end
 

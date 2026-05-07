@@ -1,3 +1,4 @@
+local Backend = require("clodex.backend")
 local History = require("clodex.history")
 local Mcp = require("clodex.mcp")
 local fs = require("clodex.util.fs")
@@ -8,10 +9,6 @@ local COMMIT_ICON = "󰜘 "
 --- Moves/restricts options for queue rewind operations in queue actions.
 --- The options are interpreted by App-level handlers when items are moved backward.
 ---@alias Clodex.AppQueueActions.RewindOpts { copy?: boolean, queue?: Clodex.QueueName, mark_not_working?: boolean, note?: string }
---- Defines options for moving an item between queues and projects.
---- It supports optional duplication and destination queue override for bulk workflows.
---- Moves/restricts options for queue item transfer operations.
---- It is used by project-to-project and adjacent project move handlers.
 
 --- Defines the Clodex.AppQueueActions.MoveOpts type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -45,6 +42,34 @@ local PREVIOUS_QUEUE = {
     history = "implemented",
 }
 
+local function touch_and_record_project(self, project)
+    if not project then
+        return
+    end
+    self:remember_workspace_revision(project)
+    self.app.project_details_store:touch_activity(project)
+end
+
+local function touch_and_record_projects(self, ...)
+    local total = select("#", ...)
+    for i = 1, total do
+        touch_and_record_project(self, select(i, ...))
+    end
+    self.app:refresh_views()
+end
+
+---@param actions Clodex.AppQueueActions
+---@param project Clodex.Project
+---@param item_id string
+---@param queue_name? Clodex.QueueName
+---@return Clodex.QueueName, Clodex.QueueItem?
+local function find_item_in_queue(actions, project, item_id, queue_name)
+    if queue_name then
+        return actions.app.queue:find_item(project, item_id, queue_name)
+    end
+    return actions.app.queue:find_item(project, item_id)
+end
+
 ---@param value any
 ---@return string
 local function trimmed_text(value)
@@ -59,9 +84,8 @@ end
 
 ---@param item Clodex.QueueItem
 ---@param opts Clodex.AppQueueActions.RewindOpts
----@param project_root? string
 ---@return Clodex.QueueItem
-local function rewind_item_spec(item, opts, project_root)
+local function rewind_item_spec(item, opts)
     local moved = vim.deepcopy(item)
     if not opts.mark_not_working then
         return moved
@@ -123,13 +147,79 @@ local function rewind_item_spec(item, opts, project_root)
     return moved
 end
 
+---@param item Clodex.QueueItem
+---@return { backend: Clodex.Backend.Name, id: string }?
+local function item_history_session(item)
+    local session = type(item.history_session) == "table" and item.history_session or nil
+    local backend = session and Backend.normalize(session.backend) or nil
+    local id = session and type(session.id) == "string" and vim.trim(session.id) or nil
+    if not backend or not id or id == "" then
+        return nil
+    end
+    return {
+        backend = backend,
+        id = id,
+    }
+end
+
+---@param actions Clodex.AppQueueActions
+---@param item Clodex.QueueItem
+---@return string?
+local function resume_session_id_for_item(actions, item)
+    if item.kind ~= "notworking" then
+        return nil
+    end
+    local session = item_history_session(item)
+    if not session then
+        return nil
+    end
+    local config = actions.app.config and actions.app.config.get and actions.app.config:get() or nil
+    local backend = config and Backend.normalize(config.backend) or "codex"
+    if session.backend ~= backend then
+        notify.warn(("Saved %s session cannot be resumed while %s backend is active"):format(
+            Backend.display_name(session.backend),
+            Backend.display_name(backend)
+        ))
+        return nil
+    end
+    return session.id
+end
+
 ---@param app Clodex.AppQueueActions.Host
 ---@return Clodex.AppQueueActions
 function QueueActions.new(app)
     return setmetatable({
         app = app,
         workspace_revisions = {},
+        continuing_projects = {},
     }, QueueActions)
+end
+
+---@param actions Clodex.AppQueueActions
+---@param project Clodex.Project
+---@param session Clodex.TerminalSession
+local function continue_after_closed_task(actions, project, session)
+    if actions.continuing_projects[project.root] then
+        return
+    end
+    local queued = actions.app.queue:queues(project).queued
+    local next_item = queued[1]
+    if not next_item then
+        return
+    end
+
+    actions.continuing_projects[project.root] = true
+    session:send("/new")
+    vim.defer_fn(function()
+        actions.continuing_projects[project.root] = nil
+        local current = actions.app.queue:queues(project).queued[1]
+        if not current then
+            actions.app:refresh_views()
+            return
+        end
+        actions:start_queued_item(project, current.id, "interactive")
+        actions.app:refresh_views()
+    end, 120)
 end
 
 ---@param project Clodex.Project
@@ -155,7 +245,9 @@ end
 ---@param item Clodex.QueueItem
 ---@return boolean
 function QueueActions:dispatch_item(project, item)
-    local session = self.app.terminals:ensure_project_session(project)
+    local session = self.app.terminals:ensure_project_session(project, {
+        resume_session_id = resume_session_id_for_item(self, item),
+    })
     if not session then
         notify.warn(("Could not start a Codex session for %s"):format(project.name))
         return false
@@ -166,9 +258,41 @@ function QueueActions:dispatch_item(project, item)
         session:set_active_prompt_title(nil)
         return false
     end
-    self:remember_workspace_revision(project)
-    self.app.project_details_store:touch_activity(project)
+    touch_and_record_project(self, project)
     return true
+end
+
+---@param project Clodex.Project
+---@param item_id string
+---@param session_id string
+---@param backend? Clodex.Backend.Name
+---@return Clodex.QueueItem|false
+function QueueActions:save_queue_item_session(project, item_id, session_id, backend)
+    session_id = vim.trim(session_id or "")
+    if session_id == "" then
+        notify.warn("Session id is required")
+        return false
+    end
+    local queue_name = self.app.queue:find_item(project, item_id)
+    if queue_name ~= "implemented" and queue_name ~= "history" then
+        notify.warn("Session ids can only be saved on implemented or history items")
+        return false
+    end
+    local config = self.app.config and self.app.config.get and self.app.config:get() or nil
+    local saved = self.app.queue:update_item(project, item_id, {
+        history_session = {
+            backend = Backend.normalize(backend or (config and config.backend)),
+            id = session_id,
+        },
+    })
+    if not saved then
+        notify.warn("Queue item not found")
+        return false
+    end
+    notify.notify(("Saved %s session for %s"):format(Backend.display_name(saved.history_session.backend), saved.title))
+    touch_and_record_project(self, project)
+    self.app:refresh_views()
+    return saved
 end
 
 ---@param project Clodex.Project
@@ -179,8 +303,7 @@ function QueueActions:dispatch_item_direct(project, item)
         return false
     end
 
-    self:remember_workspace_revision(project)
-    self.app.project_details_store:touch_activity(project)
+    touch_and_record_project(self, project)
     return true
 end
 
@@ -195,18 +318,10 @@ function QueueActions:start_queued_item(project, item_id, mode)
         return false
     end
 
-    if mode == "exec" then
-        if self:dispatch_item_direct(project, queued_item) then
-            return true
-        end
-        return self:dispatch_item(project, queued_item)
-    end
-
-    local started = self:dispatch_item(project, queued_item)
-    if started then
+    if mode == "exec" and self:dispatch_item_direct(project, queued_item) then
         return true
     end
-    return false
+    return self:dispatch_item(project, queued_item)
 end
 
 --- Checks configured queue workspace files for external updates.
@@ -251,9 +366,13 @@ function QueueActions:poll_active_prompt_titles()
             kind = type(kind) == "string" and vim.trim(kind) or nil
             local next_title = title ~= "" and title or nil
             local next_kind = next_title and kind or nil
+            local closed_active_task = session.active_prompt_title ~= nil and next_title == nil
             if session.active_prompt_title ~= next_title or session.active_prompt_kind ~= next_kind then
                 session:set_active_prompt_title(next_title, next_kind, { authoritative = true })
                 changed = true
+            end
+            if closed_active_task then
+                continue_after_closed_task(self, project, session)
             end
         end
     end
@@ -296,25 +415,25 @@ function QueueActions:add_project_todo(project, spec, opts)
         item = self:refresh_queue_item_instructions(project, item.id) or item
     end
     History.append_prompt_added(project.name, normalized.title, normalized.details, spec.kind)
-    self.app.project_details_store:touch_activity(project)
+    touch_and_record_project(self, project)
     local started = false
     if queue_name == "queued" and opts.implement then
         started = self:start_queued_item(project, item.id, opts.run_mode == "exec" and "exec" or "interactive")
     end
 
     if queue_name == "queued" and started then
-        if opts.run_mode == "exec" then
-            notify.notify(("Queued and started direct prompt for %s: %s"):format(project.name, normalized.title))
-        else
-            notify.notify(("Queued and started prompt for %s: %s"):format(project.name, normalized.title))
-        end
+        local queue_mode = opts.run_mode == "exec" and "direct" or "interactive"
+        notify.notify(("Queued and started %s prompt for %s: %s"):format(
+            queue_mode,
+            project.name,
+            normalized.title
+        ))
     elseif queue_name == "queued" then
         notify.notify(("Queued prompt for %s: %s"):format(project.name, normalized.title))
     else
         notify.notify(("Added todo to %s: %s"):format(project.name, normalized.title))
     end
-    self:remember_workspace_revision(project)
-    self.app:refresh_views()
+    touch_and_record_project(self, project)
     return item
 end
 
@@ -345,8 +464,7 @@ function QueueActions:edit_queue_item(project, item_id, spec)
 
     notify.notify(("Updated prompt for %s: %s"):format(project.name, item.title))
     self:refresh_queue_item_instructions(project, item_id)
-    self:remember_workspace_revision(project)
-    self.app:refresh_views()
+    touch_and_record_project(self, project)
     return item
 end
 
@@ -378,16 +496,12 @@ function QueueActions:implement_queue_item(project, item_id)
             project.name,
             item.title
         ))
-        self:remember_workspace_revision(project)
-        self.app.project_details_store:touch_activity(project)
-        self.app:refresh_views()
+        touch_and_record_projects(self, project)
         return true, "started"
     end
 
     if moved_from_planned then
-        self:remember_workspace_revision(project)
-        self.app.project_details_store:touch_activity(project)
-        self.app:refresh_views()
+        touch_and_record_projects(self, project)
     end
 
     return false, "blocked"
@@ -410,8 +524,7 @@ function QueueActions:implement_queued_items(project)
 
     if sent > 0 then
         notify.notify(("Started %d queued prompt(s) for %s"):format(sent, project.name))
-        self:remember_workspace_revision(project)
-        self.app:refresh_views()
+        touch_and_record_projects(self, project)
     end
 end
 
@@ -433,9 +546,7 @@ function QueueActions:move_all_planned_items_to_queued(project)
 
     if moved > 0 then
         notify.notify(("Moved %d planned prompt(s) to queued for %s"):format(moved, project.name))
-        self:remember_workspace_revision(project)
-        self.app.project_details_store:touch_activity(project)
-        self.app:refresh_views()
+        touch_and_record_projects(self, project)
     end
 end
 
@@ -465,10 +576,8 @@ function QueueActions:advance_queue_item(project, item_id)
         notify.warn("Item cannot be moved further")
         return
     end
-    self:remember_workspace_revision(project)
-    self.app.project_details_store:touch_activity(project)
     self:refresh_queue_item_instructions(project, item_id)
-    self.app:refresh_views()
+    touch_and_record_projects(self, project)
 end
 
 ---@param project Clodex.Project
@@ -476,13 +585,7 @@ end
 ---@param opts? Clodex.AppQueueActions.RewindOpts
 function QueueActions:rewind_queue_item(project, item_id, opts)
     opts = opts or {}
-    local queue_name
-    local item
-    if opts.queue then
-        queue_name, _, item = self.app.queue:find_item(project, item_id, opts.queue)
-    else
-        queue_name, _, item = self.app.queue:find_item(project, item_id)
-    end
+    local queue_name, _, item = find_item_in_queue(self, project, item_id, opts.queue)
     local previous_queue = queue_name and PREVIOUS_QUEUE[queue_name] or nil
     if opts.mark_not_working and (queue_name == "implemented" or queue_name == "history") then
         previous_queue = "queued"
@@ -491,7 +594,7 @@ function QueueActions:rewind_queue_item(project, item_id, opts)
         notify.warn("Item cannot be moved back")
         return
     end
-    local rewind_item = rewind_item_spec(item, opts, project.root)
+    local rewind_item = rewind_item_spec(item, opts)
     local clear_history = queue_name == "implemented" or queue_name == "history"
 
     local moved_item
@@ -513,9 +616,7 @@ function QueueActions:rewind_queue_item(project, item_id, opts)
     if moved_item then
         self:refresh_queue_item_instructions(project, moved_item.id)
     end
-    self:remember_workspace_revision(project)
-    self.app.project_details_store:touch_activity(project)
-    self.app:refresh_views()
+    touch_and_record_projects(self, project)
 end
 
 ---@param project Clodex.Project
@@ -524,13 +625,7 @@ end
 ---@param opts? Clodex.AppQueueActions.MoveOpts
 function QueueActions:move_queue_item_to_project(project, item_id, target_project, opts)
     opts = opts or {}
-    local queue_name
-    local item
-    if opts.source_queue then
-        queue_name, _, item = self.app.queue:find_item(project, item_id, opts.source_queue)
-    else
-        queue_name, _, item = self.app.queue:find_item(project, item_id)
-    end
+    local queue_name, _, item = find_item_in_queue(self, project, item_id, opts.source_queue)
     local target_queue = opts.target_queue or queue_name
     if not queue_name or not target_queue or not item then
         notify.warn("Queue item not found")
@@ -553,11 +648,7 @@ function QueueActions:move_queue_item_to_project(project, item_id, target_projec
 
     notify.notify(("Moved '%s' to %s"):format(item.title, target_project.name))
     self:refresh_queue_item_instructions(target_project, moved.id)
-    self:remember_workspace_revision(project)
-    self:remember_workspace_revision(target_project)
-    self.app.project_details_store:touch_activity(project)
-    self.app.project_details_store:touch_activity(target_project)
-    self.app:refresh_views()
+    touch_and_record_projects(self, project, target_project)
 end
 
 ---@param project Clodex.Project
@@ -567,8 +658,7 @@ function QueueActions:delete_queue_item(project, item_id)
         notify.warn("Queue item not found")
         return
     end
-    self:remember_workspace_revision(project)
-    self.app:refresh_views()
+    touch_and_record_project(self, project)
 end
 
 return QueueActions

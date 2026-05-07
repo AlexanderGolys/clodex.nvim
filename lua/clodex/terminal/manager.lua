@@ -10,6 +10,7 @@ local notify = require("clodex.util.notify")
 ---@class Clodex.TerminalTarget.Project
 ---@field kind 'project'
 ---@field project Clodex.Project
+---@field resume_session_id? string
 
 --- Defines the Clodex.TerminalTarget.Free type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -207,7 +208,8 @@ end
 function Manager:session_spec(target)
     local terminal_provider = session_terminal_provider(self.config)
     if target.kind == "project" then
-        local cmd = Backend.cli_cmd(self.config)
+        local resume_session_id = type(target.resume_session_id) == "string" and vim.trim(target.resume_session_id) or ""
+        local cmd = resume_session_id ~= "" and Backend.resume_cmd(self.config, resume_session_id) or Backend.cli_cmd(self.config)
         return {
             key = target.project.root,
             kind = "project",
@@ -391,11 +393,14 @@ function Manager:adopt_existing_buffers(projects)
 end
 
 ---@param project Clodex.Project
+---@param opts? { resume_session_id?: string }
 ---@return Clodex.TerminalSession?
-function Manager:ensure_project_session(project)
+function Manager:ensure_project_session(project, opts)
+    opts = opts or {}
     local session = self:get_session({
         kind = "project",
         project = project,
+        resume_session_id = opts.resume_session_id,
     })
     return session
 end
