@@ -103,7 +103,7 @@ local function ensure_terminal_highlights(win, session)
     local title_active = TITLE_HL_PREFIX .. "Active_" .. title_suffix
     local title_inactive = TITLE_HL_PREFIX .. "Inactive_" .. title_suffix
     vim.api.nvim_set_hl(0, title_inactive, { fg = title_fg, bg = bg })
-    vim.api.nvim_set_hl(0, title_active, { fg = title_fg, bg = bg})
+    vim.api.nvim_set_hl(0, title_active, { fg = title_fg, bg = bg, bold = true })
 
     local window_bg = terminal_background(buf)
     local window_fg = terminal_window_fg(buf)

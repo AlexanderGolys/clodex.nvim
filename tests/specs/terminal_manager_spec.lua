@@ -16,6 +16,30 @@ describe("clodex.terminal.manager", function()
         package.loaded["clodex.terminal.session"] = nil
     end)
 
+    it("passes the configured prompt skill name into terminal sessions", function()
+        local manager = Manager.new({
+            backend = "codex",
+            codex_cmd = { "codex" },
+            terminal = {
+                provider = "term",
+                win = {},
+            },
+            prompt_execution = {
+                skill_name = "custom-skill",
+            },
+        })
+
+        local spec = manager:session_spec({
+            kind = "project",
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+        })
+
+        assert.are.equal("custom-skill", spec.prompt_skill_name)
+    end)
+
     it("falls back to the current tab when showing a session for an invalid tab state", function()
         local manager = Manager.new({
             backend = "codex",

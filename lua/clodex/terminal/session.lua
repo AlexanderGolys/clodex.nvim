@@ -23,6 +23,7 @@ local TITLE_TRUNCATION_SUFFIX = "[...]"
 ---@field active_prompt_title? string
 ---@field active_prompt_kind? string
 ---@field active_prompt_authoritative? boolean
+---@field prompt_skill_name string
 local Session = {}
 Session.__index = Session
 
@@ -37,6 +38,7 @@ Session.__index = Session
 ---@field terminal_provider? "snacks"|"term"
 ---@field project_root? string
 ---@field header_enabled? boolean
+---@field prompt_skill_name? string
 
 ---@class Clodex.TerminalSession.Snapshot
 ---@field key string
@@ -285,6 +287,7 @@ function Session.new(spec)
     spec.suppress_exit_warning = false
     spec.archived_line_count = 0
     spec.awaiting_response = false
+    spec.prompt_skill_name = vim.trim(spec.prompt_skill_name or "prompt-nvim-clodex")
     return setmetatable(spec, Session)
 end
 
@@ -614,6 +617,22 @@ function Session:update_buffer_state()
         buffer = self.buf,
         silent = true,
     })
+    vim.keymap.set("n", "<localleader>s", function()
+        if self:insert_prompt_skill() then
+            vim.cmd.startinsert()
+        end
+    end, {
+        buffer = self.buf,
+        desc = "Clodex: Insert prompt skill",
+        silent = true,
+    })
+    vim.keymap.set("t", "<localleader>s", function()
+        self:insert_prompt_skill()
+    end, {
+        buffer = self.buf,
+        desc = "Clodex: Insert prompt skill",
+        silent = true,
+    })
 end
 
 --- Starts the terminal if needed and initializes buffer state.
@@ -689,6 +708,15 @@ function Session:send(text)
     return send_terminal_payload(self, text .. "\n", "Failed to send prompt to Codex session at %s")
 end
 
+---@return boolean
+function Session:insert_prompt_skill()
+    local skill_name = vim.trim(self.prompt_skill_name or "")
+    if skill_name == "" then
+        return false
+    end
+    return send_terminal_payload(self, ("$%s"):format(skill_name), "Failed to insert prompt skill into session at %s")
+end
+
 ---@param text string
 ---@return string
 ---@param text string
@@ -724,6 +752,7 @@ function Session:update_identity(spec)
     self.runtime_key = spec.runtime_key
     self.terminal_provider = normalize_terminal_provider(spec.terminal_provider)
     self.project_root = spec.project_root
+    self.prompt_skill_name = vim.trim(spec.prompt_skill_name or "prompt-nvim-clodex")
     if spec.header_enabled ~= nil then
         self.header_enabled = spec.header_enabled
     end

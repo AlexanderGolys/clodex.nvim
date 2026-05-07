@@ -137,6 +137,14 @@ local function use_clodex_terminal_chrome(config)
         and (not config.terminal or config.terminal.prefer_native_statusline ~= false)
 end
 
+---@param config Clodex.Config.Values
+---@return string
+local function prompt_skill_name(config)
+    local execution = config.prompt_execution or {}
+    local name = type(execution.skill_name) == "string" and vim.trim(execution.skill_name) or ""
+    return name ~= "" and name or "prompt-nvim-clodex"
+end
+
 local function normalized_root(root)
     if type(root) ~= "string" or root == "" then
         return nil
@@ -251,6 +259,7 @@ function Manager:session_spec(target)
             terminal_provider = terminal_provider,
             project_root = target.project.root,
             header_enabled = false,
+            prompt_skill_name = prompt_skill_name(self.config),
         }
     end
 
@@ -264,6 +273,7 @@ function Manager:session_spec(target)
         runtime_key = session_runtime_key(self.config),
         terminal_provider = terminal_provider,
         header_enabled = true,
+        prompt_skill_name = prompt_skill_name(self.config),
     }
 end
 

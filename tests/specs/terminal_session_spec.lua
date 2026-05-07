@@ -9,6 +9,15 @@ package.loaded["snacks.terminal"] = {
 local Session = require("clodex.terminal.session")
 local TerminalUi = require("clodex.terminal.ui")
 
+local function buffer_map(buf, mode, lhs)
+    local resolved_lhs = vim.api.nvim_replace_termcodes(lhs, true, true, true)
+    for _, map in ipairs(vim.api.nvim_buf_get_keymap(buf, mode)) do
+        if map.lhs == lhs or map.lhs == resolved_lhs then
+            return map
+        end
+    end
+end
+
 describe("clodex.terminal.session", function()
     it("keeps the active-window statusline behavior unchanged when the last line is visible", function()
         local buf = vim.api.nvim_create_buf(false, true)
@@ -461,6 +470,58 @@ describe("clodex.terminal.session", function()
 
         vim.fn.chansend = original_chansend
         vim.defer_fn = original_defer_fn
+    end)
+
+    it("inserts the configured prompt skill without submitting it", function()
+        local sent = {}
+        local original_chansend = vim.fn.chansend
+        vim.fn.chansend = function(job_id, text)
+            sent[#sent + 1] = {
+                job_id = job_id,
+                text = text,
+            }
+            return #text
+        end
+
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "codex" },
+            prompt_skill_name = "custom-skill",
+        })
+        session.job_id = 123
+        session.ensure_started = function()
+            return true
+        end
+
+        assert.is_true(session:insert_prompt_skill())
+        assert.are.same({
+            {
+                job_id = 123,
+                text = "$custom-skill",
+            },
+        }, sent)
+
+        vim.fn.chansend = original_chansend
+    end)
+
+    it("attaches prompt skill insertion maps in normal and terminal mode", function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "codex" },
+        })
+        session.buf = buf
+
+        session:update_buffer_state()
+
+        assert.are.equal("Clodex: Insert prompt skill", buffer_map(buf, "n", "<localleader>s").desc)
+        assert.are.equal("Clodex: Insert prompt skill", buffer_map(buf, "t", "<localleader>s").desc)
     end)
 
 
