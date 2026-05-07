@@ -39,9 +39,9 @@
 
 
 local HLGroups = {
-    bug = { "@float", "DiagnosticError" },
+    bug = { "DiagnosticError", "@float" },
     float_win = { "NormalFloat", "Pmenu", "Normal" },
-    not_working = {"DiagnosticError", "@error", "@variable.builtin" },
+    not_working = { "@variable.builtin", "@error", "DiagnosticError" },
     improvement = { "@constructor", "Function", "Identifier" },
     fix = { "@symbol", "Function", "Identifier" },
 }
@@ -638,7 +638,7 @@ ClodexStateCommandHint = {
     },
 -- &&&ClodexCommitId&&&Lorem Ipsum&&&
 ClodexCommitId = {
-      fg = { from = "@variable.builtin" },
+      fg = { from = { "DiagnosticError", "ErrorMsg" } },
       bold = true,
     },
   },

@@ -151,6 +151,8 @@ Set `terminal.prefer_native_statusline = false` to leave Codex terminal statusli
 
 Legacy queue items and command aliases using `todo`, `freeform`, `adjustment`, `refactor`, `idea`, `cleanup`, `docs`, and `explain` are still accepted and mapped to the current prompt kinds.
 
+Bug prompt accents and queue commit ids prefer Neovim's `DiagnosticError` color, while `notworking` prompts prefer a separate variable/error fallback so follow-up failures stay visually distinct from new bug prompts.
+
 `vision` prompts are planning-only and should produce plans or follow-up prompts instead of repository changes.
 
 ## Commands
