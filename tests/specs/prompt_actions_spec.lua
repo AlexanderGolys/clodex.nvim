@@ -124,6 +124,35 @@ describe("clodex.app.prompt_actions", function()
         }, creator_calls[1].context)
     end)
 
+    it("does not auto-seed selection text for vanilla creator opens", function()
+        package.loaded["clodex.prompt.context"].capture = function(opts)
+            captured_projects[#captured_projects + 1] = opts and opts.project or nil
+            return {
+                relative_path = "lua/captured.lua",
+                project_root = opts and opts.project and opts.project.root or nil,
+                cursor_row = 12,
+                selection_text = "local injected = true",
+                selection_start_row = 12,
+                selection_end_row = 12,
+            }
+        end
+
+        local actions = PromptActions.new({
+            queue_actions = {
+                add_project_todo = function() end,
+            },
+        })
+        local project = {
+            name = "Demo",
+            root = "/tmp/demo",
+        }
+
+        actions:open_creator(project)
+
+        assert.are.equal(1, #creator_calls)
+        assert.is_nil(creator_calls[1].initial_draft)
+    end)
+
     it("opens the bug creator when adding a bug todo", function()
         local actions = PromptActions.new({
             queue_actions = {

@@ -222,7 +222,7 @@ function PromptActions:open_creator(project, opts)
     opts = opts or {}
     local category = resolve_prompt_category(opts.category)
     local context = opts.context or PromptContext.capture({ project = project })
-    local draft = opts.initial_draft or selection_default_draft(category, context)
+    local draft = opts.initial_draft or (opts.context and selection_default_draft(category, context))
     local current_tab = self.app.current_tab and self.app:current_tab() or nil
     local active_project_root = opts.active_project_root or current_tab and current_tab.active_project_root or nil
     local projects = self.app.projects_for_queue_workspace and self.app:projects_for_queue_workspace(active_project_root)

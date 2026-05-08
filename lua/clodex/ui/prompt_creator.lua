@@ -337,7 +337,6 @@ function Creator:prime_drafts(initial_draft)
                     and initial_draft
                     and variant.id == default_mode
                     and vim.deepcopy(initial_draft)
-                or (variant.id == default_mode and Helpers.selection_seed(kind.id, self.context))
                 or KindRegistry.default_draft(kind.id, variant.id)
             self.drafts:set(kind.id, variant.id, draft)
         end
