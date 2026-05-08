@@ -48,7 +48,9 @@ require("clodex").setup()
 require("clodex").setup({
     backend = "codex",
     codex_cmd = { "codex" },
+    codex_args = {},
     opencode_cmd = { "opencode" },
+    opencode_args = {},
     storage = {
         projects_file = vim.fn.stdpath("data") .. "/clodex/projects.json",
         workspaces_dir = vim.fn.stdpath("data") .. "/clodex/workspaces",
@@ -134,6 +136,8 @@ require("clodex").setup({
     },
 })
 ```
+
+`codex_cmd` and `opencode_cmd` set the executable used for each backend. `codex_args` and `opencode_args` add backend-specific CLI flags whenever Clodex starts that backend, including project/free chat sessions, resumed sessions, and direct Codex execution. Codex MCP config arguments are appended after `codex_args` so the bundled queue helper remains wired to the configured workspace directory.
 
 `queue_workspace.date_format` accepts `"ago"` for relative timestamps, existing `os.date` formats such as `"%H:%M %d.%m.%Y"`, and token formats such as `"dd.MM.yyyy hh:mm"`. Queue data keeps its saved timestamps unchanged, so older ISO queue files remain readable when the display format changes.
 

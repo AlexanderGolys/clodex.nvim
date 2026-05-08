@@ -38,8 +38,10 @@ function Backend.cli_cmd(config)
     local cmd = nil ---@type string[]
     if name == "opencode" then
         cmd = vim.deepcopy(config.opencode_cmd)
+        vim.list_extend(cmd, vim.deepcopy(config.opencode_args or {}))
     else
         cmd = vim.deepcopy(config.codex_cmd)
+        vim.list_extend(cmd, vim.deepcopy(config.codex_args or {}))
     end
 
     if name == "codex" then

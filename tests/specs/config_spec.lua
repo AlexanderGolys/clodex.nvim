@@ -58,7 +58,9 @@ describe("clodex.config", function()
             assert.are.equal(true, values.project_detection.auto_suggest_git_root)
             assert.are.equal("codex", values.backend)
             assert.are.equal("codex", values.codex_cmd[1])
+            assert.are.same({}, values.codex_args)
             assert.are.equal("opencode", values.opencode_cmd[1])
+            assert.are.same({}, values.opencode_args)
             assert.are.equal(".codex/skills", values.prompt_execution.skills_dir)
             assert.are.equal("commit", values.prompt_execution.git_workflow)
             assert.are.equal(false, values.prompt_execution.review_after_completion)
@@ -84,7 +86,21 @@ describe("clodex.config", function()
 
             assert.are.equal("opencode", values.backend)
             assert.are.same({ "opencode" }, values.opencode_cmd)
+            assert.are.same({}, values.opencode_args)
             assert.are.equal(".codex/skills", values.prompt_execution.skills_dir)
+        end)
+
+        it("keeps backend CLI args separate from the executable commands", function()
+            local cfg = Config.new()
+            local values = cfg:setup({
+                codex_args = { "--profile", "work" },
+                opencode_args = { "--model", "qwen3-coder" },
+            })
+
+            assert.are.same({ "codex" }, values.codex_cmd)
+            assert.are.same({ "--profile", "work" }, values.codex_args)
+            assert.are.same({ "opencode" }, values.opencode_cmd)
+            assert.are.same({ "--model", "qwen3-coder" }, values.opencode_args)
         end)
 
         it("keeps an explicit git workflow override", function()

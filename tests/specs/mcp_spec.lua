@@ -47,6 +47,51 @@ describe("clodex.mcp", function()
         fs.remove(runtime_dir)
     end)
 
+    it("appends configured Codex CLI args before MCP config args", function()
+        local runtime_dir = temp_dir()
+        local values = Config.new():setup({
+            codex_args = { "--profile", "work" },
+            mcp = {
+                enabled = true,
+                cmd = { "cargo", "run", "--bin", "clodex-mcp" },
+                runtime_dir = runtime_dir,
+            },
+        })
+
+        assert.are.same({
+            "codex",
+            "--profile",
+            "work",
+            "-c",
+            'mcp_servers.clodex.command="cargo"',
+            "-c",
+            ('mcp_servers.clodex.args=["run", "--bin", "clodex-mcp", "--workspace-dir", "%s"]'):format(
+                values.storage.workspaces_dir
+            ),
+        }, Backend.cli_cmd(values))
+
+        fs.remove(runtime_dir)
+    end)
+
+    it("appends configured OpenCode CLI args before session resume args", function()
+        local values = Config.new():setup({
+            backend = "opencode",
+            opencode_args = { "--model", "qwen3-coder" },
+            mcp = {
+                enabled = false,
+            },
+        })
+
+        assert.are.same({ "opencode", "--model", "qwen3-coder" }, Backend.cli_cmd(values))
+        assert.are.same({
+            "opencode",
+            "--model",
+            "qwen3-coder",
+            "--session",
+            "session-123",
+        }, Backend.resume_cmd(values, "session-123"))
+    end)
+
     it("replaces stale configured workspace-dir args with the storage workspace dir", function()
         local runtime_dir = temp_dir()
         local workspaces_dir = temp_dir()

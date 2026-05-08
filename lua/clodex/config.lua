@@ -107,7 +107,9 @@ local fs = require("clodex.util.fs")
 ---@class Clodex.Config.Values
 ---@field backend Clodex.Backend.Name
 ---@field codex_cmd string[]
+---@field codex_args string[]
 ---@field opencode_cmd string[]
+---@field opencode_args string[]
 ---@field storage Clodex.Config.Storage
 ---@field terminal Clodex.Config.Terminal
 ---@field project_detection Clodex.Config.ProjectDetection
@@ -135,7 +137,9 @@ local function defaults()
     return {
         backend = "codex",
         codex_cmd = { "codex" },
+        codex_args = {},
         opencode_cmd = { "opencode" },
+        opencode_args = {},
         storage = {
             projects_file = fs.join(storage_root, "projects.json"),
             workspaces_dir = fs.join(storage_root, "workspaces"),
