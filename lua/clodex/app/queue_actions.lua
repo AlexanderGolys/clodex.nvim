@@ -26,6 +26,7 @@ QueueActions.__index = QueueActions
 
 local CONTINUE_AFTER_CLOSE_RETRY_MS = 250
 local CONTINUE_AFTER_CLOSE_MAX_ATTEMPTS = 120
+local CONTINUE_DISPATCH_RETRY_MAX_ATTEMPTS = 8
 
 local function refresh_terminal_chrome()
     local ok, terminal_ui = pcall(require, "clodex.terminal.ui")
@@ -321,13 +322,22 @@ local function continue_after_closed_task(actions, project, session)
             return
         end
 
-        actions.continuing_projects[project.root] = nil
         local current = actions.app.queue:queues(project).queued[1]
         if not current then
+            actions.continuing_projects[project.root] = nil
             actions.app:refresh_views()
             return
         end
-        actions:start_queued_item(project, current.id, "interactive")
+        if actions:start_queued_item(project, current.id, "interactive") then
+            actions.continuing_projects[project.root] = nil
+            actions.app:refresh_views()
+            return
+        end
+        if attempts < (CONTINUE_AFTER_CLOSE_MAX_ATTEMPTS + CONTINUE_DISPATCH_RETRY_MAX_ATTEMPTS) then
+            vim.defer_fn(start_when_ready, CONTINUE_AFTER_CLOSE_RETRY_MS)
+            return
+        end
+        actions.continuing_projects[project.root] = nil
         actions.app:refresh_views()
     end
     vim.defer_fn(start_when_ready, CONTINUE_AFTER_CLOSE_RETRY_MS)

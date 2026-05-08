@@ -556,6 +556,77 @@ describe("clodex.app.queue_actions", function()
         assert.is_nil(session.active_prompt_title)
     end)
 
+    it("retries starting the next queued item if the first post-reset dispatch fails", function()
+        local original_defer_fn = vim.defer_fn
+        vim.defer_fn = function(fn)
+            fn()
+            return 0
+        end
+
+        local start_attempts = 0
+        local started_item_id
+        local sent = {}
+        local session = {
+            active_prompt_title = "Submitted prompt",
+            active_prompt_kind = "todo",
+            active_prompt_authoritative = nil,
+            is_working = function()
+                return false
+            end,
+            set_active_prompt_title = function(self, title, kind, opts)
+                self.active_prompt_title = title
+                self.active_prompt_kind = kind
+                self.active_prompt_authoritative = title and opts and opts.authoritative == true or nil
+            end,
+            send = function(_, text)
+                sent[#sent + 1] = text
+                return true
+            end,
+        }
+        actions.app.config = {
+            get = function()
+                return {
+                    storage = {
+                        workspaces_dir = workspace_root,
+                    },
+                }
+            end,
+        }
+        actions.app.registry = {
+            list = function()
+                return { project }
+            end,
+        }
+        actions.app.terminals = {
+            project_session = function(_, root)
+                if root == project.root then
+                    return session
+                end
+            end,
+        }
+        actions.start_queued_item = function(_, _, item_id)
+            start_attempts = start_attempts + 1
+            if start_attempts == 1 then
+                return false
+            end
+            started_item_id = item_id
+            return true
+        end
+
+        local item = queue:add_todo(project, {
+            title = "Next queued work",
+            queue = "queued",
+            kind = "todo",
+        })
+
+        assert.is_true(actions:poll_active_prompt_titles())
+        vim.defer_fn = original_defer_fn
+
+        assert.are.same({ "/new" }, sent)
+        assert.are.equal(2, start_attempts)
+        assert.are.equal(item.id, started_item_id)
+    end)
+
     it("moves an implemented item back to queued when the source queue is specified", function()
         local item = queue:add_todo(project, {
             title = "fix prompt flow",
