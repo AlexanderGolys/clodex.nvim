@@ -123,6 +123,7 @@ describe("clodex.config", function()
             local refresh_lhs = (refresh[1] and refresh[1].lhs) or refresh.lhs
 
             assert.are.equal("<leader>pP", queue_workspace_lhs)
+            assert.are.equal("a", queue_workspace.mode)
             assert.are.equal("<leader>pF", refresh_lhs)
         end)
 

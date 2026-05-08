@@ -310,6 +310,17 @@ local function normalize_keymap_aliases(opts)
     end
     local keymaps = normalized.keymaps
     local legacy_prompt_panel = keymaps.prompt_panel or keymaps.panel
+    if type(legacy_prompt_panel) == "string" then
+        legacy_prompt_panel = {
+            lhs = legacy_prompt_panel,
+            mode = "a",
+        }
+    elseif type(legacy_prompt_panel) == "table" and not vim.islist(legacy_prompt_panel) then
+        if legacy_prompt_panel.mode == nil then
+            legacy_prompt_panel = vim.deepcopy(legacy_prompt_panel)
+            legacy_prompt_panel.mode = "a"
+        end
+    end
     if legacy_prompt_panel ~= nil then
         keymaps.queue_workspace = legacy_prompt_panel
     end

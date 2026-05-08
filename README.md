@@ -160,7 +160,7 @@ The default chat skill keymaps (`<leader>pw` and `<Home>w`) focus chat from anyw
 Refresh actions reopen tracked CLI sessions with each backend's resume-previous mode (`codex resume --last`, `opencode --continue`) before redrawing Clodex views.
 Each `keymaps.<action>` entry and each `keymaps.new_prompt.<kind>` entry accepts either one descriptor (`{ lhs = "...", mode = ... }`) or a descriptor list (`{{ lhs = "..." }, { lhs = "...", mode = "v" }}`). Descriptor `mode` supports a string or list, `"a"` expands to all keymap modes (`n,i,v,x,s,o,c,t`), and concatenated mode strings like `"nvi"` are expanded to `n,v,i`. For compatibility, a bare `lhs` string or `lhs` list is still accepted.
 Legacy top-level prompt fields (`new_bug_prompt`, `new_improvement_prompt`, `new_line_linked_prompt`, `new_line_linked_prompt_home`) are still supported for compatibility, but new configs should prefer grouped `new_prompt` entries.
-Legacy keymap names `keymaps.prompt_panel`/`keymaps.panel` and `keymaps.prompt_refresh` are also accepted as aliases for `keymaps.queue_workspace` (legacy panel) and `keymaps.refresh`.
+Legacy keymap names `keymaps.prompt_panel`/`keymaps.panel` and `keymaps.prompt_refresh` are also accepted as aliases for `keymaps.queue_workspace` (legacy panel) and `keymaps.refresh`. Legacy prompt-panel aliases default to mode `"a"` when no mode is provided so old `<Home><Home>` mappings continue to work across modes.
 
 `queue_workspace.date_format` accepts `"ago"` for relative timestamps, existing `os.date` formats such as `"%H:%M %d.%m.%Y"`, and token formats such as `"dd.MM.yyyy hh:mm"`. Queue data keeps its saved timestamps unchanged, so older ISO queue files remain readable when the display format changes.
 
