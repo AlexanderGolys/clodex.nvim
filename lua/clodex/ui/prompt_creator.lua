@@ -42,6 +42,7 @@ local TAB_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-tabs")
 local FOOTER_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-footer")
 local PROMPT_EDITOR_NORMAL = "ClodexPromptEditorNormal"
 local PROMPT_FOOTER_NORMAL = "ClodexPromptEditorFooter"
+local PROMPT_BACKGROUND_OVERLAY = "ClodexPromptBackgroundOverlay"
 
 ---@class Clodex.PromptCreator
 ---@field app Clodex.App
@@ -306,10 +307,10 @@ function Creator.new(opts)
                 view = "footer",
                 theme = "prompt_footer",
                 theme_overrides = {
-                    normal = "ClodexPromptEditorFooter",
-                    normal_nc = "ClodexPromptEditorFooter",
-                    normal_float = "ClodexPromptEditorFooter",
-                    end_of_buffer = "ClodexPromptEditorFooter",
+                    normal = PROMPT_BACKGROUND_OVERLAY,
+                    normal_nc = PROMPT_BACKGROUND_OVERLAY,
+                    normal_float = PROMPT_BACKGROUND_OVERLAY,
+                    end_of_buffer = PROMPT_BACKGROUND_OVERLAY,
                     winblend = 0,
                 },
             },

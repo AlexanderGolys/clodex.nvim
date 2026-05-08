@@ -499,6 +499,11 @@ ClodexPromptEditorFooter = {
       fg = { from = { "Comment", "LineNr" } },
       bg = float_win_bg(),
     },
+-- &&&ClodexPromptBackgroundOverlay&&&Lorem Ipsum&&&
+ClodexPromptBackgroundOverlay = {
+      fg = { from = { "Comment", "LineNr" } },
+      bg = float_win_bg(0.08),
+    },
 -- &&&ClodexPromptEditorHint&&&Lorem Ipsum&&&
 ClodexPromptEditorHint = {
       fg = { from = { "Comment", "LineNr" } },
