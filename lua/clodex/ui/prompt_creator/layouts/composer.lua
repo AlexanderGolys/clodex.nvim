@@ -248,6 +248,27 @@ local function split_lines(text)
     return nonempty_or_blank(lines)
 end
 
+---@param buf integer
+---@param lines string[]
+---@return boolean
+local function safe_replace_lines(buf, lines)
+    if not vim.api.nvim_buf_is_valid(buf) or not vim.bo[buf].modifiable then
+        return false
+    end
+    local ok, err = pcall(vim.api.nvim_buf_set_lines, buf, 0, -1, false, lines)
+    if ok then
+        return true
+    end
+    if type(err) == "string" and err:find("E565", 1, true) then
+        vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].modifiable then
+                pcall(vim.api.nvim_buf_set_lines, buf, 0, -1, false, lines)
+            end
+        end)
+    end
+    return false
+end
+
 ---@param overflow string
 ---@param cursor_at_start? boolean
 function ComposerLayout:prepend_details(overflow, cursor_at_start)
@@ -297,7 +318,7 @@ function ComposerLayout:normalize_title_continuation(focus_overflow)
     end
 
     if #title_lines ~= 1 or title_lines[1] ~= title then
-        vim.api.nvim_buf_set_lines(self.title_buf, 0, -1, false, { title })
+        safe_replace_lines(self.title_buf, { title })
     end
     local overflow = vim.trim(table.concat(overflow_parts, "\n"))
     if overflow ~= "" then
@@ -324,7 +345,7 @@ function ComposerLayout:split_title_at_cursor()
     end
 
     self.normalizing_title = true
-    vim.api.nvim_buf_set_lines(self.title_buf, 0, -1, false, { title })
+    safe_replace_lines(self.title_buf, { title })
     self.normalizing_title = false
     local overflow = table.concat(overflow_parts, "\n")
     if vim.trim(overflow) ~= "" then

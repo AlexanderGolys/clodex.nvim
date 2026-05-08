@@ -1529,6 +1529,51 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.same({ "Gamma Delta" }, vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false))
     end)
 
+    it("keeps title enter handling safe when text changes are temporarily blocked", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Fix parser details",
+                details = "Existing detail",
+            },
+            on_submit = function() end,
+        })
+
+        local original_set_lines = vim.api.nvim_buf_set_lines
+        local blocked_once = false
+        vim.api.nvim_buf_set_lines = function(buf, start, finish, strict, lines)
+            if not blocked_once and buf == creator.layout.title_buf then
+                blocked_once = true
+                error("E565: Not allowed to change text or change window")
+            end
+            return original_set_lines(buf, start, finish, strict, lines)
+        end
+
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
+        vim.api.nvim_win_set_cursor(creator.layout.title_win.win, { 1, #"Fix parser" })
+        local result = trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "i")
+
+        vim.api.nvim_buf_set_lines = original_set_lines
+
+        assert.are.equal("", result)
+        wait_for(function()
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+        end)
+    end)
+
     it("changes tabs by mouse hit testing", function()
         creator = Creator.open({
             app = {
