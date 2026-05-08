@@ -702,6 +702,69 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_nil(table.concat(normal_lines, "\n"):find("M", 1, true))
     end)
 
+    it("toggles file and line linked context only for project files", function()
+        local source_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(source_buf, "/tmp/demo/lua/toggle_context_demo.lua")
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                buf = source_buf,
+                file_path = "/tmp/demo/lua/toggle_context_demo.lua",
+                project_root = "/tmp/demo",
+                relative_path = "lua/toggle_context_demo.lua",
+                cursor_row = 5,
+                selection_start_row = 5,
+                selection_end_row = 5,
+                selection_text = "local value = 1",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        assert.is_false(creator.state.link_file)
+        assert.is_false(creator.state.link_line)
+
+        trigger_buffer_mapping(creator.footer_buf, "F")
+        trigger_buffer_mapping(creator.footer_buf, "L")
+
+        assert.is_true(creator.state.link_file)
+        assert.is_true(creator.state.link_line)
+        assert.are.equal(3, #creator.state.linked_context)
+        assert.are.equal("file", creator.state.linked_context[1].kind)
+        assert.are.equal("line", creator.state.linked_context[2].kind)
+        assert.are.equal("selection", creator.state.linked_context[3].kind)
+
+        creator.state.context = {
+            buf = source_buf,
+            file_path = "/tmp/other/outside.lua",
+            project_root = "/tmp/demo",
+            relative_path = nil,
+            cursor_row = 3,
+        }
+        creator.state.link_file = false
+        creator.state.link_line = false
+        creator.state.linked_context = {}
+
+        trigger_buffer_mapping(creator.footer_buf, "F")
+        trigger_buffer_mapping(creator.footer_buf, "L")
+
+        assert.is_false(creator.state.link_file)
+        assert.is_false(creator.state.link_line)
+        assert.are.equal(0, #creator.state.linked_context)
+    end)
+
     it("matches prompt border and footer keymap colors to the active kind", function()
         creator = Creator.open({
             app = {

@@ -26,6 +26,26 @@ describe("clodex.prompt.submit", function()
 
         assert.are.equal("Fix &file", spec.title)
         assert.are.equal('Inspect "value" under the cursor in @lua/demo.lua: line 7 ([Inserted context from &word])', spec.details)
+        assert.are.equal(1, #spec.context)
+        assert.are.equal("file", spec.context[1].kind)
+    end)
+
+    it("adds file and line context when link toggles are enabled", function()
+        local spec = Submit.build_spec({
+            kind = "todo",
+            title = "Fix this",
+            details = "Inspect &word",
+            link_file = true,
+            link_line = true,
+            context = {
+                relative_path = "lua/demo.lua",
+                file_path = "/tmp/lua/demo.lua",
+                project_root = "/tmp",
+                cursor_row = 7,
+                current_word = "value",
+            },
+        })
+
         assert.are.equal(2, #spec.context)
         assert.are.equal("file", spec.context[1].kind)
         assert.are.equal("line", spec.context[2].kind)

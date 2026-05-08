@@ -3,6 +3,7 @@ local Prompt = require("clodex.prompt")
 local Extmark = require("clodex.ui.extmark")
 local ui_select = require("clodex.ui.select")
 local util = require("clodex.util")
+local fs = require("clodex.util.fs")
 local ui_win = require("clodex.ui.win")
 
 local Helpers = {}
@@ -144,8 +145,12 @@ function Helpers.project_context(context, project)
     local updated = vim.deepcopy(context)
     updated.project_root = project.root
     if updated.file_path and updated.file_path ~= "" then
-        local relative = vim.fs.relpath(project.root, updated.file_path)
-        updated.relative_path = relative and relative ~= "" and relative or vim.fs.basename(updated.file_path)
+        if fs.is_relative_to(updated.file_path, project.root) then
+            local relative = vim.fs.relpath(project.root, updated.file_path)
+            updated.relative_path = relative and relative ~= "" and relative or vim.fs.basename(updated.file_path)
+        else
+            updated.relative_path = nil
+        end
     end
     return updated
 end
@@ -232,8 +237,9 @@ end
 ---@param insert_mode boolean
 ---@param has_variants boolean
 ---@param has_multiple_projects boolean
+---@param link_actions? Clodex.PromptCreator.FooterItem[]
 ---@return Clodex.PromptCreator.FooterItem[][]
-function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
+function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, link_actions)
     if insert_mode then
         local actions = {
             Helpers.footer_item("C-←/→", "kind"),
@@ -242,6 +248,7 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
             actions[#actions + 1] = Helpers.footer_item("C-↑/↓", "project")
         end
         vim.list_extend(actions, {
+            util.unpack_values(link_actions or {}),
             Helpers.footer_item("C-s", "plan"),
             Helpers.footer_item({ "C-.", "C-S-." }, "implement", " / "),
             Helpers.footer_item("C-p", "plan impl"),
@@ -271,6 +278,7 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects)
     return {
         row_one,
         {
+            util.unpack_values(link_actions or {}),
             Helpers.footer_item("s", "plan"),
             Helpers.footer_item("S"),
             Helpers.footer_item("󰌑 ", "queue"),

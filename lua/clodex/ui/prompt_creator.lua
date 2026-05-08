@@ -12,6 +12,7 @@ local Helpers = require("clodex.ui.prompt_creator.helpers")
 local LAYOUT = require("clodex.ui.prompt_creator.layout_config")
 local ui_select = require("clodex.ui.select")
 local notify = require("clodex.util.notify")
+local fs = require("clodex.util.fs")
 
 ---@class Clodex.PromptCreator.OpenOpts
 ---@field app Clodex.App
@@ -144,7 +145,40 @@ end
 ---@param context? Clodex.PromptContext.Capture
 ---@return Clodex.PromptContext.Linked[]
 local function linked_context_for_capture(context)
-    return PromptContext.linked_context(context, { include_current = true })
+    return PromptContext.linked_context(context, { include_selection = true })
+end
+
+---@param context? Clodex.PromptContext.Capture
+---@return boolean
+local function context_from_project_file(context)
+    if not context or not context.file_path or not context.project_root then
+        return false
+    end
+    if not fs.is_relative_to(context.file_path, context.project_root) then
+        return false
+    end
+    if type(context.buf) == "number" and vim.api.nvim_buf_is_valid(context.buf) then
+        local name = vim.api.nvim_buf_get_name(context.buf)
+        if name == "" or fs.is_virtual_path(name) then
+            return false
+        end
+    end
+    return true
+end
+
+---@param items Clodex.PromptContext.Linked[]?
+---@param kind "file"|"line"
+---@return boolean
+local function linked_context_has_kind(items, kind)
+    if type(items) ~= "table" then
+        return false
+    end
+    for _, item in ipairs(items) do
+        if item.kind == kind then
+            return true
+        end
+    end
+    return false
 end
 
 ---@param draft table?
@@ -230,6 +264,8 @@ function Creator.new(opts)
             details = "",
             image_path = opts.initial_draft and opts.initial_draft.image_path or nil,
             linked_context = opts.initial_draft and opts.initial_draft.context or linked_context_for_capture(prompt_context),
+            link_file = false,
+            link_line = false,
             preview_text = "",
         },
         drafts = DraftStore.new(),
@@ -346,6 +382,8 @@ function Creator:sync_state_from_draft()
     self.state.title = ""
     self.state.details = ""
     self.state.image_path = nil
+    self.state.link_file = false
+    self.state.link_line = false
     self.state.context = self.context
     self.state.linked_context = linked_context_for_capture(self.context)
     self.state.preview_text = ""
@@ -361,7 +399,17 @@ function Creator:sync_state_from_draft()
     end
     self.state.project = self.project
     self.state.context = self.context
-    self.state.linked_context = draft.context or draft.linked_context or linked_context_for_capture(self.context)
+    local captured = draft.context or draft.linked_context or linked_context_for_capture(self.context)
+    local can_link = context_from_project_file(self.context)
+    local draft_link_file = type(draft.link_file) == "boolean" and draft.link_file or linked_context_has_kind(captured, "file")
+    local draft_link_line = type(draft.link_line) == "boolean" and draft.link_line or linked_context_has_kind(captured, "line")
+    self.state.link_file = can_link and draft_link_file or false
+    self.state.link_line = can_link and draft_link_line or false
+    self.state.linked_context = PromptContext.linked_context(self.context, {
+        include_file = self.state.link_file,
+        include_line = self.state.link_line,
+        include_selection = true,
+    })
 
     local variant = KindRegistry.mode(self.state.kind, self.state.variant)
     if variant.on_select then
@@ -523,6 +571,8 @@ function Creator:save_current_draft()
         vim.tbl_extend("force", draft, {
             image_path = self.state.image_path,
             linked_context = self.state.linked_context,
+            link_file = self.state.link_file == true,
+            link_line = self.state.link_line == true,
             preview_text = self.state.preview_text,
         })
     )
@@ -1096,6 +1146,15 @@ function Creator:set_project_index(index)
     self.context = Helpers.project_context(self.context, project)
     self.state.project = project
     self.state.context = self.context
+    if not context_from_project_file(self.state.context) then
+        self.state.link_file = false
+        self.state.link_line = false
+    end
+    self.state.linked_context = PromptContext.linked_context(self.state.context, {
+        include_file = self.state.link_file,
+        include_line = self.state.link_line,
+        include_selection = true,
+    })
     self:render_project_list()
     self:refresh_layout_prompt_contexts()
 end
@@ -1333,9 +1392,20 @@ function Creator:render_footer(insert_mode)
     insert_mode = insert_mode == nil and self:in_insert_mode() or insert_mode
     local has_variants = #self:variants() > 0
     local has_multiple_projects = #self.projects > 1
+    local can_link = context_from_project_file(self.state.context)
+    local link_actions = insert_mode and {
+        Helpers.footer_item("C-f", can_link and (self.state.link_file and "file link on" or "file link off") or "file link n/a"),
+        Helpers.footer_item("C-l", can_link and (self.state.link_line and "line link on" or "line link off") or "line link n/a"),
+    } or {
+        Helpers.footer_item("F", can_link and (self.state.link_file and "file link on" or "file link off") or "file link n/a"),
+        Helpers.footer_item("L", can_link and (self.state.link_line and "line link on" or "line link off") or "line link n/a"),
+    }
     local key_hl = Prompt.title_group(self.state.kind)
     local lines, marks =
-        Helpers.render_footer_rows(Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects), key_hl)
+        Helpers.render_footer_rows(
+            Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, link_actions),
+            key_hl
+        )
 
     vim.bo[self.footer_buf].modifiable = true
     vim.api.nvim_buf_set_lines(self.footer_buf, 0, -1, false, lines)
@@ -1344,6 +1414,27 @@ function Creator:render_footer(insert_mode)
     for _, mark in ipairs(marks) do
         mark:place(self.footer_buf, FOOTER_NS)
     end
+end
+
+---@param kind "file"|"line"
+function Creator:toggle_context_link(kind)
+    if not context_from_project_file(self.state.context) then
+        notify.warn("File and line links are only available when the source buffer is a project file")
+        return
+    end
+    if kind == "file" then
+        self.state.link_file = not self.state.link_file
+    elseif kind == "line" then
+        self.state.link_line = not self.state.link_line
+    end
+    self.state.linked_context = PromptContext.linked_context(self.state.context, {
+        include_file = self.state.link_file,
+        include_line = self.state.link_line,
+        include_selection = true,
+    })
+    self:save_current_draft()
+    self:render_footer()
+    self:render_preview()
 end
 
 -- Apply theme
@@ -1809,6 +1900,18 @@ function Creator:apply_common_keymaps(buf)
     end
     vim.keymap.set({ "n", "i" }, "<C-v>", function()
         self:replace_clipboard_image(false)
+    end, { buffer = buf, silent = true })
+    vim.keymap.set("n", "F", function()
+        self:toggle_context_link("file")
+    end, { buffer = buf, silent = true })
+    vim.keymap.set("n", "L", function()
+        self:toggle_context_link("line")
+    end, { buffer = buf, silent = true })
+    vim.keymap.set("i", "<C-f>", function()
+        self:toggle_context_link("file")
+    end, { buffer = buf, silent = true })
+    vim.keymap.set("i", "<C-l>", function()
+        self:toggle_context_link("line")
     end, { buffer = buf, silent = true })
     vim.keymap.set("n", "q", function()
         self:close()

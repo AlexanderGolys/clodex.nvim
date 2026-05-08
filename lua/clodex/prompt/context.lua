@@ -651,6 +651,9 @@ end
 ---@class Clodex.PromptContext.LinkedOpts
 ---@field text? string Text to scan for explicit context token references.
 ---@field include_current? boolean Include the captured file, cursor line, and selection even without token references.
+---@field include_file? boolean Include the captured file reference when available.
+---@field include_line? boolean Include the captured cursor line reference when available.
+---@field include_selection? boolean Include the captured selection reference when available.
 
 --- Builds structured prompt context that can be saved separately from expanded prose.
 ---@param context Clodex.PromptContext.Capture?
@@ -664,13 +667,16 @@ function M.linked_context(context, opts)
     opts = opts or {}
     local tokens = referenced_tokens(opts.text)
     local items = {} ---@type Clodex.PromptContext.Linked[]
-    if tokens["&file"] or opts.include_current then
+    local include_file = opts.include_current or opts.include_file
+    local include_line = opts.include_current or opts.include_line
+    local include_selection = opts.include_current or opts.include_selection
+    if tokens["&file"] or include_file then
         append_context_item(items, file_context(context, tokens["&file"] and "&file" or nil))
     end
-    if tokens["&line"] or opts.include_current then
+    if tokens["&line"] or include_line then
         append_context_item(items, line_context(context, tokens["&line"] and "&line" or nil))
     end
-    if tokens["&selection"] or opts.include_current then
+    if tokens["&selection"] or include_selection then
         append_context_item(items, selection_context(context, tokens["&selection"] and "&selection" or nil))
     end
     return items

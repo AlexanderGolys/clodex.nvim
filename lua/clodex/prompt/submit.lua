@@ -36,7 +36,9 @@ local function linked_context(state)
     }, "\n")
     local context = PromptContext.linked_context(state.context, {
         text = referenced_text,
-        include_current = true,
+        include_file = state.link_file == true,
+        include_line = state.link_line == true,
+        include_selection = true,
     })
     if #context > 0 then
         return context
