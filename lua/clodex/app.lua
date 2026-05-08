@@ -22,7 +22,6 @@ local SessionPersistence = require("clodex.session.persistence")
 local Execution = require("clodex.workspace.execution")
 local Queue = require("clodex.workspace.queue")
 local TerminalUi = require("clodex.terminal.ui")
-local TerminalLualine = require("clodex.terminal.lualine")
 local Mcp = require("clodex.mcp")
 local fs = require("clodex.util.fs")
 local notify = require("clodex.util.notify")
@@ -394,7 +393,6 @@ end
 function App:setup(opts)
     local values = self.config:setup(opts)
     Config.apply_highlights(values)
-    TerminalLualine.ensure_terminal_disabled(values.terminal.prefer_native_statusline)
     self.registry = Registry.new({ path = values.storage.projects_file })
     self.project_details_store = self.project_details_store or ProjectDetails.new(values)
     self.project_bookmarks = self.project_bookmarks or ProjectBookmarks.new()
@@ -514,9 +512,7 @@ function App:setup_autocmds()
         group = self.group,
         pattern = "clodex_terminal",
         --- Applies Clodex terminal chrome when the terminal buffer filetype is established.
-        --- When lualine is present, prefer the native mirrored CLI line unless config opts out.
         callback = function(args)
-            TerminalLualine.ensure_terminal_disabled(self.config:get().terminal.prefer_native_statusline)
             local win = vim.fn.bufwinid(args.buf)
             if type(win) == "number" and win > 0 then
                 TerminalUi.refresh_chrome(win)
