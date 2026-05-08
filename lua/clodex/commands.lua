@@ -258,7 +258,7 @@ local GLOBAL_KEYMAPS = {
         field = "new_improvement_prompt",
         mode = "n",
         action = "add_todo",
-        desc = "Create a new improvement prompt",
+        desc = "Create a new task prompt",
     },
     {
         field = "new_line_linked_prompt",

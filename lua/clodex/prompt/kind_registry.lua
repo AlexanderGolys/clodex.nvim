@@ -71,7 +71,7 @@ end
 local kinds = {
     {
         id = "todo",
-        label = "Improvement",
+        label = "Task",
         highlight = "todo_title",
         default_title = "Improve the current implementation",
         aliases = { "improvement" },
@@ -175,7 +175,7 @@ local kinds = {
     },
     {
         id = "docs",
-        label = "Missing Docs",
+        label = "Docs",
         highlight = "docs_title",
         default_title = "Document the missing behavior",
         aliases = { "missing-docs", "missing_docs" },
