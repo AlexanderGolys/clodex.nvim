@@ -312,7 +312,11 @@ local function is_idle_line(line)
         return false
     end
 
-    if line:find("per the queued-work contract", 1, true) and line:find("close response", 1, true) then
+    local mentions_contract = line:find("queued-work contract", 1, true) ~= nil
+    local mentions_close = line:find("close", 1, true) ~= nil
+    local mentions_response = line:find("response", 1, true) ~= nil
+    local mentions_stop = line:find("stop", 1, true) ~= nil or line:find("stopping", 1, true) ~= nil
+    if mentions_contract and mentions_close and mentions_response and mentions_stop then
         return true
     end
 
