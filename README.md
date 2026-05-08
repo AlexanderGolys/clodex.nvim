@@ -133,11 +133,11 @@ require("clodex").setup({
         chat_toggle = { lhs = "<leader>pc" },
         chat_jump = {
             { lhs = "<leader>pj", mode = "n" },
-            { lhs = "<Home>j", mode = { "n", "i", "v", "x", "s", "o", "c", "t" } },
+            { lhs = "<Home>j", mode = "a" },
         },
         chat_skill = {
             { lhs = "<leader>pw", mode = "n" },
-            { lhs = "<Home>w", mode = { "n", "i", "v", "x", "s", "o", "c", "t" } },
+            { lhs = "<Home>w", mode = "a" },
         },
         refresh = { lhs = "<leader>pR" },
         new_prompt = {
@@ -145,7 +145,7 @@ require("clodex").setup({
             improvement = { lhs = "<leader>pI" },
             line_linked = {
                 { lhs = "<leader>pl", mode = "n" },
-                { lhs = "<Home>l", mode = { "n", "i", "v", "x", "s", "o", "c", "t" } },
+                { lhs = "<Home>l", mode = "nvi" },
             },
         },
         go_to_readme = { lhs = "<leader>pM" },

@@ -411,6 +411,27 @@ describe("clodex.commands", function()
         assert.are.equal("n,v,i", refresh_mode)
     end)
 
+    it("expands comma-separated mode strings like 'n,i,v'", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                refresh = {
+                    lhs = "<leader>pR",
+                    mode = "n,i,v",
+                },
+            },
+        })
+
+        local refresh_mode = nil
+        for _, item in ipairs(keymaps) do
+            if item.field == "refresh" and item.lhs == "<leader>pR" then
+                refresh_mode = item.mode
+                break
+            end
+        end
+
+        assert.are.equal("n,i,v", refresh_mode)
+    end)
+
     it("supports multiple keymap descriptors per keymap field", function()
         local keymaps = Commands.list_keymaps({
             keymaps = {
@@ -498,7 +519,7 @@ describe("clodex.commands", function()
                         { lhs = "<leader>pl", mode = "n" },
                     },
                     line_linked_home = {
-                        { lhs = "<Home>l", mode = { "n", "i", "v", "x", "s", "o", "c", "t" } },
+                        { lhs = "<Home>l", mode = "a" },
                     },
                 },
             },

@@ -303,6 +303,21 @@ local function normalize_keymap_mode(mode)
         if mode == "a" then
             return vim.deepcopy(ALL_KEYMAP_MODES)
         end
+        if mode:find(",", 1, true) or mode:find("%s") then
+            local expanded = {} ---@type string[]
+            for item in mode:gmatch("[^,%s]+") do
+                if item == "a" then
+                    vim.list_extend(expanded, ALL_KEYMAP_MODES)
+                elseif #item == 1 and VALID_KEYMAP_MODES[item] then
+                    expanded[#expanded + 1] = item
+                else
+                    return mode
+                end
+            end
+            if #expanded > 0 then
+                return expanded
+            end
+        end
         if #mode > 1 and not mode:find(",", 1, true) and not mode:find("%s") then
             local expanded = {} ---@type string[]
             for idx = 1, #mode do
