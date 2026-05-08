@@ -184,9 +184,6 @@ local function prompt_kind_enum()
         elseif category.id == "idea" then
             value = "vision"
             aliases[#aliases + 1] = "idea"
-        elseif category.id == "cleanup" then
-            value = "clean-up"
-            aliases[#aliases + 1] = "cleanup"
         end
         choices[#choices + 1] = {
             value = value,

@@ -6,7 +6,6 @@
 ---| "adjustment"
 ---| "refactor"
 ---| "idea"
----| "cleanup"
 ---| "docs"
 ---| "ask"
 ---| "explain"
@@ -157,17 +156,6 @@ local kinds = {
         default_title = "Explore a product vision",
         commit_policy = "skip",
         aliases = { "vision" },
-        default_mode = "custom",
-        modes = {
-            custom_mode(),
-        },
-    },
-    {
-        id = "cleanup",
-        label = "Clean-up",
-        highlight = "cleanup_title",
-        default_title = "Clean up the implementation",
-        aliases = { "clean-up", "clean_up" },
         default_mode = "custom",
         modes = {
             custom_mode(),
