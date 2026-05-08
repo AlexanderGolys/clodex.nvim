@@ -26,6 +26,10 @@ describe("clodex.prompt.submit", function()
 
         assert.are.equal("Fix &file", spec.title)
         assert.are.equal('Inspect "value" under the cursor in @lua/demo.lua: line 7 ([Inserted context from &word])', spec.details)
+        assert.are.equal(2, #spec.context)
+        assert.are.equal("file", spec.context[1].kind)
+        assert.are.equal("line", spec.context[2].kind)
+        assert.are.equal("Line @lua/demo.lua:7", spec.context[2].summary)
     end)
 
     it("builds clipboard-error bug prompts from preview text and uses the comment as the title", function()

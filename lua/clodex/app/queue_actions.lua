@@ -530,6 +530,7 @@ function QueueActions:add_project_todo(project, spec, opts)
         details = normalized.details,
         kind = spec.kind,
         image_path = spec.image_path,
+        context = spec.context,
         completion_target = spec.completion_target,
         start_mode = opts.start_mode,
         queue = queue_name,
@@ -562,7 +563,7 @@ end
 
 ---@param project Clodex.Project
 ---@param item_id string
----@param spec { title: string, details?: string, image_path?: string }
+---@param spec { title: string, details?: string, image_path?: string, context?: Clodex.PromptContext.Linked[] }
 ---@return Clodex.QueueItem|false
 function QueueActions:edit_queue_item(project, item_id, spec)
     local title = vim.trim(spec.title or "")
@@ -579,6 +580,7 @@ function QueueActions:edit_queue_item(project, item_id, spec)
         title = normalized.title,
         details = normalized.details or false,
         image_path = spec.image_path and vim.trim(spec.image_path) ~= "" and spec.image_path or false,
+        context = spec.context or false,
     })
     if not item then
         notify.warn("Queue item not found")

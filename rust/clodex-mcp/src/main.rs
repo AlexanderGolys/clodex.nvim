@@ -108,6 +108,8 @@ struct QueueItem {
     completion_target: Option<String>,
     #[serde(default)]
     image_path: Option<String>,
+    #[serde(default)]
+    context: Option<Vec<Value>>,
     created_at: String,
     updated_at: String,
     #[serde(default)]
@@ -565,6 +567,7 @@ fn create_prompt(args: CreatePromptArgs) -> AppResult<Value> {
         execution_instructions: None,
         completion_target: normalize_completion_target_arg(args.completion_target),
         image_path: normalize_optional_string(args.image_path),
+        context: None,
         created_at: timestamp.clone(),
         updated_at: timestamp,
         history_summary: None,
@@ -724,17 +727,82 @@ fn task_context(item: &QueueItem) -> Value {
     })
 }
 
-fn work_prompt(item: &QueueItem) -> String {
-    let prompt = item.prompt.trim();
-    if !prompt.is_empty() {
-        return prompt.to_string();
+fn linked_context_summary(item: &Value) -> Option<String> {
+    let object = item.as_object()?;
+    if let Some(summary) = object.get("summary").and_then(Value::as_str) {
+        let summary = summary.trim();
+        if !summary.is_empty() {
+            return Some(summary.to_string());
+        }
     }
 
-    match &item.details {
-        Some(details) if !details.trim().is_empty() => {
-            format!("{}\n\n{}", item.title.trim(), details.trim())
+    let kind = object.get("kind").and_then(Value::as_str).unwrap_or("file");
+    let relative_path = object
+        .get("relative_path")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    match kind {
+        "selection" => {
+            let start_line = object
+                .get("start_line")
+                .and_then(Value::as_i64)
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "?".to_string());
+            let end_line = object.get("end_line").and_then(Value::as_i64);
+            let range = match end_line {
+                Some(end) if start_line != end.to_string() => format!("{start_line}-{end}"),
+                _ => start_line,
+            };
+            Some(format!("Selection @{relative_path}:{range}"))
         }
-        _ => item.title.trim().to_string(),
+        "line" => {
+            let line = object
+                .get("line")
+                .and_then(Value::as_i64)
+                .map(|value| value.to_string())
+                .unwrap_or_else(|| "?".to_string());
+            Some(format!("Line @{relative_path}:{line}"))
+        }
+        _ => Some(format!("File @{relative_path}")),
+    }
+}
+
+fn linked_context_lines(context: Option<&[Value]>) -> Vec<String> {
+    context
+        .unwrap_or(&[])
+        .iter()
+        .filter_map(|item| {
+            let summary = linked_context_summary(item)?;
+            let token = item
+                .get("token")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(|value| format!(" {value}"))
+                .unwrap_or_default();
+            Some(format!("- {summary}{token}"))
+        })
+        .collect()
+}
+
+fn work_prompt(item: &QueueItem) -> String {
+    let prompt = item.prompt.trim();
+    let base = if !prompt.is_empty() {
+        prompt.to_string()
+    } else {
+        match &item.details {
+            Some(details) if !details.trim().is_empty() => {
+                format!("{}\n\n{}", item.title.trim(), details.trim())
+            }
+            _ => item.title.trim().to_string(),
+        }
+    };
+
+    let context_lines = linked_context_lines(item.context.as_deref());
+    if context_lines.is_empty() {
+        base
+    } else {
+        format!("{base}\n\nLinked context:\n{}", context_lines.join("\n"))
     }
 }
 
@@ -746,6 +814,7 @@ fn task_payload(item: &QueueItem) -> Value {
         "details": item.details,
         "work_prompt": work_prompt(item),
         "image_path": item.image_path,
+        "context": item.context,
     })
 }
 

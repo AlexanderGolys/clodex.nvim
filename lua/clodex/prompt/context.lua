@@ -31,6 +31,18 @@ local unpack_values = require("clodex.util").unpack_values
 ---@field selection_text? string
 ---@field selection_kind? string
 
+---@class Clodex.PromptContext.Linked
+---@field kind "file"|"line"|"selection"
+---@field token? string
+---@field file_path? string
+---@field project_root? string
+---@field relative_path string
+---@field line? integer
+---@field start_line? integer
+---@field end_line? integer
+---@field text? string
+---@field summary? string
+
 --- Defines the Clodex.PromptContext.QuickPrompt type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
 ---@class Clodex.PromptContext.QuickPrompt
@@ -91,6 +103,13 @@ local TOKEN_SPECS = {
 local current_buffer_diags
 local current_line_diags
 local project_diagnostics
+
+---@type table<string, string>
+local LINKED_CONTEXT_TOKENS = {
+    ["&file"] = "file",
+    ["&line"] = "line",
+    ["&selection"] = "selection",
+}
 
 ---@param context Clodex.PromptContext.Capture?
 ---@return boolean
@@ -188,6 +207,105 @@ local function token_available(token, context)
         return false
     end
     return is_available(context)
+end
+
+---@param text string?
+---@return table<string, boolean>
+local function referenced_tokens(text)
+    local tokens = {} ---@type table<string, boolean>
+    for token in tostring(text or ""):gmatch("&[%a_][%w_]*") do
+        if LINKED_CONTEXT_TOKENS[token] then
+            tokens[token] = true
+        end
+    end
+    return tokens
+end
+
+---@param item Clodex.PromptContext.Linked
+---@return boolean
+local function has_context_item(items, item)
+    for _, existing in ipairs(items) do
+        if
+            existing.kind == item.kind
+            and existing.relative_path == item.relative_path
+            and existing.line == item.line
+            and existing.start_line == item.start_line
+            and existing.end_line == item.end_line
+            and existing.text == item.text
+        then
+            return true
+        end
+    end
+    return false
+end
+
+---@param items Clodex.PromptContext.Linked[]
+---@param item Clodex.PromptContext.Linked?
+local function append_context_item(items, item)
+    if item and not has_context_item(items, item) then
+        items[#items + 1] = item
+    end
+end
+
+---@param context Clodex.PromptContext.Capture
+---@param token? string
+---@return Clodex.PromptContext.Linked?
+local function file_context(context, token)
+    if not has_relative_path(context) then
+        return nil
+    end
+    return {
+        kind = "file",
+        token = token,
+        file_path = context.file_path,
+        project_root = context.project_root,
+        relative_path = context.relative_path,
+        summary = ("File @%s"):format(context.relative_path),
+    }
+end
+
+---@param context Clodex.PromptContext.Capture
+---@param token? string
+---@return Clodex.PromptContext.Linked?
+local function line_context(context, token)
+    if not has_relative_path(context) or not has_cursor(context) then
+        return nil
+    end
+    return {
+        kind = "line",
+        token = token,
+        file_path = context.file_path,
+        project_root = context.project_root,
+        relative_path = context.relative_path,
+        line = context.cursor_row,
+        summary = ("Line @%s:%d"):format(context.relative_path, context.cursor_row),
+    }
+end
+
+---@param context Clodex.PromptContext.Capture
+---@param token? string
+---@return Clodex.PromptContext.Linked?
+local function selection_context(context, token)
+    if not has_selection(context) then
+        return nil
+    end
+    local start_row = context.selection_start_row or context.cursor_row
+    local end_row = context.selection_end_row or start_row
+    if not start_row then
+        return nil
+    end
+    local range = start_row == end_row and tostring(start_row) or ("%d-%d"):format(start_row, end_row)
+    return {
+        kind = "selection",
+        token = token,
+        file_path = context.file_path,
+        project_root = context.project_root,
+        relative_path = context.relative_path,
+        start_line = start_row,
+        end_line = end_row,
+        text = context.selection_text,
+        summary = ("Selection @%s:%s"):format(context.relative_path, range),
+    }
 end
 
 ---@param token string
@@ -528,6 +646,82 @@ function M.expand_text(text, context)
         local replacement = M.expand_token_with_note(token, context)
         return replacement or token
     end))
+end
+
+---@class Clodex.PromptContext.LinkedOpts
+---@field text? string Text to scan for explicit context token references.
+---@field include_current? boolean Include the captured file, cursor line, and selection even without token references.
+
+--- Builds structured prompt context that can be saved separately from expanded prose.
+---@param context Clodex.PromptContext.Capture?
+---@param opts? Clodex.PromptContext.LinkedOpts
+---@return Clodex.PromptContext.Linked[]
+function M.linked_context(context, opts)
+    if not context then
+        return {}
+    end
+
+    opts = opts or {}
+    local tokens = referenced_tokens(opts.text)
+    local items = {} ---@type Clodex.PromptContext.Linked[]
+    if tokens["&file"] or opts.include_current then
+        append_context_item(items, file_context(context, tokens["&file"] and "&file" or nil))
+    end
+    if tokens["&line"] or opts.include_current then
+        append_context_item(items, line_context(context, tokens["&line"] and "&line" or nil))
+    end
+    if tokens["&selection"] or opts.include_current then
+        append_context_item(items, selection_context(context, tokens["&selection"] and "&selection" or nil))
+    end
+    return items
+end
+
+---@param context_items Clodex.PromptContext.Linked[]?
+---@return boolean
+function M.has_linked_context(context_items)
+    return type(context_items) == "table" and #context_items > 0
+end
+
+---@param item Clodex.PromptContext.Linked
+---@return string
+function M.linked_context_summary(item)
+    if type(item) ~= "table" then
+        return ""
+    end
+    if type(item.summary) == "string" and vim.trim(item.summary) ~= "" then
+        return item.summary
+    end
+    if item.kind == "selection" then
+        local start_line = tonumber(item.start_line)
+        local end_line = tonumber(item.end_line) or start_line
+        local range = start_line and (start_line == end_line and tostring(start_line) or ("%d-%d"):format(start_line, end_line))
+            or "?"
+        return ("Selection @%s:%s"):format(item.relative_path or "unknown", range)
+    end
+    if item.kind == "line" then
+        return ("Line @%s:%s"):format(item.relative_path or "unknown", tostring(item.line or "?"))
+    end
+    return ("File @%s"):format(item.relative_path or "unknown")
+end
+
+---@param context_items Clodex.PromptContext.Linked[]?
+---@param opts? { include_text?: boolean }
+---@return string[]
+function M.linked_context_lines(context_items, opts)
+    if not M.has_linked_context(context_items) then
+        return {}
+    end
+
+    opts = opts or {}
+    local lines = {} ---@type string[]
+    for _, item in ipairs(context_items) do
+        local token = type(item.token) == "string" and item.token ~= "" and (" " .. item.token) or ""
+        lines[#lines + 1] = ("- %s%s"):format(M.linked_context_summary(item), token)
+        if opts.include_text and type(item.text) == "string" and vim.trim(item.text) ~= "" then
+            lines[#lines + 1] = vim.trim(item.text)
+        end
+    end
+    return lines
 end
 
 --- Returns canned prompt bodies that keep context tokens until submit time.

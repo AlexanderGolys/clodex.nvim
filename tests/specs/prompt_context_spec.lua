@@ -86,4 +86,52 @@ describe("clodex.prompt.context", function()
             prompts[2].text
         )
     end)
+
+    it("builds durable linked context for file, line, and selection references", function()
+        local context = {
+            relative_path = "src/main.lua",
+            file_path = "/Users/dev/project/src/main.lua",
+            project_root = "/Users/dev/project",
+            cursor_row = 9,
+            selection_start_row = 7,
+            selection_end_row = 9,
+            selection_text = "local value = call()",
+        }
+
+        local linked = PromptContext.linked_context(context, {
+            text = "Use &file and &selection",
+        })
+
+        assert.are.equal(2, #linked)
+        assert.are.same({
+            kind = "file",
+            token = "&file",
+            file_path = "/Users/dev/project/src/main.lua",
+            project_root = "/Users/dev/project",
+            relative_path = "src/main.lua",
+            summary = "File @src/main.lua",
+        }, linked[1])
+        assert.are.equal("selection", linked[2].kind)
+        assert.are.equal("&selection", linked[2].token)
+        assert.are.equal(7, linked[2].start_line)
+        assert.are.equal(9, linked[2].end_line)
+        assert.are.equal("Selection @src/main.lua:7-9", PromptContext.linked_context_summary(linked[2]))
+    end)
+
+    it("can attach the captured file, line, and selection without explicit tokens", function()
+        local linked = PromptContext.linked_context({
+            relative_path = "src/main.lua",
+            file_path = "/Users/dev/project/src/main.lua",
+            project_root = "/Users/dev/project",
+            cursor_row = 9,
+            selection_start_row = 9,
+            selection_end_row = 9,
+            selection_text = "return value",
+        }, { include_current = true })
+
+        assert.are.equal(3, #linked)
+        assert.are.equal("file", linked[1].kind)
+        assert.are.equal("line", linked[2].kind)
+        assert.are.equal("selection", linked[3].kind)
+    end)
 end)

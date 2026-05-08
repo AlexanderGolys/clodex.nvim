@@ -2,6 +2,7 @@ local PromptAssets = require("clodex.prompt.assets")
 local DraftStore = require("clodex.prompt.draft_store")
 local KindRegistry = require("clodex.prompt.kind_registry")
 local Prompt = require("clodex.prompt")
+local PromptContext = require("clodex.prompt.context")
 local PromptSubmit = require("clodex.prompt.submit")
 local Extmark = require("clodex.ui.extmark")
 local UiBlock = require("clodex.ui.panel.block")
@@ -140,6 +141,12 @@ local function blank(value)
     return type(value) ~= "string" or vim.trim(value) == ""
 end
 
+---@param context? Clodex.PromptContext.Capture
+---@return Clodex.PromptContext.Linked[]
+local function linked_context_for_capture(context)
+    return PromptContext.linked_context(context, { include_current = true })
+end
+
 ---@param draft table?
 ---@return table?
 local function normalize_initial_draft(draft)
@@ -197,6 +204,7 @@ function Creator.new(opts)
             break
         end
     end
+    local prompt_context = Helpers.project_context(opts.context, project)
 
     local self = setmetatable({
         app = opts.app,
@@ -204,7 +212,7 @@ function Creator.new(opts)
         project = project,
         project_index = project_index,
         active_project_root = active_project_root,
-        context = Helpers.project_context(opts.context, project),
+        context = prompt_context,
         submit_actions = vim.deepcopy(opts.submit_actions or DEFAULT_SUBMIT_ACTIONS),
         mode = opts.mode or "new",
         lock_kind = opts.lock_kind == true,
@@ -215,12 +223,13 @@ function Creator.new(opts)
         variant_index = 1,
         state = {
             project = project,
-            context = Helpers.project_context(opts.context, project),
+            context = prompt_context,
             kind = initial_kind,
             variant = nil,
             title = "",
             details = "",
             image_path = opts.initial_draft and opts.initial_draft.image_path or nil,
+            linked_context = opts.initial_draft and opts.initial_draft.context or linked_context_for_capture(prompt_context),
             preview_text = "",
         },
         drafts = DraftStore.new(),
@@ -337,15 +346,22 @@ function Creator:sync_state_from_draft()
     self.state.title = ""
     self.state.details = ""
     self.state.image_path = nil
+    self.state.context = self.context
+    self.state.linked_context = linked_context_for_capture(self.context)
     self.state.preview_text = ""
     for key, value in pairs(draft) do
-        self.state[key] = value
+        if key == "context" then
+            self.state.linked_context = value
+        else
+            self.state[key] = value
+        end
     end
     if self.mode == "new" and self.state.title == kind_default_title then
         self.state.title = ""
     end
     self.state.project = self.project
     self.state.context = self.context
+    self.state.linked_context = draft.context or draft.linked_context or linked_context_for_capture(self.context)
 
     local variant = KindRegistry.mode(self.state.kind, self.state.variant)
     if variant.on_select then
@@ -506,6 +522,7 @@ function Creator:save_current_draft()
         self.state.variant,
         vim.tbl_extend("force", draft, {
             image_path = self.state.image_path,
+            linked_context = self.state.linked_context,
             preview_text = self.state.preview_text,
         })
     )
@@ -526,7 +543,7 @@ end
 ---@return integer
 function Creator:total_width()
     local width = self:editor_size()
-    local base_width = self.state.image_path and LAYOUT.base_width_with_image or LAYOUT.base_width_without_image
+    local base_width = self:has_side_panel() and LAYOUT.base_width_with_image or LAYOUT.base_width_without_image
     local available_width = math.max(width - LAYOUT.creator_screen_margin_cols, LAYOUT.min_window_offset)
     return math.min(available_width, base_width + self:project_panel_width() + LAYOUT.creator_panel_gap_cols)
 end
@@ -563,7 +580,7 @@ function Creator:project_background_rect()
     local content_right = self:content_frame_col() + self:content_frame_width()
     local footer_right = self:content_col() + self:content_width() + LAYOUT.min_window_offset
     local right = math.max(picker_right, content_right, footer_right)
-    if self.state.image_path then
+    if self:has_side_panel() then
         right = math.max(right, self:preview_col() + self:preview_width() + LAYOUT.min_window_offset)
     end
 
@@ -593,9 +610,14 @@ function Creator:project_background_rect()
     }
 end
 
+---@return boolean
+function Creator:has_side_panel()
+    return self.state.image_path ~= nil or PromptContext.has_linked_context(self.state.linked_context)
+end
+
 ---@return integer
 function Creator:preview_width()
-    if not self.state.image_path then
+    if not self:has_side_panel() then
         return 0
     end
     local max_preview_width = self:total_width()
@@ -1470,11 +1492,12 @@ end
 
 -- Preview fallback
 function Creator:open_image_preview_window()
+    local title = self.state.image_path and " Clipboard Image " or " Linked Context "
     self.preview_win = self:open_block(self, "preview_block", "preview_win", "image_preview", self.preview_buf, {
         enter = false,
         border = "rounded",
         zindex = LAYOUT.prompt_content_zindex,
-        title = " Clipboard Image ",
+        title = title,
         title_pos = "center",
         width = function()
             return self:preview_width()
@@ -1491,6 +1514,18 @@ function Creator:open_image_preview_window()
         view = "wrapped_text",
         theme = "prompt_footer",
     })
+end
+
+function Creator:update_preview_title()
+    if not self.preview_win or not self.preview_win:valid() then
+        return
+    end
+    local ok, config = pcall(vim.api.nvim_win_get_config, self.preview_win.win)
+    if not ok then
+        return
+    end
+    config.title = self.state.image_path and " Clipboard Image " or " Linked Context "
+    pcall(vim.api.nvim_win_set_config, self.preview_win.win, config)
 end
 
 function Creator:apply_preview_keymaps()
@@ -1520,14 +1555,8 @@ function Creator:render_preview_fallback(opts)
     vim.bo[self.preview_buf].modifiable = false
 end
 
--- Render preview
-function Creator:render_preview()
-    if self.preview_placement and self.preview_placement.close then
-        self.preview_placement:close()
-        self.preview_placement = nil
-    end
-
-    if not self.state.image_path then
+function Creator:render_context_preview()
+    if not PromptContext.has_linked_context(self.state.linked_context) then
         self:remove_block("image_preview")
         self.preview_win = nil
         self.preview_buf = nil
@@ -1537,6 +1566,42 @@ function Creator:render_preview()
     self.preview_buf = self.preview_buf or Helpers.prompt_buffer("scratch")
     if self.preview_block and self.preview_block:is_valid() then
         self.preview_win = self.preview_block.win
+        self:update_preview_title()
+    else
+        self:open_image_preview_window()
+    end
+    self:apply_preview_keymaps()
+
+    local lines = PromptContext.linked_context_lines(self.state.linked_context)
+    vim.bo[self.preview_buf].modifiable = true
+    vim.bo[self.preview_buf].filetype = "markdown"
+    vim.api.nvim_buf_set_lines(self.preview_buf, 0, -1, false, #lines > 0 and lines or { "No linked context" })
+    vim.bo[self.preview_buf].modifiable = false
+end
+
+-- Render preview
+function Creator:render_preview()
+    if self.preview_placement and self.preview_placement.close then
+        self.preview_placement:close()
+        self.preview_placement = nil
+    end
+
+    if not self.state.image_path then
+        self:render_context_preview()
+        return
+    end
+
+    if not self:has_side_panel() then
+        self:remove_block("image_preview")
+        self.preview_win = nil
+        self.preview_buf = nil
+        return
+    end
+
+    self.preview_buf = self.preview_buf or Helpers.prompt_buffer("scratch")
+    if self.preview_block and self.preview_block:is_valid() then
+        self.preview_win = self.preview_block.win
+        self:update_preview_title()
     else
         self:open_image_preview_window()
     end

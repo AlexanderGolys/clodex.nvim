@@ -567,15 +567,17 @@ local function queue_item_matches_search(item, queue_name, query)
         return true
     end
 
-    local text = table
-        .concat({
-            search_text(item.title),
-            search_text(item.body),
-            search_text(item.details),
-            search_text(item.prompt),
-            prompt_queue_label(queue_name),
-        }, "\n")
-        :lower()
+    local fields = {
+        search_text(item.title),
+        search_text(item.body),
+        search_text(item.details),
+        search_text(item.prompt),
+        prompt_queue_label(queue_name),
+    }
+    for _, line in ipairs(PromptContext.linked_context_lines(item.context)) do
+        fields[#fields + 1] = search_text(line)
+    end
+    local text = table.concat(fields, "\n"):lower()
     return text:find(query, 1, true) ~= nil
 end
 
@@ -632,6 +634,21 @@ local function prompt_preview_lines(item, opts)
     end
 
     return preview
+end
+
+---@param item Clodex.QueueItem
+---@param indent string
+---@return string[]
+local function context_preview_lines(item, indent)
+    if not PromptContext.has_linked_context(item.context) then
+        return {}
+    end
+
+    local lines = {} ---@type string[]
+    for _, line in ipairs(PromptContext.linked_context_lines(item.context)) do
+        lines[#lines + 1] = indent .. line
+    end
+    return lines
 end
 
 ---@param item Clodex.QueueItem
@@ -728,6 +745,11 @@ local function queue_item_title_line(item, title, suffix, opts)
         else
             marks[#marks + 1] = Extmark.inline(0, title_end, #text, "ClodexQueueItemMuted")
         end
+    end
+    if PromptContext.has_linked_context(item.context) then
+        local context_start = #text
+        text = text .. "  +ctx"
+        marks[#marks + 1] = Extmark.inline(0, context_start, #text, "ClodexQueueItemMuted")
     end
     return text, marks, title_start
 end
@@ -2123,6 +2145,18 @@ function Workspace:render_queue()
                         })
                     end
 
+                    for _, text in ipairs(context_preview_lines(item, prompt_text_indent)) do
+                        self.queue_rows[#self.queue_rows + 1] = {
+                            kind = "preview",
+                            text = text,
+                            queue = queue_name,
+                            item = item,
+                        }
+                        block:append_line(text, {
+                            Extmark.inline(0, 0, #text, "ClodexQueueItemMuted"),
+                        })
+                    end
+
                     for _, preview in
                     ipairs(prompt_preview_lines(item, {
                         max_lines = self.config.queue_workspace.preview_max_lines,
@@ -2356,6 +2390,7 @@ function Workspace:edit_queue_item()
                 details = item.details,
                 prompt = item.prompt,
                 image_path = item.image_path,
+                context = item.context,
             },
             on_submit = function(spec, action, selected_project)
                 local target_project = selected_project or project
@@ -2364,6 +2399,7 @@ function Workspace:edit_queue_item()
                         title = spec.title,
                         details = spec.details,
                         image_path = spec.image_path,
+                        context = spec.context,
                     })
                     if edited == false then
                         return false
@@ -2377,6 +2413,7 @@ function Workspace:edit_queue_item()
                     title = spec.title,
                     details = spec.details,
                     image_path = spec.image_path,
+                    context = spec.context,
                 })
                 self:refresh()
             end,

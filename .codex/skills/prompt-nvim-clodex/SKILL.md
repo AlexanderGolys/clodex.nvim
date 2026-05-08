@@ -22,6 +22,7 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
    - Claimed tasks stay in the queued lane until `close_task(success = true, ...)` records completion; unsuccessful closes keep the task queued with the blocker note.
    - If an older helper left the active item in `implemented` before completion, `get_task` restores that item to `queued` before returning it.
    - Prompt creator Plan-mode implementation runs are still normal interactive queued tasks; clodex.nvim switches the terminal with `/plan` before sending `$prompt-nvim-clodex`, and this MCP task response remains the authoritative source of the actual work prompt.
+   - Queue items may include a structured `context` array for linked file, line, and selection metadata; `get_task` exposes it in the task payload and appends a compact linked-context section to `work_prompt`.
    - When `prompt_execution.review_after_completion` is enabled, clodex.nvim may generate an Ask review task immediately after an implemented item closes; treat it as a normal queued review, and if no code changes are needed, close it with the reviewed commit id.
 3. If `get_task` returns `status = done`, stop; the queue is exhausted.
 4. Before interpreting, planning, or implementing the task, send a user-visible chat message that shows the original returned `work_prompt` text as-is so the user can see exactly what the agent is working on.

@@ -27,6 +27,23 @@ local function expand_field(text, context)
     return PromptContext.expand_text(text, context)
 end
 
+---@param state table
+---@return Clodex.PromptContext.Linked[]
+local function linked_context(state)
+    local referenced_text = table.concat({
+        state.title or "",
+        state.details or "",
+    }, "\n")
+    local context = PromptContext.linked_context(state.context, {
+        text = referenced_text,
+        include_current = true,
+    })
+    if #context > 0 then
+        return context
+    end
+    return state.linked_context or {}
+end
+
 ---@param text string?
 ---@return string?
 local function trim_field(text)
@@ -52,6 +69,7 @@ function M.build_spec(state)
     local title = trim_field(state.title)
     local details = expand_field(state.details, state.context)
     local image_path = state.image_path
+    local context = linked_context(state)
 
     if bug_clipboard_error(state) then
         local parts = {}
@@ -65,6 +83,7 @@ function M.build_spec(state)
             details = table.concat(parts, "\n\n"),
             kind = "bug",
             completion_target = "history",
+            context = context,
         }
     end
 
@@ -84,6 +103,7 @@ function M.build_spec(state)
         details = #detail_parts > 0 and table.concat(detail_parts, "\n\n") or nil,
         kind = state.kind,
         image_path = image_path,
+        context = context,
         completion_target = bug_clipboard_screenshot(state) and "history" or nil,
     }
 end

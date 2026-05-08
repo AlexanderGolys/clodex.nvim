@@ -20,6 +20,7 @@ local ui = require("clodex.ui.select")
 ---@field details? string
 ---@field kind? Clodex.PromptCategory
 ---@field image_path? string
+---@field context? Clodex.PromptContext.Linked[]
 ---@field completion_target? Clodex.QueueName
 ---@field start_mode? "plan"
 

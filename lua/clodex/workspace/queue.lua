@@ -17,6 +17,7 @@ local util = require("clodex.util")
 ---@field start_mode? "plan"
 ---@field completion_target? Clodex.QueueName
 ---@field image_path? string
+---@field context? Clodex.PromptContext.Linked[]
 ---@field created_at string
 ---@field updated_at string
 ---@field history_summary? string
@@ -189,6 +190,51 @@ local function sanitize_history_metadata(item)
     end
 end
 
+---@param context any
+---@return Clodex.PromptContext.Linked[]?
+local function sanitize_context(context)
+    if type(context) ~= "table" then
+        return nil
+    end
+
+    local sanitized = {} ---@type Clodex.PromptContext.Linked[]
+    for _, entry in ipairs(context) do
+        if type(entry) == "table" then
+            local kind = entry.kind
+            local relative_path = type(entry.relative_path) == "string" and vim.trim(entry.relative_path) or ""
+            if (kind == "file" or kind == "line" or kind == "selection") and relative_path ~= "" then
+                local item = {
+                    kind = kind,
+                    token = type(entry.token) == "string" and vim.trim(entry.token) or nil,
+                    file_path = type(entry.file_path) == "string" and vim.trim(entry.file_path) or nil,
+                    project_root = type(entry.project_root) == "string" and vim.trim(entry.project_root) or nil,
+                    relative_path = relative_path,
+                    line = tonumber(entry.line),
+                    start_line = tonumber(entry.start_line),
+                    end_line = tonumber(entry.end_line),
+                    text = type(entry.text) == "string" and entry.text or nil,
+                    summary = type(entry.summary) == "string" and vim.trim(entry.summary) or nil,
+                }
+                if type(item.token) == "string" and item.token == "" then
+                    item.token = nil
+                end
+                if type(item.file_path) == "string" and item.file_path == "" then
+                    item.file_path = nil
+                end
+                if type(item.project_root) == "string" and item.project_root == "" then
+                    item.project_root = nil
+                end
+                if type(item.summary) ~= "string" or item.summary == "" then
+                    item.summary = nil
+                end
+                sanitized[#sanitized + 1] = item
+            end
+        end
+    end
+
+    return #sanitized > 0 and sanitized or nil
+end
+
 ---@param item any
 ---@return Clodex.QueueItem
 local function normalize_item(item)
@@ -207,6 +253,7 @@ local function normalize_item(item)
     if type(item.image_path) ~= "string" or vim.trim(item.image_path) == "" then
         item.image_path = nil
     end
+    item.context = sanitize_context(item.context)
     if item.completion_target ~= "history" then
         item.completion_target = nil
     end
@@ -395,7 +442,7 @@ function Queue:find_item(project, item_id, expected_queue)
 end
 
 ---@param project Clodex.Project
----@param spec { title: string, details?: string, queue?: Clodex.QueueName, kind?: Clodex.PromptCategory, image_path?: string, execution_instructions?: string, start_mode?: "plan", completion_target?: Clodex.QueueName, front?: boolean }
+---@param spec { title: string, details?: string, queue?: Clodex.QueueName, kind?: Clodex.PromptCategory, image_path?: string, context?: Clodex.PromptContext.Linked[], execution_instructions?: string, start_mode?: "plan", completion_target?: Clodex.QueueName, front?: boolean }
 ---@return Clodex.QueueItem
 function Queue:add_todo(project, spec)
     local queue_name = KNOWN_QUEUES[spec.queue] and spec.queue or "planned"
@@ -412,6 +459,7 @@ function Queue:add_todo(project, spec)
         start_mode = spec.start_mode,
         completion_target = spec.completion_target,
         image_path = spec.image_path and vim.trim(spec.image_path) or nil,
+        context = spec.context,
         created_at = timestamp,
         updated_at = timestamp,
     })
@@ -495,6 +543,7 @@ end
 ---  history_session?: { backend: Clodex.Backend.Name, id: string }|false,
 ---  kind?: Clodex.PromptCategory,
 ---  image_path?: string|false,
+---  context?: Clodex.PromptContext.Linked[]|false,
 ---  execution_instructions?: string|false,
 ---  completion_target?: Clodex.QueueName|false,
 ---  review_requested_at?: string|false,
@@ -516,6 +565,9 @@ function Queue:update_item(project, item_id, attrs)
                 end
                 if attrs.image_path ~= nil then
                     item.image_path = attrs.image_path ~= false and vim.trim(attrs.image_path) or nil
+                end
+                if attrs.context ~= nil then
+                    item.context = attrs.context ~= false and sanitize_context(attrs.context) or nil
                 end
                 if attrs.title ~= nil or attrs.details ~= nil then
                     item.prompt = item.title .. (item.details and ("\n\n" .. item.details) or "")

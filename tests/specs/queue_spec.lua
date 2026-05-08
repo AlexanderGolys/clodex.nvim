@@ -111,6 +111,36 @@ describe("clodex.workspace.queue", function()
         assert.are.equal("history", stored.completion_target)
     end)
 
+    it("stores linked prompt context separately from prompt text", function()
+        local item = queue:add_todo(project, {
+            title = "fix line",
+            details = "use the linked location",
+            queue = "queued",
+            context = {
+                {
+                    kind = "line",
+                    token = "&line",
+                    relative_path = "lua/demo.lua",
+                    line = 42,
+                    summary = "Line @lua/demo.lua:42",
+                },
+            },
+        })
+
+        local _, _, stored = queue:find_item(project, item.id)
+
+        assert.are.equal("fix line\n\nuse the linked location", stored.prompt)
+        assert.are.same({
+            {
+                kind = "line",
+                token = "&line",
+                relative_path = "lua/demo.lua",
+                line = 42,
+                summary = "Line @lua/demo.lua:42",
+            },
+        }, stored.context)
+    end)
+
     it("updates details, kind, and prompt together", function()
         local item = queue:add_todo(project, {
             title = "old title",
