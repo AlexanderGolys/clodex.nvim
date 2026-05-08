@@ -1780,7 +1780,14 @@ describe("clodex.ui.queue_workspace", function()
                             {
                                 id = "item-1",
                                 title = "Fix creator overlay",
-                                details = "The previous overlay fix regressed",
+                                details = table.concat({
+                                    "A previously implemented feature or fix is not working as expected.",
+                                    "## Latest Revoke Comment",
+                                    "Fails after restart",
+                                    "## Original Prompt",
+                                    "**Title:** Fix creator overlay",
+                                    "The previous overlay fix regressed",
+                                }, "\n\n"),
                                 prompt = "Fix creator overlay\n\nThe previous overlay fix regressed",
                                 kind = "notworking",
                                 history_commits = {
@@ -1818,6 +1825,7 @@ describe("clodex.ui.queue_workspace", function()
         assert.are.same({
             "Queued (1)",
             "   Not Working  Fix creator overlay  󰜘 65dea8d0 󰜘 76bc7ad7",
+            "                    Fails after restart",
             "                    󰜘 65dea8d0",
             "                    󰜘 76bc7ad7",
             "                    The previous overlay fix regressed",
@@ -1828,8 +1836,80 @@ describe("clodex.ui.queue_workspace", function()
         assert.are.equal(4, #commit_marks)
         assert.are.equal(lines[2]:find("󰜘 65dea8d0", 1, true) - 1, commit_marks[1][3])
         assert.are.equal(lines[2]:find("󰜘 76bc7ad7", 1, true) - 1, commit_marks[2][3])
-        assert.are.equal(2, commit_marks[3][2])
-        assert.are.equal(3, commit_marks[4][2])
+        assert.are.equal(3, commit_marks[3][2])
+        assert.are.equal(4, commit_marks[4][2])
+
+        local comment_marks = inline_extmarks(workspace.queue_buf, "ClodexPromptNotWorkingTitle")
+        assert.are.equal(2, #comment_marks)
+        assert.are.equal(1, comment_marks[1][2])
+        assert.are.equal(2, comment_marks[2][2])
+
+        vim.api.nvim_win_close(workspace.queue_win, true)
+    end)
+
+    it("skips placeholder latest revoke comments in queued not-working previews", function()
+        local project = {
+            name = "Test Project",
+            root = "/tmp/test-project",
+        }
+        local workspace = Workspace.new({
+            queue_summary = function()
+                return {
+                    project = project,
+                    counts = {
+                        planned = 0,
+                        queued = 1,
+                        implemented = 0,
+                        history = 0,
+                    },
+                    queues = {
+                        planned = {},
+                        queued = {
+                            {
+                                id = "item-1",
+                                title = "Fix creator overlay",
+                                details = table.concat({
+                                    "A previously implemented feature or fix is not working as expected.",
+                                    "## Latest Revoke Comment",
+                                    "No comment was provided for the latest mark-not-working action.",
+                                    "## Original Prompt",
+                                    "**Title:** Fix creator overlay",
+                                    "The previous overlay fix regressed",
+                                }, "\n\n"),
+                                prompt = "Fix creator overlay\n\nThe previous overlay fix regressed",
+                                kind = "notworking",
+                            },
+                        },
+                        implemented = {},
+                        history = {},
+                    },
+                }
+            end,
+        }, {
+            queue_workspace = {
+                preview_max_lines = 3,
+                fold_preview = true,
+            },
+        })
+        workspace.projects = { project }
+        workspace.project_index = 1
+        workspace.queue_buf = vim.api.nvim_create_buf(false, true)
+        workspace.queue_win = vim.api.nvim_open_win(workspace.queue_buf, false, {
+            relative = "editor",
+            row = 1,
+            col = 1,
+            width = 90,
+            height = 20,
+            style = "minimal",
+        })
+
+        workspace:render_queue()
+
+        local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
+        assert.is_false(vim.tbl_contains(lines, "                    No comment was provided for the latest mark-not-working action."))
+        local comment_marks = inline_extmarks(workspace.queue_buf, "ClodexPromptNotWorkingTitle")
+        assert.are.equal(1, #comment_marks)
+        assert.are.equal(1, comment_marks[1][2])
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)

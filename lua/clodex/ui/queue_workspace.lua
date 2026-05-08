@@ -679,6 +679,37 @@ local function item_history_comment(item)
     return comment ~= "" and comment or nil
 end
 
+---@param details string
+---@return string?
+local function details_latest_revoke_comment(details)
+    local header = "## Latest Revoke Comment"
+    local start_pos = details:find(header, 1, true)
+    if not start_pos then
+        return nil
+    end
+    local body_start = details:find("\n\n", start_pos, true)
+    if not body_start then
+        return nil
+    end
+    body_start = body_start + 2
+    local next_section = details:find("\n## ", body_start, true)
+    local body = next_section and details:sub(body_start, next_section - 1) or details:sub(body_start)
+    local comment = vim.trim(body)
+    if comment == "" or comment == "No comment was provided for the latest mark-not-working action." then
+        return nil
+    end
+    return comment
+end
+
+---@param item Clodex.QueueItem
+---@return string?
+local function item_latest_revoke_comment(item)
+    if item.kind ~= "notworking" or type(item.details) ~= "string" then
+        return nil
+    end
+    return details_latest_revoke_comment(item.details)
+end
+
 ---@param item Clodex.QueueItem
 ---@return string, { start_col: integer, end_col: integer }[]
 local function history_commit_suffix(item)
@@ -2103,6 +2134,7 @@ function Workspace:render_queue()
                     local historical = queue_name == "implemented" or queue_name == "history"
                     local has_commits = #item_history_commits(item) > 0
                     local comment = historical and item_history_comment(item) or nil
+                    local latest_revoke_comment = item_latest_revoke_comment(item)
                     local suffix, suffix_spans = "", {}
                     if has_commits then
                         suffix, suffix_spans = history_commit_suffix(item)
@@ -2121,6 +2153,20 @@ function Workspace:render_queue()
                     }
                     self.queue_item_rows[#self.queue_item_rows + 1] = #self.queue_rows
                     block:append_line(item_text, item_extmarks)
+
+                    if latest_revoke_comment then
+                        local original = prompt_text_indent .. latest_revoke_comment
+                        self.queue_rows[#self.queue_rows + 1] = {
+                            kind = "preview",
+                            text = original,
+                            queue = queue_name,
+                            item = item,
+                        }
+                        block:append_line(original, {
+                            Extmark.inline(0, 0, #prompt_text_indent, "ClodexQueueItemMuted"),
+                            Extmark.inline(0, #prompt_text_indent, #original, Prompt.title_group("notworking")),
+                        })
+                    end
 
                     for _, text in ipairs(history_commit_preview_lines(item, prompt_text_indent)) do
                         self.queue_rows[#self.queue_rows + 1] = {
