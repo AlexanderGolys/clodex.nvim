@@ -247,8 +247,8 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, l
         if has_multiple_projects then
             actions[#actions + 1] = Helpers.footer_item("C-↑/↓", "project")
         end
+        vim.list_extend(actions, link_actions or {})
         vim.list_extend(actions, {
-            util.unpack_values(link_actions or {}),
             Helpers.footer_item("C-s", "plan"),
             Helpers.footer_item("C-m", "implement"),
             Helpers.footer_item("C-p", "plan impl"),
@@ -275,17 +275,20 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, l
     end
     row_one[#row_one + 1] = Helpers.footer_item("C-v", "image")
 
+    local row_two = {}
+    vim.list_extend(row_two, link_actions or {})
+    vim.list_extend(row_two, {
+        Helpers.footer_item("s", "plan"),
+        Helpers.footer_item("S"),
+        Helpers.footer_item("󰌑 ", "queue"),
+        Helpers.footer_item({ ".", "S-." }, "implement", " / "),
+        Helpers.footer_item("p", "plan impl"),
+        Helpers.footer_item("c", "chat"),
+    })
+
     return {
         row_one,
-        {
-            util.unpack_values(link_actions or {}),
-            Helpers.footer_item("s", "plan"),
-            Helpers.footer_item("S"),
-            Helpers.footer_item("󰌑 ", "queue"),
-            Helpers.footer_item({ ".", "S-." }, "implement", " / "),
-            Helpers.footer_item("p", "plan impl"),
-            Helpers.footer_item("c", "chat"),
-        },
+        row_two,
     }
 end
 
