@@ -502,7 +502,11 @@ ClodexPromptEditorFooter = {
 -- &&&ClodexPromptBackgroundOverlay&&&Lorem Ipsum&&&
 ClodexPromptBackgroundOverlay = {
       fg = { from = { "Comment", "LineNr" } },
-      bg = float_win_bg(0.08),
+      bg = {
+        { from = { "ColorColumn", "CursorLine", "Visual", "Pmenu" }, attr = "bg" },
+        { from = HLGroups.float_win, attr = "bg", adjust = 0.12 },
+        "#202830",
+      },
     },
 -- &&&ClodexPromptEditorHint&&&Lorem Ipsum&&&
 ClodexPromptEditorHint = {
