@@ -280,6 +280,24 @@ Statusline helpers:
 - `require("clodex").lualine.project_name(opts)`
 - `require("clodex").lualine.tab_project_names(opts)`
 
+Lualine tabline example:
+
+```lua
+require("lualine").setup({
+    tabline = {
+        lualine_a = {
+            function()
+                return require("clodex").lualine.tab_project_names({
+                    separator = " ",
+                    active_hl = "TabLineSel",
+                    inactive_hl = "TabLine",
+                })
+            end,
+        },
+    },
+})
+```
+
 ## Development
 
 Useful checks:
