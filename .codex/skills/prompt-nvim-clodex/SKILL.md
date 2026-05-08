@@ -19,7 +19,7 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
    - Before MCP claims a just-dispatched interactive prompt, clodex.nvim keeps the provisional queued title visible in terminal chrome instead of clearing it during the pre-claim poll window.
    - When `get_task` resumes an existing active item, it refreshes the active file title and kind from the current queue item so older or stale active metadata still updates the terminal winbar.
    - Neovim refreshes visible terminal chrome after MCP-polled active titles change, so adopted or restored terminal windows receive the Clodex winbar expression before redraw.
-   - After a task closes and queued work remains, clodex.nvim sends `/new`, waits for the backend reset to finish or become idle, and then starts the next `$prompt-nvim-clodex` turn.
+   - After a task closes, `close_task` may immediately return the next queued task; treat that response as authoritative and continue in the same turn until MCP reports no remaining queued work.
    - Claimed tasks stay in the queued lane until `close_task(success = true, ...)` records completion; unsuccessful closes keep the task queued with the blocker note.
    - If an older helper left the active item in `implemented` before completion, `get_task` restores that item to `queued` before returning it.
    - Prompt creator Plan-mode implementation runs are still normal interactive queued tasks; clodex.nvim switches the terminal with `/plan` before sending `$prompt-nvim-clodex`, and this MCP task response remains the authoritative source of the actual work prompt.
@@ -33,10 +33,10 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
 7. For the current commit-based workflow, a successful close usually requires a focused git commit and a closure payload with `success`, `comment`, and `commit_id`.
    - Exception: `idea` prompts are planning-only. They should generate follow-up prompts or plans without changing code and should close with an empty `commit_id`.
 8. Call `close_task` after the work is finished:
-   - on success, use `success = true`, a short completion comment, and the new `commit_id`; omit `continue_next` or set it to `false`
-   - on failure or blocker, use `success = false` and provide the blocker note in `comment`; omit `continue_next` or set it to `false`
-9. Stop after the close-only response. Clodex.nvim will reset the interactive backend session with `/new` and launch the next `$prompt-nvim-clodex` turn when queued work remains.
-10. Compatibility note: callers that explicitly set `continue_next = true` may receive another task from `close_task`; only continue in the same loop when the tool response explicitly returns `status = task`.
+   - on success, use `success = true`, a short completion comment, and the new `commit_id`
+   - on failure or blocker, use `success = false` and provide the blocker note in `comment`
+9. If `close_task` returns `status = task`, continue immediately in the same loop with that returned task payload (`task.id`, `task.work_prompt`) and repeat from step 4.
+10. If `close_task` returns `status = done`, stop; MCP has no remaining queued work for this cycle.
 11. When a conversation in planning mode should produce a new follow-up prompt instead of immediate code changes, prefer the `create_prompt` MCP tool to add the new prompt directly to the project queue.
 12. Do not rely on internal queue-mutating helpers as part of the public workflow; the MCP loop itself owns task claiming, requeueing, completion, and exhaustion.
 13. Do not edit queue JSON files directly. Queue storage is MCP-managed local data and may live outside the project root.
