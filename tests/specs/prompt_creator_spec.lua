@@ -1387,7 +1387,8 @@ describe("clodex.ui.prompt_creator", function()
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
         vim.api.nvim_win_set_cursor(creator.layout.title_win.win, { 1, #"Fix parser" })
 
-        trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "i")
+        local result = trigger_buffer_mapping(creator.layout.title_buf, "<CR>", "i")
+        assert.are.equal("", result)
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win

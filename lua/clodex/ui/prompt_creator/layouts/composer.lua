@@ -103,7 +103,9 @@ function ComposerLayout:apply_keymaps()
             if vim.fn.pumvisible() == 1 then
                 return vim.keycode("<C-y>")
             end
-            self:split_title_at_cursor()
+            vim.schedule(function()
+                self:split_title_at_cursor()
+            end)
             return ""
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("n", "<Tab>", function()
