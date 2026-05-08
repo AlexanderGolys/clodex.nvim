@@ -1684,6 +1684,40 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(body_win.win, vim.api.nvim_get_current_win())
     end)
 
+    it("does not insert escape runes when pressing Up in details insert mode", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Route prompt",
+                details = "First line\nSecond line",
+            },
+            on_submit = function() end,
+        })
+
+        local body_buf = creator.layout.body_buf
+        local body_win = creator.layout.body_win
+        vim.api.nvim_set_current_win(body_win.win)
+        vim.api.nvim_win_set_cursor(body_win.win, { 2, 0 })
+        vim.cmd.startinsert()
+        vim.api.nvim_input(vim.keycode("<Up>"))
+
+        local lines = vim.api.nvim_buf_get_lines(body_buf, 0, -1, false)
+        assert.are.same({ "First line", "Second line" }, lines)
+    end)
+
     it("accepts completion in the title field without switching focus", function()
         creator = Creator.open({
             app = {

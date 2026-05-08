@@ -115,10 +115,10 @@ function ComposerLayout:apply_keymaps()
                     self:focus_body(false)
                 end)
             end
-            return vim.keycode("<Down>")
+            return "<Down>"
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("n", "<Up>", function()
-            return vim.keycode("<Up>")
+            return "<Up>"
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("i", "<S-Tab>", function()
             if vim.fn.pumvisible() == 1 then
@@ -138,7 +138,7 @@ function ComposerLayout:apply_keymaps()
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("i", "<Down>", function()
             if not self:should_focus_body_from_title() then
-                return vim.keycode("<Down>")
+                return "<Down>"
             end
             return schedule_focus(function()
                 self:focus_body(true)
@@ -168,7 +168,7 @@ function ComposerLayout:apply_keymaps()
         end, { buffer = self.body_buf, silent = true, expr = true })
         vim.keymap.set("i", "<Up>", function()
             if not self:should_focus_title_from_body() then
-                return vim.keycode("<Up>")
+                return "<Up>"
             end
             return schedule_focus(function()
                 self:focus_title(true)
@@ -180,10 +180,10 @@ function ComposerLayout:apply_keymaps()
                     self:focus_title(false)
                 end)
             end
-            return vim.keycode("<Up>")
+            return "<Up>"
         end, { buffer = self.body_buf, silent = true, expr = true })
         vim.keymap.set("n", "<Down>", function()
-            return vim.keycode("<Down>")
+            return "<Down>"
         end, { buffer = self.body_buf, silent = true, expr = true })
         vim.b[self.body_buf].clodex_prompt_keymaps_applied = true
     end
