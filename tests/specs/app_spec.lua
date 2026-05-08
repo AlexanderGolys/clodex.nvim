@@ -272,10 +272,11 @@ describe("clodex.app", function()
                 backend_toggle = { lhs = "<leader>pb" },
                 chat_toggle = { lhs = "<leader>pc" },
                 refresh = { lhs = "<leader>pR" },
-                new_bug_prompt = { lhs = "<leader>pB" },
-                new_improvement_prompt = { lhs = "<leader>pI" },
-                new_line_linked_prompt = { lhs = "<leader>pl" },
-                new_line_linked_prompt_home = { lhs = "<Home>l" },
+                new_prompt = {
+                    bug = { lhs = "<leader>pB" },
+                    improvement = { lhs = "<leader>pI" },
+                    line_linked = { lhs = { "<leader>pl", "<Home>l" } },
+                },
                 go_to_readme = { lhs = "<leader>pM" },
             },
         })

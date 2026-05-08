@@ -95,7 +95,6 @@ local fs = require("clodex.util.fs")
 ---@field bug? string|Clodex.Config.KeymapConfig|false
 ---@field improvement? string|Clodex.Config.KeymapConfig|false
 ---@field line_linked? string|Clodex.Config.KeymapConfig|false
----@field line_linked_home? string|Clodex.Config.KeymapConfig|false
 
 --- Global keymaps created by clodex during setup.
 --- Set a value to `false` to disable it.
@@ -261,10 +260,7 @@ local function defaults()
                     lhs = "<leader>pI",
                 },
                 line_linked = {
-                    lhs = "<leader>pl",
-                },
-                line_linked_home = {
-                    lhs = "<Home>l",
+                    lhs = { "<leader>pl", "<Home>l" },
                 },
             },
             go_to_readme = {

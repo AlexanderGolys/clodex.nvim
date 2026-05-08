@@ -32,7 +32,7 @@ local did_register = false
 ---@field field? Clodex.KeymapField
 ---@field raw_mode? string|string[]
 
----@alias Clodex.KeymapField "toggle"|"main_panel"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"new_line_linked_prompt"|"new_line_linked_prompt_home"|"go_to_readme"
+---@alias Clodex.KeymapField "toggle"|"main_panel"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"new_line_linked_prompt"|"go_to_readme"
 
 ---@class Clodex.GlobalKeymapDefinition
 ---@field field Clodex.KeymapField
@@ -52,7 +52,6 @@ local NEW_PROMPT_FIELD_MAP = {
     new_bug_prompt = "bug",
     new_improvement_prompt = "improvement",
     new_line_linked_prompt = "line_linked",
-    new_line_linked_prompt_home = "line_linked_home",
 }
 
 ---@class Clodex.RegisteredCommandSpec
@@ -268,12 +267,6 @@ local GLOBAL_KEYMAPS = {
         desc = "Create a new prompt linked to the current line",
     },
     {
-        field = "new_line_linked_prompt_home",
-        mode = "n",
-        action = "add_line_linked_todo",
-        desc = "Create a new prompt linked to the current line",
-    },
-    {
         field = "go_to_readme",
         mode = "n",
         action = "open_project_readme_file",
@@ -305,6 +298,12 @@ local function resolve_keymap(values, field, definition)
         if nested_value ~= nil then
             value = nested_value
         end
+        if field == "new_line_linked_prompt" and value == nil and configured.new_prompt.line_linked_home ~= nil then
+            value = configured.new_prompt.line_linked_home
+        end
+    end
+    if field == "new_line_linked_prompt" and value == nil and configured.new_line_linked_prompt_home ~= nil then
+        value = configured.new_line_linked_prompt_home
     end
     if value == false then
         return nil
