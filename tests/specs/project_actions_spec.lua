@@ -286,6 +286,67 @@ describe("clodex.app.project_actions", function()
         vim.fn.delete(root, "rf")
     end)
 
+    it("jumps to the current chat target and enters terminal mode", function()
+        local shown_state
+        local shown_session
+        local touched_project
+        local refresh_count = 0
+        local startinsert_calls = 0
+        local original_startinsert = vim.cmd.startinsert
+        vim.cmd.startinsert = function()
+            startinsert_calls = startinsert_calls + 1
+        end
+
+        local state = {}
+        local project = { name = "Demo", root = "/tmp/demo" }
+        local actions = ProjectActions.new({
+            current_tab = function()
+                return state
+            end,
+            resolve_target = function()
+                return {
+                    kind = "project",
+                    project = project,
+                }
+            end,
+            terminals = {
+                get_session = function()
+                    return { key = "project::demo" }
+                end,
+                show_in_tab = function(_, received_state, session)
+                    shown_state = received_state
+                    shown_session = session
+                end,
+            },
+            tabs = {
+                list = function()
+                    return {}
+                end,
+            },
+            project_details_store = {
+                touch_activity = function(_, value)
+                    touched_project = value
+                end,
+            },
+            refresh_views = function()
+                refresh_count = refresh_count + 1
+            end,
+        })
+        actions.prompt_set_active_project = function() end
+
+        actions:jump_to_chat()
+        vim.wait(100, function()
+            return startinsert_calls > 0
+        end)
+
+        assert.are.same(state, shown_state)
+        assert.are.same({ key = "project::demo" }, shown_session)
+        assert.are.same(project, touched_project)
+        assert.are.equal(1, refresh_count)
+
+        vim.cmd.startinsert = original_startinsert
+    end)
+
 
     it("keeps modified buffers open when opening a project workspace target", function()
         local root = vim.fn.tempname()

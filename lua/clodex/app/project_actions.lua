@@ -724,6 +724,38 @@ function ProjectActions:toggle()
     end
 end
 
+--- Opens or focuses the current chat target and returns to terminal input mode.
+--- Unlike `toggle`, this never hides a visible chat window.
+function ProjectActions:jump_to_chat()
+    local state = self.app:current_tab()
+    local target = self.app:resolve_target(state)
+    if target.kind == "project" then
+        self:prompt_set_active_project(target.project, state)
+    end
+
+    local session, replaced_key = self.app.terminals:get_session(target)
+    if replaced_key then
+        self.app.terminals:detach_session(replaced_key, self.app.tabs:list())
+    end
+    if not session then
+        self.app:refresh_views()
+        return
+    end
+
+    self.app.terminals:show_in_tab(state, session)
+    vim.schedule(function()
+        if vim.api.nvim_get_mode().mode:sub(1, 1) ~= "t" then
+            vim.cmd.startinsert()
+        end
+    end)
+
+    if target.kind == "project" then
+        touch_project_state(self, target.project)
+    else
+        self.app:refresh_views()
+    end
+end
+
 ---@param value? string|Clodex.Project
 ---@return Clodex.Project?
 function ProjectActions:resolve_project(value)

@@ -309,12 +309,21 @@ function M.input(opts, on_confirm)
   active_input = win
 
   if type(opts.changed) == "function" then
-    win:on({ "TextChangedI", "TextChanged" }, function()
+    local on_changed = function()
       if not win:valid() then
         return
       end
       opts.changed(win:text())
-    end, { buf = true })
+    end
+
+    if type(win.on) == "function" then
+      win:on({ "TextChangedI", "TextChanged" }, on_changed, { buf = true })
+    else
+      vim.api.nvim_create_autocmd({ "TextChangedI", "TextChanged" }, {
+        buffer = win.buf,
+        callback = on_changed,
+      })
+    end
   end
 
   focus_with_retry(function()
@@ -1240,45 +1249,23 @@ end
 ---@param on_confirm fun(value?: string, action?: string)
 function M.multiline_message_input(opts, on_confirm)
   opts = opts or {}
-  opts.win = opts.win or {}
   local submit_actions = vim.deepcopy(opts.submit_actions or {
     { value = "save", label = "save", key = "<C-s>" },
   })
-  local hint_lines = single_field_hint_lines(submit_actions)
   local default_lines = vim.split(opts.default or "", "\n", { plain = true })
   local captured_context = opts.context
   local ui = vim.api.nvim_list_uis()[1]
   local editor_width = ui and ui.width or vim.o.columns
   local editor_height = ui and ui.height or vim.o.lines
-  local min_height = math.max(opts.min_height or PROMPT_EDITOR_MIN_HEIGHT, PROMPT_EDITOR_MIN_HEIGHT)
+  local min_height = math.max(opts.min_height or 1, 1)
   local max_height = math.max(editor_height - PROMPT_EDITOR_HEIGHT_MARGIN, min_height)
   local width = math.min(
     math.max(
-      longest_width(collect_lines(default_lines, hint_lines)) + PROMPT_EDITOR_WIDTH_PADDING,
+      longest_width(collect_lines(default_lines)) + PROMPT_EDITOR_WIDTH_PADDING,
       PROMPT_EDITOR_MIN_WIDTH
     ),
     math.max(editor_width - PROMPT_EDITOR_MAX_MARGIN - PROMPT_EDITOR_BORDER_COLS, 24)
   )
-  local body_buf = ui_win.create_buffer({ preset = "text" })
-  local hint_buf = ui_win.create_buffer({ preset = "scratch" })
-  vim.bo[hint_buf].modifiable = false
-
-  local function calc_height()
-    local count = math.max(#vim.api.nvim_buf_get_lines(body_buf, 0, -1, false), min_height)
-    return math.min(count, max_height)
-  end
-
-  local function total_height()
-    return calc_height() + PROMPT_EDITOR_HINT_HEIGHT + (PROMPT_EDITOR_BORDER_ROWS * 2) + PROMPT_EDITOR_HINT_GAP
-  end
-
-  local function body_row()
-    return math.max(math.floor((editor_height - total_height()) / 2), 1)
-  end
-
-  local function hint_row()
-    return body_row() + calc_height() + PROMPT_EDITOR_BORDER_ROWS + PROMPT_EDITOR_HINT_GAP
-  end
 
   local function prompt_context()
     if captured_context == nil then
@@ -1287,141 +1274,39 @@ function M.multiline_message_input(opts, on_confirm)
     return captured_context
   end
 
-  local body_win = ui_win.open({
-    buf = body_buf,
-    enter = true,
-    backdrop = PROMPT_EDITOR_BACKDROP,
-    border = "rounded",
-    title = (" %s "):format(opts.prompt),
-    title_pos = "center",
-    width = width,
-    height = function()
-      return calc_height()
-    end,
-    row = body_row,
-    col = function()
-      return math.max(math.floor((editor_width - width) / 2), 1)
-    end,
-    wo = {
-      wrap = true,
-      linebreak = true,
-      breakindent = true,
-      number = false,
-      relativenumber = false,
-      signcolumn = "no",
-      foldcolumn = "0",
-      cursorline = false,
-      spell = false,
-    },
-    bo = {
-      buftype = "nofile",
-      modifiable = true,
-    },
-    zindex = PROMPT_EDITOR_ZINDEX,
-  })
-  local hint_win = ui_win.open({
-    buf = hint_buf,
-    enter = false,
-    backdrop = PROMPT_EDITOR_BACKDROP,
-    border = "rounded",
-    width = width,
-    height = PROMPT_EDITOR_HINT_HEIGHT,
-    row = hint_row,
-    col = function()
-      return math.max(math.floor((editor_width - width) / 2), 1)
-    end,
-    wo = {
-      wrap = false,
-      linebreak = false,
-      breakindent = false,
-      number = false,
-      relativenumber = false,
-      signcolumn = "no",
-      foldcolumn = "0",
-      cursorline = false,
-      spell = false,
-    },
-    bo = {
-      buftype = "nofile",
-      modifiable = false,
-    },
-    zindex = PROMPT_EDITOR_ZINDEX - 1,
-  })
-
-  local function resize()
-    if not body_win:valid() or not hint_win:valid() then
-      return
-    end
-    local next_body_height = calc_height()
-    local next_hint_row = hint_row()
-    if body_win.opts._clodex_height == next_body_height and hint_win.opts._clodex_hint_row == next_hint_row then
-      return
-    end
-    body_win.opts._clodex_height = next_body_height
-    hint_win.opts._clodex_hint_row = next_hint_row
-    body_win:update()
-    hint_win:update()
-  end
-
-  local done = false
-  local function close(value, action)
-    if done then
-      return
-    end
-    done = true
-    if body_win:valid() then
-      body_win:close()
-    end
-    if hint_win:valid() then
-      hint_win:close()
-    end
-    M.clear_prompt_context(body_buf)
-    if type(opts.win.on_close) == "function" then
-      opts.win.on_close(body_win)
-    end
-    vim.schedule(function()
-      on_confirm(value, action or submit_actions[1].value)
-    end)
-  end
-
-  vim.api.nvim_buf_set_lines(body_buf, 0, -1, false, #default_lines > 0 and default_lines or { "" })
-  render_hint_lines(hint_buf, hint_lines)
-  disable_prompt_pair_highlights(body_buf)
-  disable_prompt_pair_highlights(hint_buf)
-  local theme_overrides = nil
+  local win_opts = vim.deepcopy(opts.win or {})
+  local existing_winhl = win_opts.wo and win_opts.wo.winhighlight or nil
   if type(opts.border_highlight) == "string" and opts.border_highlight ~= "" then
-    theme_overrides = {
-      float_border = opts.border_highlight,
-      float_title = opts.border_highlight,
-    }
+    local border_winhl = ("FloatBorder:%s,FloatTitle:%s"):format(opts.border_highlight, opts.border_highlight)
+    win_opts.wo = win_opts.wo or {}
+    win_opts.wo.winhighlight = existing_winhl and (existing_winhl .. "," .. border_winhl) or border_winhl
   end
-  ui_win.apply_theme(body_win.win, "prompt_editor", theme_overrides)
-  ui_win.apply_theme(hint_win.win, "prompt_footer", theme_overrides)
-  M.refresh_prompt_context(body_buf, prompt_context())
 
-  vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
-    buffer = body_buf,
-    callback = function()
-      resize()
-      M.refresh_prompt_context(body_buf, prompt_context())
-    end,
-  })
+  local function row()
+    local height = type(win_opts.height) == "number" and win_opts.height or min_height
+    return math.max(math.floor((editor_height - (height + PROMPT_EDITOR_BORDER_ROWS * 2)) / 2), 1)
+  end
 
+  local win
   local function submit(action)
-    local details = vim.trim(join_lines(vim.api.nvim_buf_get_lines(body_buf, 0, -1, false)))
-    if details == "" then
-      close(nil, action)
+    if not win or not win:valid() then
       return
     end
-    close(PromptContext.expand_text(details, prompt_context()), action)
+    local details = vim.trim(win:text())
+    local value = details == "" and nil or PromptContext.expand_text(details, prompt_context())
+    on_confirm(value, action or submit_actions[1].value)
+    win:close()
   end
 
   local function trigger_context_completion()
-    M.refresh_prompt_context(body_buf, prompt_context())
-    vim.api.nvim_set_current_win(body_win.win)
+    if not win or not win:valid() then
+      return
+    end
+    M.refresh_prompt_context(win.buf, prompt_context())
+    vim.api.nvim_set_current_win(win.win)
     vim.cmd.startinsert()
     vim.schedule(function()
-      if not body_win:valid() or vim.api.nvim_get_current_buf() ~= body_buf then
+      if not win:valid() or vim.api.nvim_get_current_buf() ~= win.buf then
         return
       end
       vim.api.nvim_feedkeys(vim.keycode("&<C-x><C-u>"), "n", false)
@@ -1449,12 +1334,15 @@ function M.multiline_message_input(opts, on_confirm)
       },
     }, function(item)
       if not item or item.disabled then
-        vim.api.nvim_set_current_win(body_win.win)
+        if win and win:valid() then
+          vim.api.nvim_set_current_win(win.win)
+        end
         return
       end
-      insert_text(body_buf, body_win.win, item.text)
-      resize()
-      vim.api.nvim_set_current_win(body_win.win)
+      insert_text(win.buf, win.win, item.text)
+      if win and win:valid() then
+        vim.api.nvim_set_current_win(win.win)
+      end
     end)
   end
 
@@ -1466,54 +1354,86 @@ function M.multiline_message_input(opts, on_confirm)
     if not text or text == "" then
       return
     end
-    insert_text(body_buf, body_win.win, text)
-    resize()
-    vim.api.nvim_set_current_win(body_win.win)
+    insert_text(win.buf, win.win, text)
+    if win and win:valid() then
+      vim.api.nvim_set_current_win(win.win)
+    end
   end
 
-  vim.keymap.set("n", "<CR>", function()
-    submit(submit_actions[1].value)
-  end, { buffer = body_buf, silent = true })
+  win = M.input({
+    prompt = opts.prompt,
+    default = opts.default,
+    icon = false,
+    win = vim.tbl_deep_extend("force", {
+      backdrop = PROMPT_EDITOR_BACKDROP,
+      border = "rounded",
+      width = width,
+      height = min_height,
+      row = row,
+      title_pos = "center",
+      bo = {
+        buftype = "prompt",
+      },
+      wo = {
+        wrap = true,
+        linebreak = true,
+        breakindent = true,
+      },
+      keys = {
+        i_down = false,
+      },
+    }, win_opts),
+    changed = function(_value)
+      if not win or not win:valid() then
+        return
+      end
+      M.refresh_prompt_context(win.buf, prompt_context())
+      local lines = #vim.api.nvim_buf_get_lines(win.buf, 0, -1, false)
+      local next_height = math.min(math.max(lines, min_height), max_height)
+      if win.opts.height ~= next_height then
+        win.opts.height = next_height
+        win:update()
+      end
+    end,
+  }, function(value)
+    if value == nil then
+      on_confirm(nil, submit_actions[1].value)
+      return
+    end
+    local details = vim.trim(value)
+    if details == "" then
+      on_confirm(nil, submit_actions[1].value)
+      return
+    end
+    on_confirm(PromptContext.expand_text(details, prompt_context()), submit_actions[1].value)
+  end)
+
+  disable_prompt_pair_highlights(win.buf)
+  M.refresh_prompt_context(win.buf, prompt_context())
+
   for _, action in ipairs(submit_actions) do
     vim.keymap.set({ "n", "i" }, action.key, function()
       submit(action.value)
-    end, { buffer = body_buf, silent = true })
+    end, { buffer = win.buf, silent = true })
   end
-  vim.keymap.set("n", "&", trigger_context_completion, { buffer = body_buf, silent = true })
+  vim.keymap.set("n", "&", trigger_context_completion, { buffer = win.buf, silent = true })
   vim.keymap.set("i", "&", function()
-    M.refresh_prompt_context(body_buf, prompt_context())
+    M.refresh_prompt_context(win.buf, prompt_context())
     return "&" .. vim.keycode("<C-x><C-u>")
   end, {
-    buffer = body_buf,
+    buffer = win.buf,
     silent = true,
     expr = true,
   })
-  vim.keymap.set("n", "x", insert_quick_prompt, { buffer = body_buf, silent = true })
-  vim.keymap.set("i", "<C-x>", insert_quick_prompt, { buffer = body_buf, silent = true })
-  vim.keymap.set({ "n", "i" }, "<C-v>", paste_image, { buffer = body_buf, silent = true })
-  vim.keymap.set("n", "q", function()
-    close(nil)
-  end, { buffer = body_buf, silent = true })
-  vim.keymap.set({ "n", "i" }, "<Esc>", function()
-    close(nil)
-  end, { buffer = body_buf, silent = true })
-  vim.api.nvim_create_autocmd("WinClosed", {
-    once = true,
-    pattern = tostring(hint_win.win),
-    callback = function()
-      close(nil)
-    end,
-  })
-  vim.api.nvim_create_autocmd("WinClosed", {
-    once = true,
-    pattern = tostring(body_win.win),
-    callback = function()
-      close(nil)
-    end,
-  })
+  vim.keymap.set("n", "x", insert_quick_prompt, { buffer = win.buf, silent = true })
+  vim.keymap.set("i", "<C-x>", insert_quick_prompt, { buffer = win.buf, silent = true })
+  vim.keymap.set({ "n", "i" }, "<C-v>", paste_image, { buffer = win.buf, silent = true })
 
-  vim.api.nvim_set_current_win(body_win.win)
-  vim.cmd.startinsert()
+  if win and win:valid() then
+    local lines = #vim.api.nvim_buf_get_lines(win.buf, 0, -1, false)
+    win.opts.height = math.min(math.max(lines, min_height), max_height)
+    win:update()
+  end
 end
 
 ---@param prompt string

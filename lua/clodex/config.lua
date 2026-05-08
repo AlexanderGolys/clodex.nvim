@@ -1,4 +1,3 @@
-
 -- @@@clodex.config
 local HighlightConfig = require("clodex.config.highlights")
 local Backend = require("clodex.backend")
@@ -110,6 +109,7 @@ local fs = require("clodex.util.fs")
 ---@field mini_state_preview Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 ---@field backend_toggle Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 ---@field chat_toggle Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field chat_jump Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 ---@field refresh Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 ---@field new_prompt? Clodex.Config.NewPromptKeymaps|false
 ---@field new_bug_prompt Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
@@ -231,45 +231,63 @@ local function defaults()
             cmd = {},
             runtime_dir = fs.join(storage_root, "mcp"),
         },
+
+        -- @@@clodex.keymaps
         keymaps = {
-            toggle = {
-                lhs = "<leader>pt",
+            chat_toggle = {
+                { lhs = "<leader>p<leader>" },
+                { lhs = "<Home><leader>",   mode = "a" },
+            },
+            chat_jump = {
+                { lhs = "<leader>pj", mode = "n" },
+                { lhs = "<Home>j",    mode = "a" },
             },
             main_panel = {
-                lhs = "<leader>pp",
+                { lhs = "<leader>pp", mode = "n" },
+                { lhs = "<Home>p",    mode = "a" },
             },
             queue_workspace = {
-                lhs = "<leader>pq",
+                { lhs = "<leader>p<home>", mode = "n" },
+                { lhs = "<Home><home>",    mode = "a" },
             },
+
             state_preview = {
-                lhs = "<leader>ps",
+                { lhs = "<leader>ps", mode = "n" },
+                { lhs = "<Home>s",    mode = "a" },
             },
+
             mini_state_preview = {
-                lhs = "<leader>pS",
+                { lhs = "<leader>pS", mode = "n" },
+                { lhs = "<Home>S",    mode = "a" },
             },
+
             backend_toggle = {
-                lhs = "<leader>pb",
-            },
-            chat_toggle = {
-                lhs = "<leader>pc",
+                { lhs = "<leader>pB", mode = "n" },
+                { lhs = "<Home>B",    mode = "n" },
             },
             refresh = {
-                lhs = "<leader>pR",
+                { lhs = "<leader>pR", mode = "n" },
+                { lhs = "<Home>R",    mode = "a" },
             },
+
             new_prompt = {
                 bug = {
-                    lhs = "<leader>pB",
+                    { lhs = "<leader>pb", mode = "n" },
+                    { lhs = "<Home>b",    mode = "a" },
                 },
+
                 improvement = {
-                    lhs = "<leader>pI",
+                    { lhs = "<leader>pa", mode = "n" },
+                    { lhs = "<Home>a",    mode = "a" },
                 },
                 line_linked = {
                     { lhs = "<leader>pl", mode = "n" },
-                    { lhs = "<Home>l", mode = { "n", "i", "v", "x", "s", "o", "c", "t" } },
+                    { lhs = "<Home>l",    mode = "nvi" },
                 },
             },
             go_to_readme = {
-                lhs = "<leader>pM",
+                { lhs = "<leader>pr", mode = "n" },
+                { lhs = "<Home>r",    mode = "a" },
             },
         },
     }

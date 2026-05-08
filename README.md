@@ -131,6 +131,10 @@ require("clodex").setup({
         mini_state_preview = { lhs = "<leader>pS" },
         backend_toggle = { lhs = "<leader>pb" },
         chat_toggle = { lhs = "<leader>pc" },
+        chat_jump = {
+            { lhs = "<leader>pj", mode = "n" },
+            { lhs = "<Home>j", mode = { "n", "i", "v", "x", "s", "o", "c", "t" } },
+        },
         refresh = { lhs = "<leader>pR" },
         new_prompt = {
             bug = { lhs = "<leader>pB" },
@@ -147,6 +151,7 @@ require("clodex").setup({
 
 `codex_cmd` and `opencode_cmd` set the executable used for each backend. `codex_args` and `opencode_args` add backend-specific CLI flags whenever Clodex starts that backend, including project/free chat sessions, resumed sessions, and direct Codex execution. For example, set `codex_args = { "--yolo" }` to launch Codex with `--yolo`. Codex MCP config arguments are appended after `codex_args` so the bundled queue helper remains wired to the configured workspace directory.
 The default line-linked prompt keymaps (`<leader>pl` and `<Home>l`) open the prompt creator with the current cursor line linked as prompt context; `<leader>pl` is normal-mode only, while `<Home>l` is registered across normal/insert/visual/select/operator-pending/command/terminal modes.
+The default chat jump keymaps (`<leader>pj` and `<Home>j`) focus the current Clodex chat session from anywhere, open it when hidden, and enter terminal input mode.
 Each `keymaps.<action>` entry and each `keymaps.new_prompt.<kind>` entry accepts either one descriptor (`{ lhs = "...", mode = ... }`) or a descriptor list (`{{ lhs = "..." }, { lhs = "...", mode = "v" }}`). Descriptor `mode` supports a string or list, and `"a"` expands to all keymap modes (`n,i,v,x,s,o,c,t`). For compatibility, a bare `lhs` string or `lhs` list is still accepted.
 Legacy top-level prompt fields (`new_bug_prompt`, `new_improvement_prompt`, `new_line_linked_prompt`, `new_line_linked_prompt_home`) are still supported for compatibility, but new configs should prefer grouped `new_prompt` entries.
 

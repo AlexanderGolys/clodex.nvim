@@ -32,7 +32,7 @@ local did_register = false
 ---@field field? Clodex.KeymapField
 ---@field raw_mode? string|string[]
 
----@alias Clodex.KeymapField "toggle"|"main_panel"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"new_line_linked_prompt"|"go_to_readme"
+---@alias Clodex.KeymapField "toggle"|"main_panel"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"chat_jump"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"new_line_linked_prompt"|"go_to_readme"
 
 ---@class Clodex.GlobalKeymapDefinition
 ---@field field Clodex.KeymapField
@@ -241,6 +241,12 @@ local GLOBAL_KEYMAPS = {
         mode = "n",
         action = "toggle",
         desc = "Toggle Codex chat terminal",
+    },
+    {
+        field = "chat_jump",
+        mode = "n",
+        action = "jump_to_chat",
+        desc = "Jump to Clodex chat terminal and enter input mode",
     },
     {
         field = "refresh",
