@@ -70,6 +70,19 @@ function Backend.resume_cmd(config, session_id)
 end
 
 ---@param config Clodex.Config.Values
+---@return string[]
+function Backend.resume_previous_cmd(config)
+    local name = Backend.normalize(config.backend)
+    local cmd = Backend.cli_cmd(config)
+    if name == "opencode" then
+        cmd[#cmd + 1] = "--continue"
+    else
+        vim.list_extend(cmd, { "resume", "--last" })
+    end
+    return cmd
+end
+
+---@param config Clodex.Config.Values
 ---@param _target? Clodex.TerminalTarget
 ---@return table<string, string>?
 function Backend.cli_env(config, _target)

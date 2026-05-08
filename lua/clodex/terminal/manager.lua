@@ -11,12 +11,14 @@ local notify = require("clodex.util.notify")
 ---@field kind 'project'
 ---@field project Clodex.Project
 ---@field resume_session_id? string
+---@field resume_previous? boolean
 
 --- Defines the Clodex.TerminalTarget.Free type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
 ---@class Clodex.TerminalTarget.Free
 ---@field kind 'free'
 ---@field cwd string
+---@field resume_previous? boolean
 
 --- Defines the Clodex.TerminalTarget type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -247,7 +249,14 @@ function Manager:session_spec(target)
     local terminal_provider = session_terminal_provider(self.config)
     if target.kind == "project" then
         local resume_session_id = type(target.resume_session_id) == "string" and vim.trim(target.resume_session_id) or ""
-        local cmd = resume_session_id ~= "" and Backend.resume_cmd(self.config, resume_session_id) or Backend.cli_cmd(self.config)
+        local cmd = nil ---@type string[]
+        if resume_session_id ~= "" then
+            cmd = Backend.resume_cmd(self.config, resume_session_id)
+        elseif target.resume_previous then
+            cmd = Backend.resume_previous_cmd(self.config)
+        else
+            cmd = Backend.cli_cmd(self.config)
+        end
         return {
             key = target.project.root,
             kind = "project",
@@ -268,7 +277,7 @@ function Manager:session_spec(target)
         kind = "free",
         cwd = target.cwd,
         title = string.format("Clodex: %s", target.cwd),
-        cmd = Backend.cli_cmd(self.config),
+        cmd = target.resume_previous and Backend.resume_previous_cmd(self.config) or Backend.cli_cmd(self.config),
         env = Backend.cli_env(self.config, target),
         runtime_key = session_runtime_key(self.config),
         terminal_provider = terminal_provider,
@@ -817,6 +826,32 @@ function Manager:restore_specs(specs)
                 end
             end
         end
+    end
+end
+
+function Manager:reopen_sessions_with_resume()
+    local project_roots = sorted_root_keys(self.project_sessions)
+    for _, root in ipairs(project_roots) do
+        local session = self.project_sessions[root]
+        if session and (session:is_running() or session:buf_valid()) then
+            self:get_session({
+                kind = "project",
+                project = {
+                    name = project_name_from_root(root),
+                    root = root,
+                },
+                resume_previous = true,
+            })
+        end
+    end
+
+    local free = self.free_session
+    if free and free.cwd ~= nil and (free:is_running() or free:buf_valid()) then
+        self:get_session({
+            kind = "free",
+            cwd = free.cwd,
+            resume_previous = true,
+        })
     end
 end
 

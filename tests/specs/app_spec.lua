@@ -182,6 +182,24 @@ describe("clodex.app", function()
         assert.are.equal("opencode", snapshot.backend)
     end)
 
+    it("reopens tracked CLI sessions with resume-previous before refreshing views", function()
+        local calls = {}
+        local app = setmetatable({
+            terminals = {
+                reopen_sessions_with_resume = function()
+                    calls[#calls + 1] = "reopen"
+                end,
+            },
+            refresh_views = function()
+                calls[#calls + 1] = "refresh_views"
+            end,
+        }, App)
+
+        app:refresh()
+
+        assert.are.same({ "reopen", "refresh_views" }, calls)
+    end)
+
     it("sends the prompt skill only from Clodex terminal buffers and re-enters terminal mode from normal mode", function()
         local original_startinsert = vim.cmd.startinsert
         local startinsert_calls = 0

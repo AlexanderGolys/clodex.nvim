@@ -70,6 +70,63 @@ describe("clodex.terminal.manager", function()
         assert.are.same({ "codex", "--yolo" }, free_spec.cmd)
     end)
 
+    it("builds resume-previous commands for refresh reopen flows", function()
+        local codex_manager = Manager.new({
+            backend = "codex",
+            codex_cmd = { "codex" },
+            terminal = {
+                provider = "term",
+                win = {},
+            },
+            mcp = {
+                enabled = false,
+            },
+        })
+        local opencode_manager = Manager.new({
+            backend = "opencode",
+            opencode_cmd = { "opencode" },
+            terminal = {
+                provider = "term",
+                win = {},
+            },
+            mcp = {
+                enabled = false,
+            },
+        })
+
+        local codex_project_spec = codex_manager:session_spec({
+            kind = "project",
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            resume_previous = true,
+        })
+        local codex_free_spec = codex_manager:session_spec({
+            kind = "free",
+            cwd = "/tmp",
+            resume_previous = true,
+        })
+        local opencode_project_spec = opencode_manager:session_spec({
+            kind = "project",
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            resume_previous = true,
+        })
+        local opencode_free_spec = opencode_manager:session_spec({
+            kind = "free",
+            cwd = "/tmp",
+            resume_previous = true,
+        })
+
+        assert.are.same({ "codex", "resume", "--last" }, codex_project_spec.cmd)
+        assert.are.same({ "codex", "resume", "--last" }, codex_free_spec.cmd)
+        assert.are.same({ "opencode", "--continue" }, opencode_project_spec.cmd)
+        assert.are.same({ "opencode", "--continue" }, opencode_free_spec.cmd)
+    end)
+
     it("falls back to the current tab when showing a session for an invalid tab state", function()
         local manager = Manager.new({
             backend = "codex",

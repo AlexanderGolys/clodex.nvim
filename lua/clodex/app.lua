@@ -1053,6 +1053,9 @@ function App:refresh_views()
 end
 
 function App:refresh()
+    if self.terminals and type(self.terminals.reopen_sessions_with_resume) == "function" then
+        self.terminals:reopen_sessions_with_resume()
+    end
     self:refresh_views()
 end
 
