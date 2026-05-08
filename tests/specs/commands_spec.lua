@@ -446,4 +446,34 @@ describe("clodex.commands", function()
 
         assert.are.equal("<leader>grouped", improvement_lhs)
     end)
+
+    it("merges grouped line_linked and legacy/new grouped home keymaps", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                new_prompt = {
+                    line_linked = {
+                        { lhs = "<leader>pl", mode = "n" },
+                    },
+                    line_linked_home = {
+                        { lhs = "<Home>l", mode = { "n", "i", "v", "x", "s", "o", "c", "t" } },
+                    },
+                },
+            },
+        })
+
+        local line_linked = {}
+        for _, item in ipairs(keymaps) do
+            if item.field == "new_line_linked_prompt" then
+                line_linked[#line_linked + 1] = {
+                    lhs = item.lhs,
+                    mode = item.mode,
+                }
+            end
+        end
+
+        assert.are.same({
+            { lhs = "<leader>pl", mode = "n" },
+            { lhs = "<Home>l", mode = "n,i,v,x,s,o,c,t" },
+        }, line_linked)
+    end)
 end)

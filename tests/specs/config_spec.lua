@@ -75,7 +75,10 @@ describe("clodex.config", function()
             assert.are.equal("<leader>pR", values.keymaps.refresh.lhs)
             assert.are.equal("<leader>pB", values.keymaps.new_prompt.bug.lhs)
             assert.are.equal("<leader>pI", values.keymaps.new_prompt.improvement.lhs)
-            assert.are.same({ "<leader>pl", "<Home>l" }, values.keymaps.new_prompt.line_linked.lhs)
+            assert.are.same({
+                { lhs = "<leader>pl", mode = "n" },
+                { lhs = "<Home>l", mode = { "n", "i", "v", "x", "s", "o", "c", "t" } },
+            }, values.keymaps.new_prompt.line_linked)
             assert.are.equal("<leader>pM", values.keymaps.go_to_readme.lhs)
         end)
 

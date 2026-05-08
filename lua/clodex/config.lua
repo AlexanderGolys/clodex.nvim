@@ -91,28 +91,32 @@ local fs = require("clodex.util.fs")
 ---@field unique? boolean
 ---@field replace_keycodes? boolean
 
+---@alias Clodex.Config.KeymapEntry string|Clodex.Config.KeymapConfig|false
+---@alias Clodex.Config.KeymapEntryList Clodex.Config.KeymapEntry[]
+
 ---@class Clodex.Config.NewPromptKeymaps
----@field bug? string|Clodex.Config.KeymapConfig|false
----@field improvement? string|Clodex.Config.KeymapConfig|false
----@field line_linked? string|Clodex.Config.KeymapConfig|false
+---@field bug? Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field improvement? Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field line_linked? Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field line_linked_home? Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 
 --- Global keymaps created by clodex during setup.
 --- Set a value to `false` to disable it.
 ---@class Clodex.Config.Keymaps
----@field toggle string|Clodex.Config.KeymapConfig|false
----@field main_panel string|Clodex.Config.KeymapConfig|false
----@field queue_workspace string|Clodex.Config.KeymapConfig|false
----@field state_preview string|Clodex.Config.KeymapConfig|false
----@field mini_state_preview string|Clodex.Config.KeymapConfig|false
----@field backend_toggle string|Clodex.Config.KeymapConfig|false
----@field chat_toggle string|Clodex.Config.KeymapConfig|false
----@field refresh string|Clodex.Config.KeymapConfig|false
+---@field toggle Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field main_panel Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field queue_workspace Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field state_preview Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field mini_state_preview Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field backend_toggle Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field chat_toggle Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field refresh Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 ---@field new_prompt? Clodex.Config.NewPromptKeymaps|false
----@field new_bug_prompt string|Clodex.Config.KeymapConfig|false
----@field new_improvement_prompt string|Clodex.Config.KeymapConfig|false
----@field new_line_linked_prompt string|Clodex.Config.KeymapConfig|false
----@field new_line_linked_prompt_home string|Clodex.Config.KeymapConfig|false
----@field go_to_readme string|Clodex.Config.KeymapConfig|false
+---@field new_bug_prompt Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field new_improvement_prompt Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field new_line_linked_prompt Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field new_line_linked_prompt_home Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field go_to_readme Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 
 --- Runtime-config data structure consumed across managers and UI modules.
 ---@class Clodex.Config.Values
@@ -260,7 +264,8 @@ local function defaults()
                     lhs = "<leader>pI",
                 },
                 line_linked = {
-                    lhs = { "<leader>pl", "<Home>l" },
+                    { lhs = "<leader>pl", mode = "n" },
+                    { lhs = "<Home>l", mode = { "n", "i", "v", "x", "s", "o", "c", "t" } },
                 },
             },
             go_to_readme = {

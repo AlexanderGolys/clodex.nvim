@@ -364,6 +364,30 @@ local function resolve_keymap_entry(value, definition)
     }
 end
 
+---@param resolved Clodex.ResolvedKeymap[]
+---@param value any
+---@param definition Clodex.GlobalKeymapDefinition
+local function append_resolved_keymaps(resolved, value, definition)
+    if value == nil then
+        return
+    end
+
+    if type(value) == "table" and vim.islist(value) then
+        for _, item in ipairs(value) do
+            local keymap = resolve_keymap_entry(item, definition)
+            if keymap then
+                resolved[#resolved + 1] = keymap
+            end
+        end
+        return
+    end
+
+    local keymap = resolve_keymap_entry(value, definition)
+    if keymap then
+        resolved[#resolved + 1] = keymap
+    end
+end
+
 ---@param values Clodex.Commands.KeymapValues
 ---@param field Clodex.KeymapField
 ---@param definition Clodex.GlobalKeymapDefinition
@@ -377,32 +401,31 @@ local function resolve_keymap(values, field, definition)
         if nested_value ~= nil then
             value = nested_value
         end
-        if field == "new_line_linked_prompt" and value == nil and configured.new_prompt.line_linked_home ~= nil then
-            value = configured.new_prompt.line_linked_home
-        end
     end
-    if field == "new_line_linked_prompt" and value == nil and configured.new_line_linked_prompt_home ~= nil then
-        value = configured.new_line_linked_prompt_home
-    end
-    if value == nil then
+    if value == nil and field ~= "new_line_linked_prompt" then
         return {}
     end
 
     local resolved = {} ---@type Clodex.ResolvedKeymap[]
-    if type(value) == "table" and vim.islist(value) then
-        for _, item in ipairs(value) do
-            local keymap = resolve_keymap_entry(item, definition)
-            if keymap then
-                resolved[#resolved + 1] = keymap
-            end
-        end
+
+    -- An explicit disable for the main line-linked keymap should disable the whole pair.
+    if field == "new_line_linked_prompt" and value == false then
         return resolved
     end
 
-    local keymap = resolve_keymap_entry(value, definition)
-    if keymap then
-        resolved[#resolved + 1] = keymap
+    append_resolved_keymaps(resolved, value, definition)
+
+    if field == "new_line_linked_prompt" then
+        local line_linked_home = nil
+        if type(configured.new_prompt) == "table" then
+            line_linked_home = configured.new_prompt.line_linked_home
+        end
+        if line_linked_home == nil then
+            line_linked_home = configured.new_line_linked_prompt_home
+        end
+        append_resolved_keymaps(resolved, line_linked_home, definition)
     end
+
     return resolved
 end
 
