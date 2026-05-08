@@ -109,6 +109,19 @@ describe("clodex.config", function()
             assert.are.same({ "--model", "qwen3-coder" }, values.opencode_args)
         end)
 
+        it("supports legacy prompt-panel and refresh keymap option names", function()
+            local cfg = Config.new()
+            local values = cfg:setup({
+                keymaps = {
+                    prompt_panel = { lhs = "<leader>pP" },
+                    prompt_refresh = { lhs = "<leader>pF" },
+                },
+            })
+
+            assert.are.equal("<leader>pP", values.keymaps.main_panel[1].lhs)
+            assert.are.equal("<leader>pF", values.keymaps.refresh[1].lhs)
+        end)
+
         it("keeps an explicit git workflow override", function()
             local cfg = Config.new()
             local values = cfg:setup({

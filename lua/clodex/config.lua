@@ -252,8 +252,8 @@ local function defaults()
                 { lhs = "<Home>p",    mode = "a" },
             },
             queue_workspace = {
-                { lhs = "<leader>p<home>", mode = "n" },
-                { lhs = "<Home><home>",    mode = "a" },
+                { lhs = "<leader>p<Home>", mode = "n" },
+                { lhs = "<Home><Home>",    mode = "a" },
             },
 
             state_preview = {
@@ -296,6 +296,30 @@ local function defaults()
             },
         },
     }
+end
+
+---@param opts table
+---@return table
+local function normalize_keymap_aliases(opts)
+    if type(opts) ~= "table" then
+        return opts
+    end
+    local normalized = vim.deepcopy(opts)
+    if type(normalized.keymaps) ~= "table" then
+        return normalized
+    end
+    local keymaps = normalized.keymaps
+    if keymaps.main_panel == nil then
+        if keymaps.prompt_panel ~= nil then
+            keymaps.main_panel = keymaps.prompt_panel
+        elseif keymaps.panel ~= nil then
+            keymaps.main_panel = keymaps.panel
+        end
+    end
+    if keymaps.refresh == nil and keymaps.prompt_refresh ~= nil then
+        keymaps.refresh = keymaps.prompt_refresh
+    end
+    return normalized
 end
 
 ---@param provider string?
@@ -534,7 +558,7 @@ end
 ---@param opts? table
 ---@return Clodex.Config.Values
 function Config:setup(opts)
-    self.values = Config.merge(defaults(), opts or {})
+    self.values = Config.merge(defaults(), normalize_keymap_aliases(opts or {}))
     apply_backend_defaults(self.values)
     return self.values
 end
