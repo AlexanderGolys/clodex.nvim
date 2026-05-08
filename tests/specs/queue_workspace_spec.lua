@@ -1397,8 +1397,8 @@ describe("clodex.ui.queue_workspace", function()
             "Filter: token",
             "",
             "Planned (1)",
-            "         Task  Fix parser",
-            "                   Adjust token handling",
+            "       Task  Fix parser",
+            "                 Adjust token handling",
             "",
         }, lines)
         local groups = extmark_groups(workspace.queue_buf)
@@ -1478,7 +1478,7 @@ describe("clodex.ui.queue_workspace", function()
             "Filter: hidden matcher",
             "",
             "Planned (1)",
-            "         Task  Fix parser",
+            "       Task  Fix parser",
             "",
         }, lines)
 
@@ -1541,12 +1541,12 @@ describe("clodex.ui.queue_workspace", function()
         workspace:render_queue()
 
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
-        assert.are.equal("          Bug  ", lines[2]:sub(1, 15))
-        assert.are.equal("         Docs  ", lines[3]:sub(1, 15))
-        assert.are.equal("         Task  ", lines[4]:sub(1, 15))
-        assert.are.equal("Fix bug", lines[2]:sub(16))
-        assert.are.equal("Write docs", lines[3]:sub(16))
-        assert.are.equal("Improve flow", lines[4]:sub(16))
+        assert.are.equal("        Bug  ", lines[2]:sub(1, 13))
+        assert.are.equal("       Docs  ", lines[3]:sub(1, 13))
+        assert.are.equal("       Task  ", lines[4]:sub(1, 13))
+        assert.are.equal("Fix bug", lines[2]:sub(14))
+        assert.are.equal("Write docs", lines[3]:sub(14))
+        assert.are.equal("Improve flow", lines[4]:sub(14))
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
@@ -1671,9 +1671,9 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "         Task  Fix parser  󰜘 abc1234",
-            "                   Implemented parser fix",
-            "                   Adjust token handling",
+            "       Task  Fix parser  󰜘 abc1234",
+            "                 Implemented parser fix",
+            "                 Adjust token handling",
             "",
         }, lines)
         local commit_marks = inline_extmarks(workspace.queue_buf, "ClodexCommitId")
@@ -1746,12 +1746,12 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "  Not Working  Fix creator context  󰜘 f3e2f7a9 (+2)",
-            "                   󰜘 f3e2f7a9",
-            "                   󰜘 ac39acf4",
-            "                   󰜘 d7258068",
-            "                   Restored context capture",
-            "                   Restore macro expansion",
+            "Not Working  Fix creator context  󰜘 f3e2f7a9 (+2)",
+            "                 󰜘 f3e2f7a9",
+            "                 󰜘 ac39acf4",
+            "                 󰜘 d7258068",
+            "                 Restored context capture",
+            "                 Restore macro expansion",
             "",
         }, lines)
 
@@ -1830,11 +1830,11 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Queued (1)",
-            "  Not Working  Fix creator overlay  󰜘 65dea8d0 (+1)",
-            "                   Fails after restart",
-            "                   󰜘 65dea8d0",
-            "                   󰜘 76bc7ad7",
-            "                   The previous overlay fix regressed",
+            "Not Working  Fix creator overlay  󰜘 65dea8d0 (+1)",
+            "                 Fails after restart",
+            "                 󰜘 65dea8d0",
+            "                 󰜘 76bc7ad7",
+            "                 The previous overlay fix regressed",
             "",
         }, lines)
 
@@ -1911,7 +1911,7 @@ describe("clodex.ui.queue_workspace", function()
         workspace:render_queue()
 
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
-        assert.is_false(vim.tbl_contains(lines, "                   No comment was provided for the latest mark-not-working action."))
+        assert.is_false(vim.tbl_contains(lines, "                 No comment was provided for the latest mark-not-working action."))
         local comment_marks = inline_extmarks(workspace.queue_buf, "ClodexPromptNotWorkingTitle")
         assert.are.equal(1, #comment_marks)
         assert.are.equal(1, comment_marks[1][2])
@@ -1975,8 +1975,8 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "         Task  Fix parser  󰜘 abc1234",
-            "                   Adjust token handling",
+            "       Task  Fix parser  󰜘 abc1234",
+            "                 Adjust token handling",
             "",
         }, lines)
 
@@ -2039,9 +2039,9 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "         Task  Fix parser",
-            "                   Implemented parser fix",
-            "                   Adjust token handling",
+            "       Task  Fix parser",
+            "                 Implemented parser fix",
+            "                 Adjust token handling",
             "",
         }, lines)
         assert.are.equal(0, #inline_extmarks(workspace.queue_buf, "ClodexCommitId"))
@@ -3233,9 +3233,9 @@ describe("clodex.ui.queue_workspace", function()
         local older_index = 0
         local newer_index = 0
         for index, line in ipairs(queue_lines) do
-            if line == "         Task  Older implemented prompt" then
+            if line == "       Task  Older implemented prompt" then
                 older_index = index
-            elseif line == "         Task  Newer implemented prompt" then
+            elseif line == "       Task  Newer implemented prompt" then
                 newer_index = index
             end
         end

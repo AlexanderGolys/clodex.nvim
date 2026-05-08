@@ -90,7 +90,7 @@ local PROMPT_KIND_PREFIX_WIDTH = (function()
     for _, kind in ipairs(Prompt.categories.list()) do
         width = math.max(width, vim.fn.strdisplaywidth(kind.label or ""))
     end
-    return width + 2
+    return width
 end)()
 local PROJECT_SEARCH_FIELDS = {
     "name",
