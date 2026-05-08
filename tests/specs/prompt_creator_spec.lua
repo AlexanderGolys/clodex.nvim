@@ -1619,6 +1619,39 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(body_win.win, vim.api.nvim_get_current_win())
     end)
 
+    it("accepts completion in the title field without switching focus", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "bug",
+            on_submit = function() end,
+        })
+
+        local title_win = creator.layout.title_win
+        local title_buf = creator.layout.title_buf
+
+        vim.api.nvim_set_current_win(title_win.win)
+        vim.cmd.startinsert()
+        vim.fn.pumvisible = function()
+            return 1
+        end
+
+        local result = trigger_buffer_mapping(title_buf, "<CR>", "i")
+        assert.are.equal(vim.keycode("<C-y>"), result)
+        assert.are.equal(title_win.win, vim.api.nvim_get_current_win())
+    end)
+
     it("removes the image preview when switching to a draft without an image", function()
         creator = Creator.open({
             app = {

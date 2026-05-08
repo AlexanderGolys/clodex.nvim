@@ -99,6 +99,9 @@ function ComposerLayout:apply_keymaps()
     if not vim.b[self.title_buf].clodex_prompt_keymaps_applied then
         self.creator:apply_first_slot_keymaps(self.title_buf)
         vim.keymap.set("i", "<CR>", function()
+            if vim.fn.pumvisible() == 1 then
+                return vim.keycode("<C-y>")
+            end
             self:split_title_at_cursor()
             return ""
         end, { buffer = self.title_buf, silent = true, expr = true })
@@ -117,11 +120,17 @@ function ComposerLayout:apply_keymaps()
             return vim.keycode("<Up>")
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("i", "<S-Tab>", function()
+            if vim.fn.pumvisible() == 1 then
+                return vim.keycode("<S-Tab>")
+            end
             return schedule_focus(function()
                 self:focus_body(true)
             end)
         end, { buffer = self.title_buf, silent = true, expr = true })
         vim.keymap.set("i", "<Tab>", function()
+            if vim.fn.pumvisible() == 1 then
+                return vim.keycode("<Tab>")
+            end
             return schedule_focus(function()
                 self:focus_body(true)
             end)
