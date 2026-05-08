@@ -427,6 +427,44 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(vim.api.nvim_win_get_width(creator.preview_win.win) < 28)
     end)
 
+    it("renders linked context preview items as two-line blocks with spacer rows", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                file_path = "/tmp/demo/a.lua",
+                relative_path = "a.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 3,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Linked context",
+                link_line = true,
+            },
+            on_submit = function() end,
+        })
+
+        assert.is_not_nil(creator.preview_buf)
+        assert.are.same({
+            "",
+            "Line",
+            "a.lua:3",
+            "",
+        }, vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false))
+    end)
+
     it("normalizes raw edit prompt drafts into title and details fields", function()
         creator = Creator.open({
             app = {

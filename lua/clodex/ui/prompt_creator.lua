@@ -183,6 +183,54 @@ local function linked_context_has_kind(items, kind)
     return false
 end
 
+---@param item Clodex.PromptContext.Linked
+---@return string
+local function linked_context_kind_label(item)
+    if item.kind == "selection" then
+        return "Selection"
+    end
+    if item.kind == "line" then
+        return "Line"
+    end
+    return "File"
+end
+
+---@param item Clodex.PromptContext.Linked
+---@return string
+local function linked_context_value_label(item)
+    if item.kind == "selection" then
+        local start_line = tonumber(item.start_line)
+        local end_line = tonumber(item.end_line) or start_line
+        local range = start_line and (start_line == end_line and tostring(start_line) or ("%d-%d"):format(start_line, end_line))
+            or "?"
+        return ("%s:%s"):format(item.relative_path or "unknown", range)
+    end
+    if item.kind == "line" then
+        return ("%s:%s"):format(item.relative_path or "unknown", tostring(item.line or "?"))
+    end
+    return item.relative_path or "unknown"
+end
+
+---@param context_items Clodex.PromptContext.Linked[]?
+---@return string[]
+local function linked_context_preview_lines(context_items)
+    if not PromptContext.has_linked_context(context_items) then
+        return {}
+    end
+
+    local lines = { "" } ---@type string[]
+    for _, item in ipairs(context_items or {}) do
+        lines[#lines + 1] = linked_context_kind_label(item)
+        local value = linked_context_value_label(item)
+        if type(item.token) == "string" and item.token ~= "" then
+            value = ("%s  %s"):format(value, item.token)
+        end
+        lines[#lines + 1] = value
+        lines[#lines + 1] = ""
+    end
+    return lines
+end
+
 ---@param draft table?
 ---@return table?
 local function normalize_initial_draft(draft)
@@ -685,7 +733,7 @@ function Creator:preview_width()
         return width
     end
 
-    local lines = PromptContext.linked_context_lines(self.state.linked_context)
+    local lines = linked_context_preview_lines(self.state.linked_context)
     local max_text_width = 0
     for _, line in ipairs(lines) do
         max_text_width = math.max(max_text_width, vim.fn.strdisplaywidth(line))
@@ -823,7 +871,14 @@ end
 
 ---@return integer
 function Creator:preview_height()
-    return math.max(self:footer_row() - self:preview_row() + LAYOUT.creator_panel_gap_cols, LAYOUT.preview_min_height)
+    local max_height = math.max(self:footer_row() - self:preview_row() + LAYOUT.creator_panel_gap_cols, LAYOUT.preview_min_height)
+    if self.state.image_path ~= nil or not PromptContext.has_linked_context(self.state.linked_context) then
+        return max_height
+    end
+
+    local lines = linked_context_preview_lines(self.state.linked_context)
+    local desired = math.max(#lines, 3)
+    return Helpers.clamp(desired, 3, max_height)
 end
 
 ---@return snacks.image.Opts
@@ -1678,21 +1733,17 @@ function Creator:render_context_preview()
     end
     self:apply_preview_keymaps()
 
-    local lines = PromptContext.linked_context_lines(self.state.linked_context)
+    local lines = linked_context_preview_lines(self.state.linked_context)
     vim.bo[self.preview_buf].modifiable = true
     vim.bo[self.preview_buf].filetype = "markdown"
     vim.api.nvim_buf_set_lines(self.preview_buf, 0, -1, false, #lines > 0 and lines or { "No linked context" })
     vim.api.nvim_buf_clear_namespace(self.preview_buf, LINKED_CONTEXT_HIGHLIGHT_NS, 0, -1)
     local value_highlight = Prompt.kind_name_group(self.state.kind)
     for row, line in ipairs(lines) do
-        local value_start, value_end = line:find("@%S+")
-        if not value_start then
-            value_start, value_end = line:find(":%s*%S.*")
-        end
-        if value_start and value_end then
-            vim.api.nvim_buf_set_extmark(self.preview_buf, LINKED_CONTEXT_HIGHLIGHT_NS, row - 1, value_start - 1, {
+        if row > 1 and (row % 3 == 0) and vim.trim(line) ~= "" then
+            vim.api.nvim_buf_set_extmark(self.preview_buf, LINKED_CONTEXT_HIGHLIGHT_NS, row - 1, 0, {
                 end_row = row - 1,
-                end_col = value_end,
+                end_col = #line,
                 hl_group = value_highlight,
             })
         end
