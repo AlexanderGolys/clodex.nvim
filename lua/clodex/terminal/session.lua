@@ -23,6 +23,7 @@ local TITLE_TRUNCATION_SUFFIX = "[...]"
 ---@field active_prompt_title? string
 ---@field active_prompt_kind? string
 ---@field active_prompt_authoritative? boolean
+---@field active_queue_item_title? string Compatibility with state snapshots produced by queue-aware tests.
 ---@field prompt_skill_name string
 local Session = {}
 Session.__index = Session
@@ -54,6 +55,9 @@ Session.__index = Session
 ---@field last_cli_line? string
 ---@field terminal_provider "snacks"|"term"
 ---@field env_keys? string[]
+---@field active_prompt_title? string
+---@field active_prompt_kind? string
+---@field active_prompt_authoritative? boolean
 
 
 local Snacks = {
@@ -532,10 +536,6 @@ end
 ---@param win integer
 ---@return string
 function Session:statusline_text(win)
-    local current_win = vim.api.nvim_get_current_win()
-    if vim.api.nvim_win_is_valid(win) and win ~= current_win then
-        return self:statusline_line_text()
-    end
     if self:window_shows_bottom(win) then
         return ""
     end
@@ -795,6 +795,9 @@ function Session:snapshot()
         last_cli_line = last_line,
         terminal_provider = self.terminal_provider,
         env_keys = env_keys,
+        active_prompt_title = self.active_prompt_title,
+        active_prompt_kind = self.active_prompt_kind,
+        active_prompt_authoritative = self.active_prompt_authoritative,
     }
 end
 

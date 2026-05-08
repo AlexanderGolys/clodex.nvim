@@ -60,10 +60,39 @@ describe("clodex.terminal.session", function()
         vim.cmd("vsplit")
         local inactive_win = vim.api.nvim_get_current_win()
         vim.api.nvim_win_set_buf(inactive_win, inactive_buf)
+        vim.api.nvim_win_set_height(inactive_win, 1)
         vim.api.nvim_set_current_win(current_win)
 
         assert.are.equal(" Codex ready ", session:statusline_text(inactive_win))
         assert.are.equal(session:statusline_line_text(), session:statusline_text(inactive_win))
+
+        vim.api.nvim_win_close(inactive_win, true)
+    end)
+
+    it("hides the inactive-window statusline text when that window already shows the latest line", function()
+        local current_win = vim.api.nvim_get_current_win()
+        local inactive_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(inactive_buf, 0, -1, false, {
+            "older output",
+            "Codex ready",
+        })
+
+        local session = Session.new({
+            key = "project:/tmp/demo",
+            kind = "project",
+            cwd = "/tmp/demo",
+            title = "Clodex: Demo",
+            cmd = { "codex" },
+        })
+        session.buf = inactive_buf
+
+        vim.cmd("vsplit")
+        local inactive_win = vim.api.nvim_get_current_win()
+        vim.api.nvim_win_set_buf(inactive_win, inactive_buf)
+        vim.api.nvim_win_set_height(inactive_win, 10)
+        vim.api.nvim_set_current_win(current_win)
+
+        assert.are.equal("", session:statusline_text(inactive_win))
 
         vim.api.nvim_win_close(inactive_win, true)
     end)
