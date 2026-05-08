@@ -154,7 +154,7 @@ local function defaults()
     return {
         backend = "codex",
         codex_cmd = { "codex" },
-        codex_args = {},
+        codex_args = { "--yolo" },
         opencode_cmd = { "opencode" },
         opencode_args = {},
         storage = {

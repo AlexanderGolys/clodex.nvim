@@ -49,7 +49,7 @@ require("clodex").setup()
 require("clodex").setup({
     backend = "codex",
     codex_cmd = { "codex" },
-    codex_args = {},
+    codex_args = { "--yolo" },
     opencode_cmd = { "opencode" },
     opencode_args = {},
     storage = {
@@ -153,7 +153,7 @@ require("clodex").setup({
 })
 ```
 
-`codex_cmd` and `opencode_cmd` set the executable used for each backend. `codex_args` and `opencode_args` add backend-specific CLI flags whenever Clodex starts that backend, including project/free chat sessions, resumed sessions, and direct Codex execution. For example, set `codex_args = { "--yolo" }` to launch Codex with `--yolo`. Codex MCP config arguments are appended after `codex_args` so the bundled queue helper remains wired to the configured workspace directory.
+`codex_cmd` and `opencode_cmd` set the executable used for each backend. `codex_args` and `opencode_args` add backend-specific CLI flags whenever Clodex starts that backend, including project/free chat sessions, resumed sessions, and direct Codex execution. Codex starts with `codex_args = { "--yolo" }` by default; override it with another list, or set `codex_args = {}` to opt out. Codex MCP config arguments are appended after `codex_args` so the bundled queue helper remains wired to the configured workspace directory.
 The default line-linked prompt keymaps (`<leader>pl` and `<Home>l`) open the prompt creator with the current cursor line linked as prompt context; `<leader>pl` is normal-mode only, while `<Home>l` is registered across normal/insert/visual/select/operator-pending/command/terminal modes.
 The default chat jump keymaps (`<leader>pj` and `<Home>j`) focus the current Clodex chat session from anywhere, open it when hidden, and enter terminal input mode.
 The default chat skill keymaps (`<leader>pw` and `<Home>w`) focus chat from anywhere, submit `$<prompt_execution.skill_name>`, and return to terminal input mode.

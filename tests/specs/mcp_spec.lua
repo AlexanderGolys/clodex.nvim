@@ -35,6 +35,7 @@ describe("clodex.mcp", function()
 
         assert.are.same({
             "codex",
+            "--yolo",
             "-c",
             'mcp_servers.clodex.command="cargo"',
             "-c",
@@ -117,6 +118,7 @@ describe("clodex.mcp", function()
 
         assert.are.same({
             "codex",
+            "--yolo",
             "-c",
             'mcp_servers.clodex.command="cargo"',
             "-c",
