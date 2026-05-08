@@ -745,6 +745,7 @@ describe("clodex.app.queue_actions", function()
         local queue_name, _, moved = queue:find_item(project, item.id)
         assert.are.equal("queued", queue_name)
         assert.are.equal("notworking", moved.kind)
+        assert.is_true(moved.details:find("## Latest Revoke Comment") ~= nil)
         assert.is_true(moved.details:find("Still fails after review%.") ~= nil)
         assert.is_true(moved.details:find("abcdef12") ~= nil)
         assert.are.equal(nil, moved.history_summary)
@@ -775,12 +776,78 @@ describe("clodex.app.queue_actions", function()
         local queue_name, _, moved = queue:find_item(project, item.id)
         assert.are.equal("queued", queue_name)
         assert.are.equal("notworking", moved.kind)
-        assert.is_true(moved.details:find("## User Note") ~= nil)
+        assert.is_true(moved.details:find("## Latest Revoke Comment") ~= nil)
         assert.is_true(moved.details:find("Fails when the cache is cold%.") ~= nil)
         assert.is_true(moved.details:find("## Implementation Details") ~= nil)
         assert.is_true(moved.details:find("implementation complete") ~= nil)
         assert.are.equal(nil, moved.history_summary)
         assert.are.same({}, moved.history_commits)
+    end)
+
+    it("explicitly says when the latest mark-not-working action has no comment", function()
+        local item = queue:add_todo(project, {
+            title = "fix prompt flow",
+            details = "return to queued",
+            queue = "queued",
+            kind = "todo",
+        })
+        queue:advance(project, item.id)
+        queue:update_implemented_item(project, item.id, {
+            summary = "implementation complete",
+            completed_at = "2026-01-01T00:00:00Z",
+        })
+
+        actions:rewind_queue_item(project, item.id, {
+            queue = "implemented",
+            mark_not_working = true,
+            note = "",
+        })
+
+        local _, _, moved = queue:find_item(project, item.id)
+        assert.is_true(moved.details:find("No comment was provided for the latest mark%-not%-working action%.") ~= nil)
+    end)
+
+    it("flattens nested not-working prompts and keeps history coherent", function()
+        local item = queue:add_todo(project, {
+            title = "fix prompt flow",
+            details = "return to queued",
+            queue = "queued",
+            kind = "todo",
+        })
+        queue:advance(project, item.id)
+        queue:update_implemented_item(project, item.id, {
+            summary = "first fix",
+            commit = "11111111aaaaaaaa",
+            completed_at = "2026-01-01T00:00:00Z",
+        })
+        queue:advance(project, item.id)
+        actions:rewind_queue_item(project, item.id, {
+            queue = "history",
+            mark_not_working = true,
+            note = "still broken",
+        })
+
+        queue:advance(project, item.id)
+        queue:update_implemented_item(project, item.id, {
+            summary = "second fix",
+            commit = "22222222bbbbbbbb",
+            completed_at = "2026-01-01T00:00:00Z",
+        })
+
+        actions:rewind_queue_item(project, item.id, {
+            queue = "implemented",
+            mark_not_working = true,
+            note = "fails on restart",
+        })
+
+        local _, _, moved = queue:find_item(project, item.id)
+        assert.are.equal("notworking", moved.kind)
+        assert.is_true(moved.details:find("## Latest Revoke Comment\n\nfails on restart", 1, true) ~= nil)
+        assert.is_true(moved.details:find("## Previous Revoke Comments\n\n%- still broken") ~= nil)
+        assert.is_true(moved.details:find("`󰜘 22222222` `󰜘 11111111`", 1, true) ~= nil)
+        assert.is_true(moved.details:find("second fix", 1, true) ~= nil)
+        assert.is_true(moved.details:find("%- first fix") ~= nil)
+        assert.is_nil(moved.details:match("## Original Prompt.-## Original Prompt"))
     end)
 
     it("coerces non-string rewind fields before trimming them", function()
@@ -808,7 +875,7 @@ describe("clodex.app.queue_actions", function()
 
         assert.are.equal("queued", queue_name)
         assert.are.equal("notworking", moved.kind)
-        assert.is_true(moved.details:find("## User Note") ~= nil)
+        assert.is_true(moved.details:find("## Latest Revoke Comment") ~= nil)
         assert.is_true(moved.details:find("uv_timer") ~= nil)
     end)
 

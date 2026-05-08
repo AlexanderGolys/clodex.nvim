@@ -87,6 +87,107 @@ local function trimmed_text(value)
     return vim.trim(tostring(value))
 end
 
+---@param details string
+---@return table<string, string>
+local function markdown_h2_sections(details)
+    local sections = {} ---@type table<string, string>
+    local current_name = nil ---@type string?
+    local current_lines = {} ---@type string[]
+    local lines = vim.split(details, "\n", { plain = true })
+    for _, line in ipairs(lines) do
+        local heading = line:match("^##%s+(.+)$")
+        if heading then
+            if current_name then
+                sections[current_name] = vim.trim(table.concat(current_lines, "\n"))
+            end
+            current_name = vim.trim(heading)
+            current_lines = {}
+        elseif current_name then
+            current_lines[#current_lines + 1] = line
+        end
+    end
+    if current_name then
+        sections[current_name] = vim.trim(table.concat(current_lines, "\n"))
+    end
+    return sections
+end
+
+---@param section string
+---@return string, string
+local function parse_original_prompt_section(section)
+    local title = ""
+    local details = ""
+    local lines = vim.split(section, "\n", { plain = true })
+    local details_lines = {} ---@type string[]
+    for _, line in ipairs(lines) do
+        if title == "" then
+            local parsed_title = line:match("^%*%*Title:%*%*%s*(.+)$")
+            if parsed_title then
+                title = vim.trim(parsed_title)
+            elseif vim.trim(line) ~= "" then
+                details_lines[#details_lines + 1] = line
+            end
+        else
+            details_lines[#details_lines + 1] = line
+        end
+    end
+    details = vim.trim(table.concat(details_lines, "\n"))
+    return title, details
+end
+
+---@param section string
+---@return string[], string[]
+local function parse_implementation_section(section)
+    local commits = {} ---@type string[]
+    local summaries = {} ---@type string[]
+    local lines = vim.split(section, "\n", { plain = true })
+    for _, line in ipairs(lines) do
+        local commit_line = line:match("^%*%*Commits:%*%*%s*(.+)$")
+        local summary_line = line:match("^%*%*Summary:%*%*%s*(.+)$")
+        if commit_line then
+            for commit in commit_line:gmatch("([0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]+)") do
+                commits[#commits + 1] = commit
+            end
+        elseif summary_line then
+            summaries[#summaries + 1] = vim.trim(summary_line)
+        end
+    end
+    return commits, summaries
+end
+
+---@param target string[]
+---@param seen table<string, boolean>
+---@param value string
+local function push_unique(target, seen, value)
+    local normalized = vim.trim(value)
+    if normalized == "" or seen[normalized] then
+        return
+    end
+    seen[normalized] = true
+    target[#target + 1] = normalized
+end
+
+---@param section string
+---@return string[]
+local function parse_comment_entries(section)
+    local entries = {} ---@type string[]
+    local lines = vim.split(section, "\n", { plain = true })
+    for _, line in ipairs(lines) do
+        local bullet = line:match("^%-%s+(.+)$")
+        if bullet and vim.trim(bullet) ~= "" then
+            entries[#entries + 1] = vim.trim(bullet)
+        end
+    end
+    if #entries > 0 then
+        return entries
+    end
+    local trimmed = vim.trim(section)
+    if trimmed ~= "" then
+        return { trimmed }
+    end
+    return {}
+end
+
 ---@param item Clodex.QueueItem
 ---@param opts Clodex.AppQueueActions.RewindOpts
 ---@return Clodex.QueueItem
@@ -103,10 +204,56 @@ local function rewind_item_spec(item, opts)
     local note = trimmed_text(opts.note)
     local commits = moved.history_commits or {}
     local commit_summary = trimmed_text(moved.history_summary)
+    local prior_comments = {} ---@type string[]
+    local prior_summaries = {} ---@type string[]
+    local prior_commits = {} ---@type string[]
+    local comments_seen = {} ---@type table<string, boolean>
+    local summaries_seen = {} ---@type table<string, boolean>
+    local commits_seen = {} ---@type table<string, boolean>
+
+    if moved.kind == "notworking" and original_details ~= "" then
+        local parsed_sections = markdown_h2_sections(original_details)
+        local parsed_original = parsed_sections["Original Prompt"]
+        if parsed_original then
+            local parsed_title, parsed_details = parse_original_prompt_section(parsed_original)
+            if parsed_title ~= "" then
+                original_title = parsed_title
+            end
+            if parsed_details ~= "" then
+                original_details = parsed_details
+            end
+        end
+        local parsed_impl = parsed_sections["Implementation Details"]
+        if parsed_impl then
+            local parsed_commits, parsed_summaries = parse_implementation_section(parsed_impl)
+            for _, commit in ipairs(parsed_commits) do
+                push_unique(prior_commits, commits_seen, commit)
+            end
+            for _, summary in ipairs(parsed_summaries) do
+                push_unique(prior_summaries, summaries_seen, summary)
+            end
+        end
+        local comment_sections = {
+            parsed_sections["Latest Revoke Comment"],
+            parsed_sections["Previous Revoke Comments"],
+            parsed_sections["User Note"],
+        }
+        for _, comment_section in ipairs(comment_sections) do
+            if type(comment_section) == "string" then
+                local parsed_entries = parse_comment_entries(comment_section)
+                for _, entry in ipairs(parsed_entries) do
+                    push_unique(prior_comments, comments_seen, entry)
+                end
+            end
+        end
+    end
 
     local header =
         "A previously implemented feature or fix is not working as expected. The original implementation needs to be investigated and fixed."
     sections[#sections + 1] = header
+
+    local latest_comment = note ~= "" and note or "No comment was provided for the latest mark-not-working action."
+    sections[#sections + 1] = ("## Latest Revoke Comment\n\n%s"):format(latest_comment)
 
     local original_section = { "## Original Prompt" }
     if original_title ~= "" then
@@ -119,24 +266,51 @@ local function rewind_item_spec(item, opts)
         sections[#sections + 1] = table.concat(original_section, "\n\n")
     end
 
-    if #commits > 0 or commit_summary ~= "" then
+    if #commits > 0 or #prior_commits > 0 or commit_summary ~= "" or #prior_summaries > 0 then
         local impl_section = { "## Implementation Details" }
-        if #commits > 0 then
+        local all_commits = {} ---@type string[]
+        local all_commits_seen = {} ---@type table<string, boolean>
+        for idx = #commits, 1, -1 do
+            local commit_id = commits[idx]
+            if type(commit_id) == "string" then
+                push_unique(all_commits, all_commits_seen, commit_id)
+            end
+        end
+        for _, commit_id in ipairs(prior_commits) do
+            push_unique(all_commits, all_commits_seen, commit_id)
+        end
+        if #all_commits > 0 then
             local commit_parts = {}
-            for _, commit_id in ipairs(commits) do
+            for _, commit_id in ipairs(all_commits) do
                 local short = commit_id:sub(1, 8)
                 commit_parts[#commit_parts + 1] = ("`%s%s`"):format(COMMIT_ICON, short)
             end
             impl_section[#impl_section + 1] = ("**Commits:** %s"):format(table.concat(commit_parts, " "))
         end
+        local all_summaries = {} ---@type string[]
+        local all_summaries_seen = {} ---@type table<string, boolean>
         if commit_summary ~= "" then
-            impl_section[#impl_section + 1] = ("**Summary:** %s"):format(commit_summary)
+            push_unique(all_summaries, all_summaries_seen, commit_summary)
+        end
+        for _, summary in ipairs(prior_summaries) do
+            push_unique(all_summaries, all_summaries_seen, summary)
+        end
+        if #all_summaries > 0 then
+            local summary_lines = {} ---@type string[]
+            for index, summary in ipairs(all_summaries) do
+                if index == 1 then
+                    summary_lines[#summary_lines + 1] = ("**Summary:** %s"):format(summary)
+                else
+                    summary_lines[#summary_lines + 1] = ("- %s"):format(summary)
+                end
+            end
+            impl_section[#impl_section + 1] = table.concat(summary_lines, "\n")
         end
         sections[#sections + 1] = table.concat(impl_section, "\n\n")
     end
 
-    if note ~= "" then
-        sections[#sections + 1] = "## User Note\n\n" .. note
+    if #prior_comments > 0 then
+        sections[#sections + 1] = "## Previous Revoke Comments\n\n- " .. table.concat(prior_comments, "\n- ")
     end
 
     local instructions =
