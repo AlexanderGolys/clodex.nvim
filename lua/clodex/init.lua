@@ -25,6 +25,7 @@
 ---| "add_project_bookmark"
 ---| "open_project_bookmarks_picker"
 ---| "add_todo"
+---| "add_line_linked_todo"
 ---| "implement_next_queued_item"
 ---| "implement_all_queued_items"
 ---| "add_prompt"
@@ -66,6 +67,7 @@ local PUBLIC_ACTIONS = {
     "add_project_bookmark",
     "open_project_bookmarks_picker",
     "add_todo",
+    "add_line_linked_todo",
     "implement_next_queued_item",
     "implement_all_queued_items",
     "add_prompt",

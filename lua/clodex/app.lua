@@ -5,6 +5,7 @@ local ExecutionRunner = require("clodex.execution.runner")
 local History = require("clodex.history")
 local ProjectActions = require("clodex.app.project_actions")
 local PromptActions = require("clodex.app.prompt_actions")
+local PromptContext = require("clodex.prompt.context")
 local QueueActions = require("clodex.app.queue_actions")
 local ProjectDetails = require("clodex.project.details")
 local ProjectBookmarks = require("clodex.project.bookmarks")
@@ -1198,6 +1199,19 @@ end
 function App:add_todo(opts)
     self.prompt_actions:pick_project(self.prompt_actions:resolve_project(opts), function(project)
         self.prompt_actions:prompt_for_todo(project)
+    end)
+end
+
+function App:add_line_linked_todo(opts)
+    self.prompt_actions:pick_project(self.prompt_actions:resolve_project(opts), function(project)
+        local context = PromptContext.capture({ project = project })
+        self.prompt_actions:open_creator(project, {
+            category = "todo",
+            context = context,
+            initial_draft = {
+                link_line = true,
+            },
+        })
     end)
 end
 

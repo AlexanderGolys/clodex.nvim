@@ -41,6 +41,7 @@ describe("clodex.commands", function()
             open_project_bookmarks_picker = function() end,
             add_project_bookmark = function() end,
             add_todo = function() end,
+            add_line_linked_todo = function() end,
             add_bug_todo = function() end,
             implement_next_queued_item = function() end,
             implement_all_queued_items = function() end,

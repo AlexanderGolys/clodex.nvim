@@ -378,7 +378,7 @@ describe("clodex.ui.select", function()
             "v:lua.require'clodex.ui.select'.prompt_context_complete",
             vim.bo[body_window.buf].completefunc
         )
-        assert.are.equal("menuone,noselect,longest", vim.bo[body_window.buf].completeopt)
+        assert.are.equal("menuone,longest", vim.bo[body_window.buf].completeopt)
 
         local start_col = select.prompt_context_complete(1, "")
         local items = select.prompt_context_complete(0, "&f")

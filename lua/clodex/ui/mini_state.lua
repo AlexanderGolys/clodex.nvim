@@ -73,6 +73,15 @@ local function local_session_status(session)
     return session.buffer_valid and "stopped" or "offline"
 end
 
+---@param session Clodex.TerminalSession.Snapshot?
+---@return string?
+local function local_session_item_title(session)
+    if not session then
+        return nil
+    end
+    return session.active_queue_item_title or session.active_prompt_title
+end
+
 ---@param title string
 ---@return Clodex.Extmark[]
 local function section_marks(title)
@@ -158,6 +167,10 @@ function Preview:render(snapshot)
     append_field(block, "tab", snapshot.current_tab.tabpage)
     append_field(block, "session", local_session_status(session))
     append_field(block, "provider", session and session.terminal_provider or "none")
+    local item_title = local_session_item_title(session)
+    if item_title then
+        append_field(block, "item", item_title)
+    end
     append_field(block, "visible", snapshot.current_tab.has_visible_window)
     append_field(block, "window", snapshot.current_tab.window_id)
     append_field(block, "prompted", snapshot.current_tab.prompted_project == true)

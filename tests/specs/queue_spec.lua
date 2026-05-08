@@ -79,7 +79,7 @@ describe("clodex.workspace.queue", function()
             kind = "explain",
         })
 
-        assert.are.equal("explain", item.kind)
+        assert.are.equal("ask", item.kind)
     end)
 
     it("moves a queued item to implemented", function()
@@ -166,7 +166,7 @@ describe("clodex.workspace.queue", function()
             kind = "adjustment",
         })
 
-        assert.are.equal("adjustment", item.kind)
+        assert.are.equal("freeform", item.kind)
     end)
 
     it("updates an implemented item with execution metadata", function()

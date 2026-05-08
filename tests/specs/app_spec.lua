@@ -274,6 +274,8 @@ describe("clodex.app", function()
                 refresh = { lhs = "<leader>pR" },
                 new_bug_prompt = { lhs = "<leader>pB" },
                 new_improvement_prompt = { lhs = "<leader>pI" },
+                new_line_linked_prompt = { lhs = "<leader>pl" },
+                new_line_linked_prompt_home = { lhs = "<Home>l" },
                 go_to_readme = { lhs = "<leader>pM" },
             },
         })
@@ -287,6 +289,18 @@ describe("clodex.app", function()
                 return item.lhs
             end, keymaps),
             "<leader>pb"
+        ))
+        assert.is_true(vim.tbl_contains(
+            vim.tbl_map(function(item)
+                return item.lhs
+            end, keymaps),
+            "<leader>pl"
+        ))
+        assert.is_true(vim.tbl_contains(
+            vim.tbl_map(function(item)
+                return item.lhs
+            end, keymaps),
+            "<Home>l"
         ))
         assert.is_true(vim.tbl_contains(
             vim.tbl_map(function(item)

@@ -104,6 +104,8 @@ local fs = require("clodex.util.fs")
 ---@field refresh string|Clodex.Config.KeymapConfig|false
 ---@field new_bug_prompt string|Clodex.Config.KeymapConfig|false
 ---@field new_improvement_prompt string|Clodex.Config.KeymapConfig|false
+---@field new_line_linked_prompt string|Clodex.Config.KeymapConfig|false
+---@field new_line_linked_prompt_home string|Clodex.Config.KeymapConfig|false
 ---@field go_to_readme string|Clodex.Config.KeymapConfig|false
 
 --- Runtime-config data structure consumed across managers and UI modules.
@@ -249,6 +251,12 @@ local function defaults()
             },
             new_improvement_prompt = {
                 lhs = "<leader>pI",
+            },
+            new_line_linked_prompt = {
+                lhs = "<leader>pl",
+            },
+            new_line_linked_prompt_home = {
+                lhs = "<Home>l",
             },
             go_to_readme = {
                 lhs = "<leader>pM",

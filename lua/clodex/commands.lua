@@ -32,7 +32,7 @@ local did_register = false
 ---@field field? Clodex.KeymapField
 ---@field raw_mode? string|string[]
 
----@alias Clodex.KeymapField "toggle"|"main_panel"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"go_to_readme"
+---@alias Clodex.KeymapField "toggle"|"main_panel"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"new_line_linked_prompt"|"new_line_linked_prompt_home"|"go_to_readme"
 
 ---@class Clodex.GlobalKeymapDefinition
 ---@field field Clodex.KeymapField
@@ -253,6 +253,18 @@ local GLOBAL_KEYMAPS = {
         mode = "n",
         action = "add_todo",
         desc = "Create a new improvement prompt",
+    },
+    {
+        field = "new_line_linked_prompt",
+        mode = "n",
+        action = "add_line_linked_todo",
+        desc = "Create a new prompt linked to the current line",
+    },
+    {
+        field = "new_line_linked_prompt_home",
+        mode = "n",
+        action = "add_line_linked_todo",
+        desc = "Create a new prompt linked to the current line",
     },
     {
         field = "go_to_readme",

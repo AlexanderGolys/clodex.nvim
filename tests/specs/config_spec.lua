@@ -75,6 +75,8 @@ describe("clodex.config", function()
             assert.are.equal("<leader>pR", values.keymaps.refresh.lhs)
             assert.are.equal("<leader>pB", values.keymaps.new_bug_prompt.lhs)
             assert.are.equal("<leader>pI", values.keymaps.new_improvement_prompt.lhs)
+            assert.are.equal("<leader>pl", values.keymaps.new_line_linked_prompt.lhs)
+            assert.are.equal("<Home>l", values.keymaps.new_line_linked_prompt_home.lhs)
             assert.are.equal("<leader>pM", values.keymaps.go_to_readme.lhs)
         end)
 
