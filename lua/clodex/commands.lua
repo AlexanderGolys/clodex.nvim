@@ -912,13 +912,16 @@ function M.register_keymaps(values)
         local resolved = resolve_keymap(values, definition.field, definition)
         for _, keymap in ipairs(resolved) do
             for _, lhs in ipairs(keymap.lhses) do
-                vim.keymap.set(keymap.mode, lhs, function()
+                local ok, err = pcall(vim.keymap.set, keymap.mode, lhs, function()
                     if definition.field == "queue_workspace" then
                         vim.cmd("Clodex")
                         return
                     end
                     return require_clodex()[definition.action]()
                 end, keymap.opts)
+                if not ok then
+                    notify.warn(("Skipping invalid keymap %s for %s: %s"):format(lhs, definition.field, tostring(err)))
+                else
                 REGISTERED_KEYMAPS[#REGISTERED_KEYMAPS + 1] = {
                     context = "Global",
                     mode = keymap_mode_label(keymap.mode),
@@ -927,6 +930,7 @@ function M.register_keymaps(values)
                     desc = keymap.desc,
                     field = definition.field,
                 }
+                end
             end
         end
     end

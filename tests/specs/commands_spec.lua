@@ -572,4 +572,45 @@ describe("clodex.commands", function()
         vim.keymap.set = original_keymap_set
         vim.cmd = original_cmd
     end)
+
+    it("skips invalid keymap modes without aborting registration", function()
+        local original_keymap_set = vim.keymap.set
+        local set_calls = {}
+
+        vim.keymap.set = function(mode, lhs, rhs, opts)
+            if mode == "nope" then
+                error("invalid mode")
+            end
+            set_calls[#set_calls + 1] = {
+                mode = mode,
+                lhs = lhs,
+                rhs = rhs,
+                opts = opts,
+            }
+        end
+
+        Commands.register_keymaps({
+            keymaps = {
+                refresh = {
+                    lhs = "<leader>ok",
+                    mode = "n",
+                },
+                queue_workspace = {
+                    lhs = "<leader>bad",
+                    mode = "nope",
+                },
+            },
+        })
+
+        local saw_refresh = false
+        for _, call in ipairs(set_calls) do
+            if call.lhs == "<leader>ok" then
+                saw_refresh = true
+                break
+            end
+        end
+        assert.is_true(saw_refresh)
+
+        vim.keymap.set = original_keymap_set
+    end)
 end)
