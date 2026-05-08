@@ -9,6 +9,10 @@ local App = require("clodex.app")
 ---@field include_detected? boolean
 ---@field empty_text? string
 ---@field prefix? string
+---@field tabpages? number[]
+---@field separator? string
+---@field active_hl? string
+---@field inactive_hl? string
 
 local M = {}
 
@@ -80,6 +84,41 @@ function M.project_name(opts)
     return opts.prefix .. project.name
   end
   return project.name
+end
+
+---@param opts? Clodex.Lualine.Opts
+---@return string
+function M.tab_project_names(opts)
+  opts = opts or {}
+  local tabpages = opts.tabpages or vim.api.nvim_list_tabpages()
+  if type(tabpages) ~= "table" or #tabpages == 0 then
+    return opts.empty_text or ""
+  end
+
+  local active_tab = vim.api.nvim_get_current_tabpage()
+  local separator = opts.separator or " "
+  local active_hl = opts.active_hl or "TabLineSel"
+  local inactive_hl = opts.inactive_hl or "TabLine"
+  local parts = {}
+
+  for _, tabpage in ipairs(tabpages) do
+    if vim.api.nvim_tabpage_is_valid(tabpage) then
+      local label = M.project_name({
+        tabpage = tabpage,
+        include_detected = opts.include_detected,
+        empty_text = opts.empty_text or "No project",
+        prefix = opts.prefix,
+      })
+      local hl = tabpage == active_tab and active_hl or inactive_hl
+      parts[#parts + 1] = string.format("%%#%s#%s%%*", hl, label)
+    end
+  end
+
+  if #parts == 0 then
+    return opts.empty_text or ""
+  end
+
+  return table.concat(parts, separator)
 end
 
 return M

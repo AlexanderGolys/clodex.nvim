@@ -278,6 +278,7 @@ Statusline helpers:
 
 - `require("clodex").lualine.project(opts)`
 - `require("clodex").lualine.project_name(opts)`
+- `require("clodex").lualine.tab_project_names(opts)`
 
 ## Development
 
