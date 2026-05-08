@@ -898,6 +898,10 @@ function M.register_keymaps(values)
         for _, keymap in ipairs(resolved) do
             for _, lhs in ipairs(keymap.lhses) do
                 vim.keymap.set(keymap.mode, lhs, function()
+                    if definition.field == "queue_workspace" then
+                        vim.cmd("Clodex")
+                        return
+                    end
                     return require_clodex()[definition.action]()
                 end, keymap.opts)
                 REGISTERED_KEYMAPS[#REGISTERED_KEYMAPS + 1] = {

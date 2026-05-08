@@ -519,4 +519,36 @@ describe("clodex.commands", function()
             { lhs = "<Home>l", mode = "n,i,v,x,s,o,c,t" },
         }, line_linked)
     end)
+
+    it("routes legacy queue workspace keymaps through :Clodex", function()
+        local original_keymap_set = vim.keymap.set
+        local original_cmd = vim.cmd
+        local captured_callback = nil
+        local captured_cmd = nil
+
+        vim.keymap.set = function(_, lhs, rhs, _)
+            if lhs == "<Home><Home>" then
+                captured_callback = rhs
+            end
+        end
+        vim.cmd = function(command)
+            captured_cmd = command
+        end
+
+        Commands.register_keymaps({
+            keymaps = {
+                queue_workspace = {
+                    lhs = "<Home><Home>",
+                    mode = "n",
+                },
+            },
+        })
+
+        assert.is_not_nil(captured_callback)
+        captured_callback()
+        assert.are.equal("Clodex", captured_cmd)
+
+        vim.keymap.set = original_keymap_set
+        vim.cmd = original_cmd
+    end)
 end)
