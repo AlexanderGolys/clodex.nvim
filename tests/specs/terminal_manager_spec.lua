@@ -40,6 +40,36 @@ describe("clodex.terminal.manager", function()
         assert.are.equal("custom-skill", spec.prompt_skill_name)
     end)
 
+    it("includes configured codex startup flags in session commands", function()
+        local manager = Manager.new({
+            backend = "codex",
+            codex_cmd = { "codex" },
+            codex_args = { "--yolo" },
+            terminal = {
+                provider = "term",
+                win = {},
+            },
+            mcp = {
+                enabled = false,
+            },
+        })
+
+        local project_spec = manager:session_spec({
+            kind = "project",
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+        })
+        local free_spec = manager:session_spec({
+            kind = "free",
+            cwd = "/tmp",
+        })
+
+        assert.are.same({ "codex", "--yolo" }, project_spec.cmd)
+        assert.are.same({ "codex", "--yolo" }, free_spec.cmd)
+    end)
+
     it("falls back to the current tab when showing a session for an invalid tab state", function()
         local manager = Manager.new({
             backend = "codex",
