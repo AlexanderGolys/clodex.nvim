@@ -285,6 +285,16 @@ local GLOBAL_KEYMAPS = {
 
 local REGISTERED_KEYMAPS = {} ---@type Clodex.KeymapSpec[]
 local ALL_KEYMAP_MODES = { "n", "i", "v", "x", "s", "o", "c", "t" }
+local VALID_KEYMAP_MODES = {
+    n = true,
+    i = true,
+    v = true,
+    x = true,
+    s = true,
+    o = true,
+    c = true,
+    t = true,
+}
 
 ---@param mode string|string[]
 ---@return string|string[]
@@ -292,6 +302,20 @@ local function normalize_keymap_mode(mode)
     if type(mode) == "string" then
         if mode == "a" then
             return vim.deepcopy(ALL_KEYMAP_MODES)
+        end
+        if #mode > 1 and not mode:find(",", 1, true) and not mode:find("%s") then
+            local expanded = {} ---@type string[]
+            for idx = 1, #mode do
+                local item = mode:sub(idx, idx)
+                if item == "a" then
+                    vim.list_extend(expanded, ALL_KEYMAP_MODES)
+                elseif VALID_KEYMAP_MODES[item] then
+                    expanded[#expanded + 1] = item
+                else
+                    return mode
+                end
+            end
+            return expanded
         end
         return mode
     end

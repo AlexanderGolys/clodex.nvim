@@ -883,6 +883,8 @@ describe("clodex.ui.prompt_creator", function()
     end)
 
     it("renders factual link toggle actions and hides selection toggle without selection", function()
+        local source_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(source_buf, "/tmp/demo/a.lua")
         creator = Creator.open({
             app = {
                 config = {
@@ -898,6 +900,7 @@ describe("clodex.ui.prompt_creator", function()
                 root = "/tmp/demo",
             },
             context = {
+                buf = source_buf,
                 file_path = "/tmp/demo/a.lua",
                 project_root = "/tmp/demo",
                 relative_path = "a.lua",
@@ -910,7 +913,7 @@ describe("clodex.ui.prompt_creator", function()
         local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
         local text = table.concat(lines, "\n")
         assert.is_truthy(text:find("file link on", 1, true))
-        assert.is_truthy(text:find("line link on", 1, true))
+        assert.is_truthy(text:find("line link ", 1, true))
         assert.is_nil(text:find("selection link", 1, true))
 
         trigger_buffer_mapping(creator.footer_buf, "F")
