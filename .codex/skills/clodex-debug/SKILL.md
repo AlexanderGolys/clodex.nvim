@@ -1,6 +1,7 @@
 ---
 name: clodex-debug
 description: Diagnose and repair known clodex.nvim legacy state issues, especially local queue data left in older project-local locations.
+version: 1
 ---
 
 Use this skill when a user reports that clodex.nvim queue, MCP, project state, prompt execution, or shipped skill behavior looks stale, missing, or inconsistent.
@@ -33,7 +34,8 @@ Start with the least invasive checks and only apply a fix when the matching caus
 5. Check that bundled skills are installed locally.
    - Verify that `<project_root>/.codex/skills/prompt-nvim-clodex/SKILL.md` exists.
    - Verify that `<project_root>/.codex/skills/clodex-debug/SKILL.md` exists.
-   - If either is missing or stale in a clodex.nvim repository, run the plugin's normal skill sync path by restarting setup or creating the project session, or copy the checked-in `.codex/skills/<name>/SKILL.md` file into the project-local skills directory.
+   - Check each local bundled skill's `version` frontmatter against the checked-in `.codex/skills/<name>/SKILL.md` version.
+   - If either is missing, unversioned, or older in a clodex.nvim repository, run the plugin's normal skill sync path by restarting setup or opening the project session, or copy the checked-in `.codex/skills/<name>/SKILL.md` file into the project-local skills directory.
 
 6. Check MCP runtime configuration when agents cannot see the expected tools.
    - Confirm that Codex/OpenCode runtime config points to the current clodex MCP helper.

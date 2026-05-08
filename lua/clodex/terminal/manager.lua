@@ -463,6 +463,7 @@ function Manager:get_session(target)
     local spec = self:session_spec(target)
     if target.kind == "project" then
         local project_root = fs.normalize(target.project.root)
+        self:sync_project_skills(target.project)
         local session = self.project_sessions[project_root]
         if session_requires_restart(session, spec) then
             session:destroy()
@@ -471,7 +472,6 @@ function Manager:get_session(target)
         if session then
             session:update_identity(spec)
         else
-            self:sync_project_skills(target.project)
             session = Session.new(spec)
         end
         self.project_sessions[project_root] = session

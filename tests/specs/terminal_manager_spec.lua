@@ -219,7 +219,7 @@ describe("clodex.terminal.manager", function()
 
         assert.is_not_nil(first)
         assert.are.same(first, second)
-        assert.are.same({ "/tmp/demo" }, synced)
+        assert.are.same({ "/tmp/demo", "/tmp/demo" }, synced)
 
         package.loaded["clodex.terminal.manager"] = nil
         package.loaded["clodex.terminal.session"] = original_session

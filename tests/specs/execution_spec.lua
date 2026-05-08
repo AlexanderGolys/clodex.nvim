@@ -36,6 +36,7 @@ describe("clodex.workspace.execution", function()
         file:close()
 
         assert.matches("Use the `clodex` MCP server as the primary queue interface", content)
+        assert.matches("version: 1", content)
         assert.matches("Call `get_task`", content)
         assert.matches("Call `close_task`", content)
         assert.matches("Do not edit queue JSON files directly", content)
@@ -48,6 +49,7 @@ describe("clodex.workspace.execution", function()
         local debug_content = debug_file:read("*a")
         debug_file:close()
         assert.matches("local_data_dir", debug_content)
+        assert.matches("version: 1", debug_content)
         assert.matches("Legacy Queue Migration Fix", debug_content)
 
         fs.remove(root)
@@ -66,6 +68,48 @@ describe("clodex.workspace.execution", function()
 
         assert.are_not.equal("stale", content)
         assert.matches("omit `continue_next` or set it to `false`", content)
+
+        fs.remove(root)
+    end)
+
+    it("leaves up-to-date versioned skills untouched during sync", function()
+        local root = temp_dir()
+        local execution = new_execution(fs.join(root, "skills"))
+
+        execution:sync_prompt_skill()
+        local skill_file = execution:skill_file()
+        fs.write_file(skill_file, "---\nname: prompt-nvim-clodex\nversion: 99\n---\nLocal override\n")
+
+        local changed = execution:sync_prompt_skill()
+        local file = assert(io.open(skill_file, "rb"))
+        local content = file:read("*a")
+        file:close()
+
+        assert.is_false(changed)
+        assert.matches("Local override", content)
+
+        fs.remove(root)
+    end)
+
+    it("updates project-local skills when the installed version is older", function()
+        local root = temp_dir()
+        local project = {
+            name = "Demo",
+            root = fs.join(root, "project"),
+        }
+        fs.ensure_dir(project.root)
+        local execution = new_opencode_execution()
+        local skill_file = execution:skill_file(project)
+
+        fs.write_file(skill_file, "---\nname: prompt-nvim-clodex\nversion: 0\n---\nOld skill\n")
+        local changed = execution:sync_prompt_skill(project)
+        local file = assert(io.open(skill_file, "rb"))
+        local content = file:read("*a")
+        file:close()
+
+        assert.is_true(changed)
+        assert.matches("version: 1", content)
+        assert.matches("Use the `clodex` MCP server", content)
 
         fs.remove(root)
     end)
