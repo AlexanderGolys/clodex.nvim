@@ -40,6 +40,7 @@ local RESET_AFTER_SUBMIT_ACTIONS = {}
 
 local TAB_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-tabs")
 local FOOTER_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-footer")
+local LINKED_CONTEXT_HIGHLIGHT_NS = vim.api.nvim_create_namespace("clodex-prompt-linked-context")
 local PROMPT_EDITOR_NORMAL = "ClodexPromptEditorNormal"
 local PROMPT_FOOTER_NORMAL = "ClodexPromptEditorFooter"
 local PROMPT_BACKGROUND_OVERLAY = "ClodexPromptBackgroundOverlay"
@@ -676,11 +677,23 @@ function Creator:preview_width()
         - LAYOUT.creator_panel_gap_cols
         - LAYOUT.content_min_width
         - LAYOUT.creator_panel_gap_cols
-    return Helpers.clamp(
+    local width = Helpers.clamp(
         math.floor(self:total_width() * LAYOUT.preview_width_ratio),
         LAYOUT.preview_min_width,
         math.max(LAYOUT.preview_min_width, math.min(LAYOUT.preview_max_width, max_preview_width))
     )
+    if self.state.image_path ~= nil or not PromptContext.has_linked_context(self.state.linked_context) then
+        return width
+    end
+
+    local lines = PromptContext.linked_context_lines(self.state.linked_context)
+    local max_text_width = 0
+    for _, line in ipairs(lines) do
+        max_text_width = math.max(max_text_width, vim.fn.strdisplaywidth(line))
+    end
+
+    local fit_width = Helpers.clamp(max_text_width + 4, 18, math.max(18, math.min(LAYOUT.preview_max_width, max_preview_width)))
+    return math.min(width, fit_width)
 end
 
 ---@return integer
@@ -1668,6 +1681,29 @@ function Creator:render_context_preview()
     vim.bo[self.preview_buf].modifiable = true
     vim.bo[self.preview_buf].filetype = "markdown"
     vim.api.nvim_buf_set_lines(self.preview_buf, 0, -1, false, #lines > 0 and lines or { "No linked context" })
+    vim.api.nvim_buf_clear_namespace(self.preview_buf, LINKED_CONTEXT_HIGHLIGHT_NS, 0, -1)
+    local value_highlight = Prompt.kind_name_group(self.state.kind)
+    for row, line in ipairs(lines) do
+        local value_start, value_end = line:find("@%S+")
+        if not value_start then
+            value_start, value_end = line:find(":%s*%S.*")
+        end
+        if value_start and value_end then
+            vim.api.nvim_buf_set_extmark(self.preview_buf, LINKED_CONTEXT_HIGHLIGHT_NS, row - 1, value_start - 1, {
+                end_row = row - 1,
+                end_col = value_end,
+                hl_group = value_highlight,
+            })
+        end
+        local token_start, token_end = line:find("&[%a_][%w_]*")
+        if token_start and token_end then
+            vim.api.nvim_buf_set_extmark(self.preview_buf, LINKED_CONTEXT_HIGHLIGHT_NS, row - 1, token_start - 1, {
+                end_row = row - 1,
+                end_col = token_end,
+                hl_group = "ClodexPromptEditorContext",
+            })
+        end
+    end
     vim.bo[self.preview_buf].modifiable = false
 end
 

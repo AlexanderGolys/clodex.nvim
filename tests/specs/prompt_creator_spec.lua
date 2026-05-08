@@ -10,6 +10,16 @@ local function extmark_groups(buf)
     return groups
 end
 
+local function extmarks_with_group(buf, group)
+    local marks = {}
+    for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, -1, 0, -1, { details = true })) do
+        if mark[4].hl_group == group then
+            marks[#marks + 1] = mark
+        end
+    end
+    return marks
+end
+
 local function trigger_buffer_mapping(buf, lhs, mode)
     local map = vim.fn.maparg(lhs, mode or "n", false, true)
     assert.is_table(map)
@@ -373,6 +383,39 @@ describe("clodex.ui.prompt_creator", function()
         })
 
         assert.are.equal("markdown", vim.bo[creator.layout.body_buf].filetype)
+    end)
+
+    it("fits linked context preview width to its content", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                file_path = "/tmp/demo/a.lua",
+                relative_path = "a.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 3,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Linked context",
+                link_line = true,
+            },
+            on_submit = function() end,
+        })
+
+        assert.is_not_nil(creator.preview_win)
+        assert.is_true(vim.api.nvim_win_get_width(creator.preview_win.win) < 28)
     end)
 
     it("normalizes raw edit prompt drafts into title and details fields", function()
