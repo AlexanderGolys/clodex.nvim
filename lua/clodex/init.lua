@@ -75,6 +75,25 @@ local function app()
     return require("clodex.app").instance()
 end
 
+local function app_module()
+    local ok, module = pcall(require, "clodex.app")
+    if ok and type(module.instance) == "function" then
+        return module
+    end
+end
+
+local function current_app()
+    local module = app_module()
+    if not module then
+        return nil
+    end
+
+    local ok, instance = pcall(module.instance)
+    if ok then
+        return instance
+    end
+end
+
 ---@param method Clodex.PublicAction
 ---@return fun(...): any
 local function call(method)
@@ -85,13 +104,8 @@ local function call(method)
 end
 
 local function current_config()
-    local ok, app_module = pcall(require, "clodex.app")
-    if not ok or type(app_module.instance) ~= "function" then
-        return {}
-    end
-
-    local ok_app, instance = pcall(app_module.instance)
-    if not ok_app or not instance or not instance.config then
+    local instance = current_app()
+    if not instance or not instance.config then
         return {}
     end
 
@@ -133,6 +147,22 @@ end
 
 function M.debug_reload()
     local opts = current_config()
+    local old_app = current_app()
+    local reload_state
+
+    if old_app and type(old_app.capture_reload_state) == "function" then
+        local ok, state = pcall(function()
+            return old_app:capture_reload_state()
+        end)
+        if ok then
+            reload_state = state
+        end
+    end
+    if old_app and type(old_app.teardown_for_reload) == "function" then
+        pcall(function()
+            old_app:teardown_for_reload()
+        end)
+    end
 
     reload_lazy_plugin()
     for key in pairs(package.loaded) do
@@ -142,6 +172,12 @@ function M.debug_reload()
     end
 
     require("clodex").setup(opts)
+    local new_app = reload_state and current_app() or nil
+    if new_app and type(new_app.restore_reload_state) == "function" then
+        pcall(function()
+            new_app:restore_reload_state(reload_state)
+        end)
+    end
     vim.notify("clodex reloaded", vim.log.levels.INFO)
 end
 

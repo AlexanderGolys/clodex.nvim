@@ -18,6 +18,7 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
    - Before MCP claims a just-dispatched interactive prompt, clodex.nvim keeps the provisional queued title visible in terminal chrome instead of clearing it during the pre-claim poll window.
    - When `get_task` resumes an existing active item, it refreshes the active file title and kind from the current queue item so older or stale active metadata still updates the terminal winbar.
    - Neovim refreshes visible terminal chrome after MCP-polled active titles change, so adopted or restored terminal windows receive the Clodex winbar expression before redraw.
+   - After a task closes and queued work remains, clodex.nvim sends `/new`, waits for the backend reset to finish or become idle, and then starts the next `$prompt-nvim-clodex` turn.
    - Claimed tasks stay in the queued lane until `close_task(success = true, ...)` records completion; unsuccessful closes keep the task queued with the blocker note.
    - If an older helper left the active item in `implemented` before completion, `get_task` restores that item to `queued` before returning it.
    - Prompt creator Plan-mode implementation runs are still normal interactive queued tasks; clodex.nvim switches the terminal with `/plan` before sending `$prompt-nvim-clodex`, and this MCP task response remains the authoritative source of the actual work prompt.

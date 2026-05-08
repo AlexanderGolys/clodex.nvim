@@ -67,6 +67,9 @@ end
 ---@field blocked_input_window? snacks.win
 ---@field blocked_input_session_key? string
 ---@field new_tab_source_active_project_root? string
+---@field capture_reload_state fun(self: Clodex.App): Clodex.App.ReloadState
+---@field teardown_for_reload fun(self: Clodex.App)
+---@field restore_reload_state fun(self: Clodex.App, state?: Clodex.App.ReloadState)
 ---@field current_tab fun(self: Clodex.App): Clodex.TabState
 ---@field resolve_target fun(self: Clodex.App, state: Clodex.TabState): Clodex.TerminalTarget
 ---@field resolve_target_from_path fun(self: Clodex.App, state: Clodex.TabState, path: string, mutate: boolean): Clodex.TerminalTarget
@@ -94,6 +97,10 @@ end
 ---@field runtime_projects Clodex.Project[]
 ---@field runtime_project_states Clodex.App.ProjectState[]
 ---@field backend Clodex.Backend.Name
+
+---@class Clodex.App.ReloadState
+---@field tabs Clodex.TabState.Snapshot[]
+---@field terminal_specs Clodex.TerminalSession.Spec[]
 
 --- Defines the Clodex.App.ProjectState type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -591,6 +598,67 @@ function App:setup_autocmds()
             self:refresh_views()
         end,
     })
+end
+
+--- Captures runtime state that should survive a Lazy/module reload.
+--- The returned data intentionally uses serializable snapshots so it can cross module generations safely.
+---@return Clodex.App.ReloadState
+function App:capture_reload_state()
+    return {
+        tabs = self.tabs and self.tabs:snapshot() or {},
+        terminal_specs = self.terminals and self.terminals:persistence_specs() or {},
+    }
+end
+
+--- Stops live callbacks owned by this app before package.loaded entries are cleared.
+--- This prevents old timers and autocmd closures from acting on stale module state after reload.
+function App:teardown_for_reload()
+    if self.execution_timer then
+        self.execution_timer:stop()
+        self.execution_timer = nil
+    end
+    if self.blocked_input_timer then
+        self.blocked_input_timer:stop()
+        self.blocked_input_timer = nil
+    end
+    self:close_blocked_input_window()
+    if self.state_preview then
+        pcall(function()
+            self.state_preview:hide()
+        end)
+    end
+    if self.mini_state_preview then
+        pcall(function()
+            self.mini_state_preview:hide()
+        end)
+    end
+    if self.queue_workspace then
+        pcall(function()
+            self.queue_workspace:close()
+        end)
+    end
+    if self.group then
+        pcall(vim.api.nvim_del_augroup_by_id, self.group)
+        self.group = nil
+    end
+    if self.terminals then
+        pcall(function()
+            self.terminals:restore_specs({})
+        end)
+    end
+end
+
+---@param state? Clodex.App.ReloadState
+--- Restores state captured before a Lazy/module reload into the fresh app instance.
+function App:restore_reload_state(state)
+    if type(state) ~= "table" then
+        return
+    end
+    self.registry:load()
+    self.terminals:restore_specs(state.terminal_specs or {})
+    self.tabs:restore(state.tabs or {})
+    self:restore_session_windows(state.tabs or {})
+    self:refresh_views()
 end
 
 --- Reloads unmodified file buffers whose on-disk contents changed under registered projects.

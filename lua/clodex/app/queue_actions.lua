@@ -24,6 +24,9 @@ local COMMIT_ICON = "󰜘 "
 local QueueActions = {}
 QueueActions.__index = QueueActions
 
+local CONTINUE_AFTER_CLOSE_RETRY_MS = 250
+local CONTINUE_AFTER_CLOSE_MAX_ATTEMPTS = 120
+
 local function refresh_terminal_chrome()
     local ok, terminal_ui = pcall(require, "clodex.terminal.ui")
     if ok and terminal_ui and type(terminal_ui.refresh_all_chrome) == "function" then
@@ -306,7 +309,18 @@ local function continue_after_closed_task(actions, project, session)
 
     actions.continuing_projects[project.root] = true
     session:send("/new")
-    vim.defer_fn(function()
+    local attempts = 0
+    local function start_when_ready()
+        attempts = attempts + 1
+        if
+            attempts < CONTINUE_AFTER_CLOSE_MAX_ATTEMPTS
+            and type(session.is_working) == "function"
+            and session:is_working()
+        then
+            vim.defer_fn(start_when_ready, CONTINUE_AFTER_CLOSE_RETRY_MS)
+            return
+        end
+
         actions.continuing_projects[project.root] = nil
         local current = actions.app.queue:queues(project).queued[1]
         if not current then
@@ -315,7 +329,8 @@ local function continue_after_closed_task(actions, project, session)
         end
         actions:start_queued_item(project, current.id, "interactive")
         actions.app:refresh_views()
-    end, 120)
+    end
+    vim.defer_fn(start_when_ready, CONTINUE_AFTER_CLOSE_RETRY_MS)
 end
 
 ---@param project Clodex.Project

@@ -45,6 +45,10 @@ Start with the least invasive checks and only apply a fix when the matching caus
    - Agents should use `get_task`, `close_task`, `create_prompt`, `queue_status`, and `local_data_dir`.
    - Do not use removed internal queue mutators or edit queue storage directly.
 
+8. Use safe reload for stale live Neovim state.
+   - Prefer `:ClodexDebug reload` over manually running `:Lazy reload clodex.nvim`.
+   - The reload command captures Clodex tab/session state, stops old timers and autocmds, runs Lazy reload when available, reloads Clodex modules, and restores the captured state into the fresh app instance.
+
 # Legacy Queue Migration Fix
 
 When `<project_root>/.clodex/` contains legacy queue JSON and `local_data_dir` reports a different `queue_data_dir`:
