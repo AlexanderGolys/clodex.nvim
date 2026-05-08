@@ -286,6 +286,7 @@ function M.open(opts)
     position = "float",
     relative = "editor",
     show = true,
+    noautocmd = true,
     -- Clodex uses this helper for dedicated float views whose buffers should not
     -- be "fixed" by Snacks buffer-swapping autocommands.
     fixbuf = false,

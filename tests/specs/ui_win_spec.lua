@@ -46,11 +46,13 @@ describe("clodex.ui.win", function()
             position = "float",
             relative = "editor",
             show = true,
+            noautocmd = true,
             fixbuf = false,
         }, captured.defaults)
         assert.are.equal("minimal", captured.style)
         assert.are.equal(23, win.buf)
         assert.is_false(win.opts.fixbuf)
+        assert.is_true(win.opts.noautocmd)
     end)
 
     it("bumps low zindex values to avoid invalid backdrop zindex", function()
