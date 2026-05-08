@@ -132,18 +132,21 @@ require("clodex").setup({
         backend_toggle = { lhs = "<leader>pb" },
         chat_toggle = { lhs = "<leader>pc" },
         refresh = { lhs = "<leader>pR" },
-        new_bug_prompt = { lhs = "<leader>pB" },
-        new_improvement_prompt = { lhs = "<leader>pI" },
-        new_line_linked_prompt = { lhs = "<leader>pl" },
-        new_line_linked_prompt_home = { lhs = "<Home>l" },
+        new_prompt = {
+            bug = { lhs = "<leader>pB" },
+            improvement = { lhs = "<leader>pI" },
+            line_linked = { lhs = "<leader>pl" },
+            line_linked_home = { lhs = "<Home>l" },
+        },
         go_to_readme = { lhs = "<leader>pM" },
     },
 })
 ```
 
 `codex_cmd` and `opencode_cmd` set the executable used for each backend. `codex_args` and `opencode_args` add backend-specific CLI flags whenever Clodex starts that backend, including project/free chat sessions, resumed sessions, and direct Codex execution. Codex MCP config arguments are appended after `codex_args` so the bundled queue helper remains wired to the configured workspace directory.
-The default `new_line_linked_prompt` keymaps (`<leader>pl` and `<Home>l`) open the prompt creator with the current cursor line linked as prompt context.
-Each `keymaps.<action>` entry accepts either a single `lhs` string or an `lhs` list to register multiple shortcuts for the same action.
+The default line-linked prompt keymaps (`<leader>pl` and `<Home>l`) open the prompt creator with the current cursor line linked as prompt context.
+Each `keymaps.<action>` entry and each `keymaps.new_prompt.<kind>` entry accepts either a single `lhs` string or an `lhs` list, and supports `mode` as a string or list.
+Legacy top-level prompt fields (`new_bug_prompt`, `new_improvement_prompt`, `new_line_linked_prompt`, `new_line_linked_prompt_home`) are still supported for compatibility.
 
 `queue_workspace.date_format` accepts `"ago"` for relative timestamps, existing `os.date` formats such as `"%H:%M %d.%m.%Y"`, and token formats such as `"dd.MM.yyyy hh:mm"`. Queue data keeps its saved timestamps unchanged, so older ISO queue files remain readable when the display format changes.
 

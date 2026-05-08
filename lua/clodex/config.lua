@@ -91,6 +91,12 @@ local fs = require("clodex.util.fs")
 ---@field unique? boolean
 ---@field replace_keycodes? boolean
 
+---@class Clodex.Config.NewPromptKeymaps
+---@field bug? string|Clodex.Config.KeymapConfig|false
+---@field improvement? string|Clodex.Config.KeymapConfig|false
+---@field line_linked? string|Clodex.Config.KeymapConfig|false
+---@field line_linked_home? string|Clodex.Config.KeymapConfig|false
+
 --- Global keymaps created by clodex during setup.
 --- Set a value to `false` to disable it.
 ---@class Clodex.Config.Keymaps
@@ -102,6 +108,7 @@ local fs = require("clodex.util.fs")
 ---@field backend_toggle string|Clodex.Config.KeymapConfig|false
 ---@field chat_toggle string|Clodex.Config.KeymapConfig|false
 ---@field refresh string|Clodex.Config.KeymapConfig|false
+---@field new_prompt? Clodex.Config.NewPromptKeymaps|false
 ---@field new_bug_prompt string|Clodex.Config.KeymapConfig|false
 ---@field new_improvement_prompt string|Clodex.Config.KeymapConfig|false
 ---@field new_line_linked_prompt string|Clodex.Config.KeymapConfig|false
@@ -246,17 +253,19 @@ local function defaults()
             refresh = {
                 lhs = "<leader>pR",
             },
-            new_bug_prompt = {
-                lhs = "<leader>pB",
-            },
-            new_improvement_prompt = {
-                lhs = "<leader>pI",
-            },
-            new_line_linked_prompt = {
-                lhs = "<leader>pl",
-            },
-            new_line_linked_prompt_home = {
-                lhs = "<Home>l",
+            new_prompt = {
+                bug = {
+                    lhs = "<leader>pB",
+                },
+                improvement = {
+                    lhs = "<leader>pI",
+                },
+                line_linked = {
+                    lhs = "<leader>pl",
+                },
+                line_linked_home = {
+                    lhs = "<Home>l",
+                },
             },
             go_to_readme = {
                 lhs = "<leader>pM",

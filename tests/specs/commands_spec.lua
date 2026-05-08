@@ -339,4 +339,57 @@ describe("clodex.commands", function()
 
         assert.are.same({ "<leader>pR", "<Home>R" }, refresh_lhs)
     end)
+
+    it("supports grouped new prompt keymaps with multi-mode and multi-lhs", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                new_prompt = {
+                    improvement = {
+                        lhs = { "<leader>pI", "<Home>I" },
+                        mode = { "n", "v" },
+                    },
+                },
+            },
+        })
+
+        local improvement = {}
+        for _, item in ipairs(keymaps) do
+            if item.field == "new_improvement_prompt" then
+                improvement[#improvement + 1] = {
+                    lhs = item.lhs,
+                    mode = item.mode,
+                }
+            end
+        end
+
+        assert.are.same({
+            { lhs = "<leader>pI", mode = "n,v" },
+            { lhs = "<Home>I", mode = "n,v" },
+        }, improvement)
+    end)
+
+    it("prefers grouped new prompt keymaps over legacy prompt fields", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                new_improvement_prompt = {
+                    lhs = "<leader>legacy",
+                },
+                new_prompt = {
+                    improvement = {
+                        lhs = "<leader>grouped",
+                    },
+                },
+            },
+        })
+
+        local improvement_lhs = nil
+        for _, item in ipairs(keymaps) do
+            if item.field == "new_improvement_prompt" then
+                improvement_lhs = item.lhs
+                break
+            end
+        end
+
+        assert.are.equal("<leader>grouped", improvement_lhs)
+    end)
 end)

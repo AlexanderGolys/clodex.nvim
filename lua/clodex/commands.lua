@@ -48,6 +48,13 @@ local did_register = false
 
 ---@alias Clodex.Commands.KeymapValues Clodex.Config.Values|{ keymaps?: table<string, string|Clodex.Config.KeymapConfig|false> }
 
+local NEW_PROMPT_FIELD_MAP = {
+    new_bug_prompt = "bug",
+    new_improvement_prompt = "improvement",
+    new_line_linked_prompt = "line_linked",
+    new_line_linked_prompt_home = "line_linked_home",
+}
+
 ---@class Clodex.RegisteredCommandSpec
 ---@field name string
 ---@field desc string
@@ -292,6 +299,13 @@ end
 local function resolve_keymap(values, field, definition)
     local configured = values.keymaps or {}
     local value = configured[field]
+    local new_prompt_key = NEW_PROMPT_FIELD_MAP[field]
+    if new_prompt_key ~= nil and type(configured.new_prompt) == "table" then
+        local nested_value = configured.new_prompt[new_prompt_key]
+        if nested_value ~= nil then
+            value = nested_value
+        end
+    end
     if value == false then
         return nil
     end
