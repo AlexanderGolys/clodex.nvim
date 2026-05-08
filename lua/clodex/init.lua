@@ -12,6 +12,7 @@
 ---| "toggle_terminal_header"
 ---| "clear_active_project"
 ---| "open_queue_workspace"
+---| "open_project_dashboard"
 ---| "open_project_readme_file"
 ---| "open_project_todo_file"
 ---| "open_project_dictionary_file"
@@ -31,6 +32,7 @@
 ---| "new_session"
 ---| "compact_session"
 ---| "save_session"
+---| "send_prompt_skill"
 
 --- Defines the clodex type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -50,6 +52,7 @@ local PUBLIC_ACTIONS = {
     "toggle_terminal_header",
     "clear_active_project",
     "open_queue_workspace",
+    "open_project_dashboard",
     "open_project_readme_file",
     "open_project_todo_file",
     "open_project_dictionary_file",
@@ -69,6 +72,7 @@ local PUBLIC_ACTIONS = {
     "new_session",
     "compact_session",
     "save_session",
+    "send_prompt_skill",
 } ---@type Clodex.PublicAction[]
 
 local function app()

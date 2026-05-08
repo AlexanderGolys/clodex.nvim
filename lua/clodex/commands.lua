@@ -105,6 +105,7 @@ end
 
 local CLODEX_ACTION = enum("action", {
     { value = "panel", desc = "Toggle the queue workspace panel" },
+    { value = "dashboard", aliases = { "experimental-panel", "experimental_panel" }, desc = "Toggle the experimental project dashboard" },
     { value = "terminal", aliases = { "cli", "term", "chat" }, desc = "Toggle the project terminal" },
     { value = "history", desc = "Open global Clodex history" },
     { value = "backend", desc = "Toggle or set the active backend" },
@@ -126,6 +127,7 @@ local SESSION_ACTION = enum("action", {
     { value = "new", desc = "Start a new conversation in the active backend session" },
     { value = "compact", desc = "Ask the active backend session to compact the current conversation" },
     { value = "save", desc = "Save a session id on the focused implemented or history queue item" },
+    { value = "skill", desc = "Paste and submit the queued-work skill in the active Clodex terminal" },
 })
 
 local PROJECT_ACTIONS = {
@@ -534,6 +536,11 @@ local function registered_command_specs()
                         return
                     end
                     clodex.open_queue_workspace()
+                elseif action == "dashboard" then
+                    if not check_extra_args("Clodex", vim.list_slice(command.fargs, 2), "at most one action argument") then
+                        return
+                    end
+                    clodex.open_project_dashboard()
                 elseif action == "terminal" then
                     if not check_extra_args("Clodex", vim.list_slice(command.fargs, 2), "at most one action argument") then
                         return
@@ -650,6 +657,11 @@ local function registered_command_specs()
                         return
                     end
                     clodex.save_session(session_id)
+                elseif action == "skill" then
+                    if not check_extra_args("ClodexSession", vim.list_slice(command.fargs, 2), "at most one action argument") then
+                        return
+                    end
+                    clodex.send_prompt_skill()
                 end
             end,
         },

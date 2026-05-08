@@ -182,6 +182,48 @@ describe("clodex.app", function()
         assert.are.equal("opencode", snapshot.backend)
     end)
 
+    it("sends the prompt skill only from Clodex terminal buffers and re-enters terminal mode from normal mode", function()
+        local original_startinsert = vim.cmd.startinsert
+        local startinsert_calls = 0
+        vim.cmd.startinsert = function()
+            startinsert_calls = startinsert_calls + 1
+        end
+
+        local terminal_buf = vim.api.nvim_create_buf(false, true)
+        vim.bo[terminal_buf].filetype = "clodex_terminal"
+        local plain_buf = vim.api.nvim_create_buf(false, true)
+        vim.bo[plain_buf].filetype = "lua"
+
+        local inserted = 0
+        local app = setmetatable({
+            terminals = {
+                session_by_buf = function(_, buf)
+                    if buf ~= terminal_buf then
+                        return nil
+                    end
+                    return {
+                        insert_prompt_skill = function()
+                            inserted = inserted + 1
+                            return true
+                        end,
+                    }
+                end,
+            },
+            refresh_views = function() end,
+        }, App)
+
+        local win = vim.api.nvim_get_current_win()
+        vim.api.nvim_win_set_buf(win, plain_buf)
+        assert.is_false(app:send_prompt_skill())
+
+        vim.api.nvim_win_set_buf(win, terminal_buf)
+        assert.is_true(app:send_prompt_skill())
+        assert.are.equal(1, inserted)
+        assert.are.equal(1, startinsert_calls)
+
+        vim.cmd.startinsert = original_startinsert
+    end)
+
     it("resolves tabs without an active project to the configured free root", function()
         local project = { name = "Alpha", root = "/tmp/alpha" }
         local app = setmetatable({

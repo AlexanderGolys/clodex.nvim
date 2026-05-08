@@ -22,6 +22,7 @@ describe("clodex.commands", function()
         fake_clodex = {
             toggle = function() end,
             open_queue_workspace = function() end,
+            open_project_dashboard = function() end,
             open_history = function() end,
             toggle_backend = function() end,
             toggle_terminal_header = function() end,
@@ -137,6 +138,37 @@ describe("clodex.commands", function()
         assert.are.equal("session-123", called)
     end)
 
+    it("routes the session skill action through the public API", function()
+        Commands.register()
+
+        local called = 0
+        fake_clodex.send_prompt_skill = function()
+            called = called + 1
+        end
+
+        created.ClodexSession.handler({ args = "skill", fargs = { "skill" } })
+
+        assert.are.equal(1, called)
+    end)
+
+    it("routes the experimental dashboard through its separate public API", function()
+        Commands.register()
+
+        local dashboard_calls = 0
+        local workspace_calls = 0
+        fake_clodex.open_project_dashboard = function()
+            dashboard_calls = dashboard_calls + 1
+        end
+        fake_clodex.open_queue_workspace = function()
+            workspace_calls = workspace_calls + 1
+        end
+
+        created.Clodex.handler({ args = "dashboard", fargs = { "dashboard" } })
+
+        assert.are.equal(1, dashboard_calls)
+        assert.are.equal(0, workspace_calls)
+    end)
+
     it("offers enum and project completion for prompt commands", function()
         Commands.register()
 
@@ -182,7 +214,22 @@ describe("clodex.commands", function()
     it("offers explicit backend completion for the top-level command", function()
         Commands.register()
 
-        assert.are.same({ "backend", "chat", "cli", "header", "history", "panel", "term", "term-header", "terminal", "terminal-header", "terminal_header" }, created.Clodex.opts.complete("", "Clodex ", 7))
+        assert.are.same({
+            "backend",
+            "chat",
+            "cli",
+            "dashboard",
+            "experimental-panel",
+            "experimental_panel",
+            "header",
+            "history",
+            "panel",
+            "term",
+            "term-header",
+            "terminal",
+            "terminal-header",
+            "terminal_header",
+        }, created.Clodex.opts.complete("", "Clodex ", 7))
         assert.are.same({ "codex", "opencode" }, created.Clodex.opts.complete("", "Clodex backend ", 15))
     end)
 

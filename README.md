@@ -181,6 +181,7 @@ Bug prompt accents and queue commit ids prefer Neovim's `DiagnosticError` color,
 - `:ClodexSession new`
 - `:ClodexSession compact`
 - `:ClodexSession save <session-id>`
+- `:ClodexSession skill` (terminal-only: in a `clodex_terminal` window, pastes/submits `$prompt-nvim-clodex`; from normal mode it returns to terminal input)
 - `:ClodexPrompt [kind]`
 
 Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the selected range.

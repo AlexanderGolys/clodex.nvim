@@ -15,6 +15,7 @@ local TabManager = require("clodex.tab.manager")
 local TerminalManager = require("clodex.terminal.manager")
 local StatePreview = require("clodex.ui.state_preview")
 local MiniStatePreview = require("clodex.ui.mini_state")
+local ProjectDashboard = require("clodex.ui.project_dashboard")
 local QueueWorkspace = require("clodex.ui.queue_workspace")
 local SessionPersistence = require("clodex.session.persistence")
 local Execution = require("clodex.workspace.execution")
@@ -50,6 +51,7 @@ end
 ---@field terminals Clodex.TerminalManager
 ---@field state_preview Clodex.StatePreview
 ---@field mini_state_preview Clodex.MiniStatePreview
+---@field project_dashboard Clodex.ProjectDashboard
 ---@field project_bookmarks Clodex.ProjectBookmarks
 ---@field project_notes Clodex.ProjectNotes
 ---@field project_cheatsheet Clodex.ProjectCheatsheet
@@ -83,6 +85,7 @@ end
 ---@field set_current_project fun(self: Clodex.App, project: Clodex.Project|string)
 ---@field add_project fun(self: Clodex.App)
 ---@field send_session_command fun(self: Clodex.App, command: string): boolean
+---@field send_prompt_skill fun(self: Clodex.App): boolean
 
 --- Defines the Clodex.App.StateSnapshot type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
@@ -398,6 +401,7 @@ function App:setup(opts)
     self.terminals = self.terminals or TerminalManager.new(values, self.execution)
     self.state_preview = self.state_preview or StatePreview.new(values)
     self.mini_state_preview = self.mini_state_preview or MiniStatePreview.new(values)
+    self.project_dashboard = self.project_dashboard or ProjectDashboard.new(self, values)
     self.queue = self.queue or Queue.new(values.storage.workspaces_dir)
     self.exec_runner = self.exec_runner or ExecutionRunner.new(self, values)
     self.queue_workspace = self.queue_workspace or QueueWorkspace.new(self, values)
@@ -407,6 +411,7 @@ function App:setup(opts)
     self.terminals:update_execution(self.execution)
     self.state_preview:update_config(values)
     self.mini_state_preview:update_config(values)
+    self.project_dashboard:update_config(values)
     self.project_details_store:update_config(values)
     self.execution:update_config(values)
     self:sync_registered_project_skills()
@@ -635,6 +640,11 @@ function App:teardown_for_reload()
     if self.queue_workspace then
         pcall(function()
             self.queue_workspace:close()
+        end)
+    end
+    if self.project_dashboard then
+        pcall(function()
+            self.project_dashboard:close()
         end)
     end
     if self.group then
@@ -1024,6 +1034,9 @@ function App:refresh_queue_workspace()
     if self.queue_workspace and self.queue_workspace:is_open() then
         self.queue_workspace:refresh()
     end
+    if self.project_dashboard and self.project_dashboard:is_open() then
+        self.project_dashboard:refresh()
+    end
 end
 
 function App:refresh_views()
@@ -1224,6 +1237,28 @@ function App:send_session_command(command)
     return ok
 end
 
+---@return boolean
+function App:send_prompt_skill()
+    local win = vim.api.nvim_get_current_win()
+    local buf = vim.api.nvim_get_current_buf()
+    if not vim.api.nvim_win_is_valid(win) or vim.bo[buf].filetype ~= "clodex_terminal" then
+        notify.warn("Open a Clodex terminal window first")
+        return false
+    end
+
+    local session = self.terminals:session_by_buf(buf)
+    if not session then
+        notify.warn("Current buffer is not a Clodex terminal session")
+        return false
+    end
+    local ok = session:insert_prompt_skill()
+    if ok and vim.api.nvim_get_mode().mode:sub(1, 1) == "n" then
+        vim.cmd.startinsert()
+    end
+    self:refresh_views()
+    return ok
+end
+
 ---@param session_id string
 ---@return boolean
 function App:save_focused_queue_session(session_id)
@@ -1241,6 +1276,15 @@ App.open_queue_workspace = function(self)
     end
     self.queue_workspace:open()
 end
+
+App.open_project_dashboard = function(self)
+    if self.project_dashboard:is_open() then
+        self.project_dashboard:close()
+        return
+    end
+    self.project_dashboard:open()
+end
+
 App.open_history = function()
     History.open()
 end
