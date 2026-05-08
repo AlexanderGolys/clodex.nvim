@@ -756,6 +756,41 @@ function ProjectActions:jump_to_chat()
     end
 end
 
+--- Opens or focuses the current chat target, inserts the configured prompt skill, and submits it.
+function ProjectActions:send_prompt_skill_from_anywhere()
+    local state = self.app:current_tab()
+    local target = self.app:resolve_target(state)
+    if target.kind == "project" then
+        self:prompt_set_active_project(target.project, state)
+    end
+
+    local session, replaced_key = self.app.terminals:get_session(target)
+    if replaced_key then
+        self.app.terminals:detach_session(replaced_key, self.app.tabs:list())
+    end
+    if not session then
+        self.app:refresh_views()
+        return false
+    end
+
+    self.app.terminals:show_in_tab(state, session)
+    local ok = session:insert_prompt_skill()
+    if ok then
+        vim.schedule(function()
+            if vim.api.nvim_get_mode().mode:sub(1, 1) ~= "t" then
+                vim.cmd.startinsert()
+            end
+        end)
+    end
+
+    if target.kind == "project" then
+        touch_project_state(self, target.project)
+    else
+        self.app:refresh_views()
+    end
+    return ok
+end
+
 ---@param value? string|Clodex.Project
 ---@return Clodex.Project?
 function ProjectActions:resolve_project(value)

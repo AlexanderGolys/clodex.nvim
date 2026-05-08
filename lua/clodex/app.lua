@@ -139,6 +139,7 @@ local FORWARDED_METHODS = {
     toggle_project_cheatsheet_preview = { field = "project_actions", method = "toggle_project_cheatsheet_preview" },
     toggle_backend = { field = "project_actions", method = "toggle_backend" },
     jump_to_chat = { field = "project_actions", method = "jump_to_chat" },
+    send_prompt_skill_from_anywhere = { field = "project_actions", method = "send_prompt_skill_from_anywhere" },
     set_backend = { field = "project_actions", method = "set_backend" },
     add_project_cheatsheet_item = { field = "project_actions", method = "add_project_cheatsheet_item" },
     open_project_notes_picker = { field = "project_actions", method = "open_project_notes_picker" },

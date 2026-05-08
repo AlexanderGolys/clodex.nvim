@@ -73,12 +73,13 @@ describe("clodex.config", function()
             assert.are.equal("<leader>pB", values.keymaps.backend_toggle[1].lhs)
             assert.are.equal("<leader>p<leader>", values.keymaps.chat_toggle[1].lhs)
             assert.are.equal("<leader>pj", values.keymaps.chat_jump[1].lhs)
+            assert.are.equal("<leader>pw", values.keymaps.chat_skill[1].lhs)
             assert.are.equal("<leader>pR", values.keymaps.refresh[1].lhs)
             assert.are.equal("<leader>pb", values.keymaps.new_prompt.bug[1].lhs)
             assert.are.equal("<leader>pa", values.keymaps.new_prompt.improvement[1].lhs)
             assert.are.same({
                 { lhs = "<leader>pl", mode = "n" },
-                { lhs = "<Home>l", mode = "nvi" },
+                { lhs = "<Home>l", mode = { "n", "i", "v" } },
             }, values.keymaps.new_prompt.line_linked)
             assert.are.equal("<leader>pr", values.keymaps.go_to_readme[1].lhs)
         end)

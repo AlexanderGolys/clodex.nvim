@@ -347,6 +347,76 @@ describe("clodex.app.project_actions", function()
         vim.cmd.startinsert = original_startinsert
     end)
 
+    it("opens chat, submits the main prompt skill, and enters terminal mode", function()
+        local shown_state
+        local shown_session
+        local touched_project
+        local refresh_count = 0
+        local startinsert_calls = 0
+        local inserted = 0
+        local original_startinsert = vim.cmd.startinsert
+        vim.cmd.startinsert = function()
+            startinsert_calls = startinsert_calls + 1
+        end
+
+        local state = {}
+        local project = { name = "Demo", root = "/tmp/demo" }
+        local session = {
+            key = "project::demo",
+            insert_prompt_skill = function()
+                inserted = inserted + 1
+                return true
+            end,
+        }
+        local actions = ProjectActions.new({
+            current_tab = function()
+                return state
+            end,
+            resolve_target = function()
+                return {
+                    kind = "project",
+                    project = project,
+                }
+            end,
+            terminals = {
+                get_session = function()
+                    return session
+                end,
+                show_in_tab = function(_, received_state, value)
+                    shown_state = received_state
+                    shown_session = value
+                end,
+            },
+            tabs = {
+                list = function()
+                    return {}
+                end,
+            },
+            project_details_store = {
+                touch_activity = function(_, value)
+                    touched_project = value
+                end,
+            },
+            refresh_views = function()
+                refresh_count = refresh_count + 1
+            end,
+        })
+        actions.prompt_set_active_project = function() end
+
+        assert.is_true(actions:send_prompt_skill_from_anywhere())
+        vim.wait(100, function()
+            return startinsert_calls > 0
+        end)
+
+        assert.are.same(state, shown_state)
+        assert.are.same(session, shown_session)
+        assert.are.same(project, touched_project)
+        assert.are.equal(1, inserted)
+        assert.are.equal(1, refresh_count)
+
+        vim.cmd.startinsert = original_startinsert
+    end)
+
 
     it("keeps modified buffers open when opening a project workspace target", function()
         local root = vim.fn.tempname()

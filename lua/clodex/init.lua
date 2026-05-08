@@ -7,6 +7,7 @@
 ---| "toggle_mini_state_preview"
 ---| "toggle_backend"
 ---| "jump_to_chat"
+---| "send_prompt_skill_from_anywhere"
 ---| "refresh"
 ---| "add_project"
 ---| "rename_project"
@@ -50,6 +51,7 @@ local PUBLIC_ACTIONS = {
     "toggle_mini_state_preview",
     "toggle_backend",
     "jump_to_chat",
+    "send_prompt_skill_from_anywhere",
     "refresh",
     "add_project",
     "rename_project",

@@ -110,6 +110,7 @@ local fs = require("clodex.util.fs")
 ---@field backend_toggle Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 ---@field chat_toggle Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 ---@field chat_jump Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
+---@field chat_skill Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 ---@field refresh Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
 ---@field new_prompt? Clodex.Config.NewPromptKeymaps|false
 ---@field new_bug_prompt Clodex.Config.KeymapEntry|Clodex.Config.KeymapEntryList
@@ -242,6 +243,10 @@ local function defaults()
                 { lhs = "<leader>pj", mode = "n" },
                 { lhs = "<Home>j",    mode = "a" },
             },
+            chat_skill = {
+                { lhs = "<leader>pw", mode = "n" },
+                { lhs = "<Home>w",    mode = "a" },
+            },
             main_panel = {
                 { lhs = "<leader>pp", mode = "n" },
                 { lhs = "<Home>p",    mode = "a" },
@@ -282,7 +287,7 @@ local function defaults()
                 },
                 line_linked = {
                     { lhs = "<leader>pl", mode = "n" },
-                    { lhs = "<Home>l",    mode = "nvi" },
+                    { lhs = "<Home>l",    mode = { "n", "i", "v" } },
                 },
             },
             go_to_readme = {

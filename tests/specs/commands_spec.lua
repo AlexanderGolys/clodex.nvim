@@ -26,6 +26,7 @@ describe("clodex.commands", function()
             open_history = function() end,
             toggle_backend = function() end,
             jump_to_chat = function() end,
+            send_prompt_skill_from_anywhere = function() end,
             toggle_terminal_header = function() end,
             toggle_state_preview = function() end,
             toggle_mini_state_preview = function() end,

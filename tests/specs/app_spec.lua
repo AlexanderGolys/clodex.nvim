@@ -272,6 +272,7 @@ describe("clodex.app", function()
                 backend_toggle = { lhs = "<leader>pb" },
                 chat_toggle = { lhs = "<leader>pc" },
                 chat_jump = { lhs = "<leader>pj" },
+                chat_skill = { lhs = "<leader>pw" },
                 refresh = { lhs = "<leader>pR" },
                 new_prompt = {
                     bug = { lhs = "<leader>pB" },
