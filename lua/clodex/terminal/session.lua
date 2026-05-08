@@ -312,6 +312,10 @@ local function is_idle_line(line)
         return false
     end
 
+    if line:find("per the queued-work contract", 1, true) and line:find("close response", 1, true) then
+        return true
+    end
+
     if line:find("ready", 1, true) then
         return true
     end
