@@ -282,8 +282,7 @@ local function rewind_item_spec(item, opts)
         if #all_commits > 0 then
             local commit_parts = {}
             for _, commit_id in ipairs(all_commits) do
-                local short = commit_id:sub(1, 8)
-                commit_parts[#commit_parts + 1] = ("`%s%s`"):format(COMMIT_ICON, short)
+                commit_parts[#commit_parts + 1] = ("`%s%s`"):format(COMMIT_ICON, commit_id)
             end
             impl_section[#impl_section + 1] = ("**Commits:** %s"):format(table.concat(commit_parts, " "))
         end
