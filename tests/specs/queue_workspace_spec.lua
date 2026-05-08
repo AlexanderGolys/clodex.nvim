@@ -2402,6 +2402,7 @@ describe("clodex.ui.queue_workspace", function()
 
         assert.are.equal(2, workspace.project_index)
         assert.are.equal(2, workspace.queue_index)
+        assert.are.equal("queue", workspace.focus)
 
         vim.api.nvim_win_close(workspace.footer_win, true)
         vim.api.nvim_win_close(workspace.queue_win, true)

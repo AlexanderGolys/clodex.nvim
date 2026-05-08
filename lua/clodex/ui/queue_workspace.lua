@@ -1929,7 +1929,7 @@ function Workspace:refresh(initial)
     self:render_queue()
     self:render_footer()
     if initial then
-        self.focus = "projects"
+        self.focus = "queue"
     end
     if win_valid(self.footer_win) then
         update_win_config(self.footer_win, {
