@@ -246,8 +246,8 @@ describe("clodex.config", function()
             assert.is_true(active.bold)
         end)
 
-        it("maps vision prompt accents to @keyword", function()
-            vim.api.nvim_set_hl(0, "@keyword", { fg = "#b366ff" })
+        it("keeps vision prompt accents on the bundled purple accent", function()
+            vim.api.nvim_set_hl(0, "@keyword", { fg = "#ff99cc" })
             vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#101010" })
 
             Config.apply_highlights({

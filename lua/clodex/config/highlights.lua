@@ -44,7 +44,7 @@ local HLGroups = {
     not_working = { "@variable.builtin", "@error", "DiagnosticError" },
     improvement = { "@constructor", "Function", "Identifier" },
     fix = { "@symbol", "Function", "Identifier" },
-    vision = { "@keyword", "Keyword", "PreProc" },
+    vision = { "#b366ff", "@keyword", "Keyword", "PreProc" },
 }
 
 
