@@ -501,10 +501,19 @@ function QueueActions:poll_active_prompt_titles()
             local next_title = title ~= "" and title or nil
             local next_kind = next_title and kind or nil
             local closed_active_task = session.active_prompt_authoritative == true and next_title == nil
+            local inferred_closed_pending_task = session.active_prompt_authoritative ~= true
+                and session.active_prompt_title ~= nil
+                and next_title == nil
+                and type(session.is_working) == "function"
+                and not session:is_working()
+            if inferred_closed_pending_task then
+                closed_active_task = true
+            end
             -- Keep the prompt title shown while the queued MCP task is still being claimed.
             local has_pending_dispatch_title = session.active_prompt_title ~= nil
                 and session.active_prompt_authoritative ~= true
                 and next_title == nil
+                and not inferred_closed_pending_task
             if
                 not has_pending_dispatch_title
                 and (session.active_prompt_title ~= next_title or session.active_prompt_kind ~= next_kind)
