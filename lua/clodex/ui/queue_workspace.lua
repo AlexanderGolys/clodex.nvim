@@ -2583,8 +2583,19 @@ function Workspace:mark_queue_item_not_working()
         return
     end
 
-    open_workspace_input(self, {
+    show_workspace_cursor(self)
+    self.modal_input_open = true
+    ui.multiline_message_input({
         prompt = "Optional note",
+        border_highlight = Prompt.title_border_group("notworking"),
+        win = {
+            on_close = function()
+                self.modal_input_open = false
+                if workspace_is_open(self) then
+                    hide_workspace_cursor(self)
+                end
+            end,
+        },
     }, function(note)
         if note == nil then
             return

@@ -70,6 +70,14 @@ describe("clodex.ui.queue_workspace", function()
                 input_callbacks[#input_callbacks + 1] = {
                     opts = opts,
                     on_confirm = on_confirm,
+                    kind = "singleline",
+                }
+            end,
+            multiline_message_input = function(opts, on_confirm)
+                input_callbacks[#input_callbacks + 1] = {
+                    opts = opts,
+                    on_confirm = on_confirm,
+                    kind = "multiline",
                 }
             end,
             close_active_input = function()
@@ -2848,7 +2856,9 @@ describe("clodex.ui.queue_workspace", function()
 
         assert.is_true(workspace.modal_input_open)
         assert.are.equal(1, #input_callbacks)
+        assert.are.equal("multiline", input_callbacks[1].kind)
         assert.are.equal("Optional note", input_callbacks[1].opts.prompt)
+        assert.are.equal("ClodexPromptNotWorkingTitleBorder", input_callbacks[1].opts.border_highlight)
         assert.is_false(rewind_called)
 
         input_callbacks[1].opts.win.on_close()

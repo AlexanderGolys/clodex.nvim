@@ -1236,10 +1236,11 @@ function M.multiline_input(opts, on_confirm)
   focus_title()
 end
 
----@param opts { prompt: string, default?: string, min_height?: integer, context?: Clodex.PromptContext.Capture, paste_image?: fun(): string?, submit_actions?: Clodex.UiSelect.MultilineAction[] }
+---@param opts { prompt: string, default?: string, min_height?: integer, context?: Clodex.PromptContext.Capture, paste_image?: fun(): string?, submit_actions?: Clodex.UiSelect.MultilineAction[], win?: { on_close?: fun(win?: snacks.win) }, border_highlight?: string }
 ---@param on_confirm fun(value?: string, action?: string)
 function M.multiline_message_input(opts, on_confirm)
   opts = opts or {}
+  opts.win = opts.win or {}
   local submit_actions = vim.deepcopy(opts.submit_actions or {
     { value = "save", label = "save", key = "<C-s>" },
   })
@@ -1375,6 +1376,9 @@ function M.multiline_message_input(opts, on_confirm)
       hint_win:close()
     end
     M.clear_prompt_context(body_buf)
+    if type(opts.win.on_close) == "function" then
+      opts.win.on_close(body_win)
+    end
     vim.schedule(function()
       on_confirm(value, action or submit_actions[1].value)
     end)
@@ -1384,8 +1388,15 @@ function M.multiline_message_input(opts, on_confirm)
   render_hint_lines(hint_buf, hint_lines)
   disable_prompt_pair_highlights(body_buf)
   disable_prompt_pair_highlights(hint_buf)
-  style_prompt_editor(body_win.win)
-  style_prompt_editor(hint_win.win, "prompt_footer")
+  local theme_overrides = nil
+  if type(opts.border_highlight) == "string" and opts.border_highlight ~= "" then
+    theme_overrides = {
+      float_border = opts.border_highlight,
+      float_title = opts.border_highlight,
+    }
+  end
+  ui_win.apply_theme(body_win.win, "prompt_editor", theme_overrides)
+  ui_win.apply_theme(hint_win.win, "prompt_footer", theme_overrides)
   M.refresh_prompt_context(body_buf, prompt_context())
 
   vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
