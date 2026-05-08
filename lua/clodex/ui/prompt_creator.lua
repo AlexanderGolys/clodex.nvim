@@ -183,6 +183,19 @@ local function linked_context_has_kind(items, kind)
     return false
 end
 
+---@param context Clodex.PromptContext.Capture?
+---@return boolean
+local function context_has_selection(context)
+    return context ~= nil and type(context.selection_text) == "string" and vim.trim(context.selection_text) ~= ""
+end
+
+---@param enabled boolean
+---@param name string
+---@return string
+local function toggle_action_label(enabled, name)
+    return ("%s link %s"):format(name, enabled and "off" or "on")
+end
+
 ---@param item Clodex.PromptContext.Linked
 ---@return string
 local function linked_context_kind_label(item)
@@ -316,6 +329,7 @@ function Creator.new(opts)
             linked_context = opts.initial_draft and opts.initial_draft.context or linked_context_for_capture(prompt_context),
             link_file = false,
             link_line = false,
+            link_selection = false,
             preview_text = "",
         },
         drafts = DraftStore.new(),
@@ -433,6 +447,7 @@ function Creator:sync_state_from_draft()
     self.state.image_path = nil
     self.state.link_file = false
     self.state.link_line = false
+    self.state.link_selection = false
     self.state.context = self.context
     self.state.linked_context = linked_context_for_capture(self.context)
     self.state.preview_text = ""
@@ -452,12 +467,16 @@ function Creator:sync_state_from_draft()
     local can_link = context_from_project_file(self.context)
     local draft_link_file = type(draft.link_file) == "boolean" and draft.link_file or linked_context_has_kind(captured, "file")
     local draft_link_line = type(draft.link_line) == "boolean" and draft.link_line or linked_context_has_kind(captured, "line")
+    local draft_link_selection = type(draft.link_selection) == "boolean"
+            and draft.link_selection
+        or linked_context_has_kind(captured, "selection")
     self.state.link_file = can_link and draft_link_file or false
     self.state.link_line = can_link and draft_link_line or false
+    self.state.link_selection = can_link and context_has_selection(self.context) and draft_link_selection or false
     self.state.linked_context = PromptContext.linked_context(self.context, {
         include_file = self.state.link_file,
         include_line = self.state.link_line,
-        include_selection = true,
+        include_selection = self.state.link_selection,
     })
 
     local variant = KindRegistry.mode(self.state.kind, self.state.variant)
@@ -1463,13 +1482,21 @@ function Creator:render_footer(insert_mode)
     local has_variants = #self:variants() > 0
     local has_multiple_projects = #self.projects > 1
     local can_link = context_from_project_file(self.state.context)
-    local link_actions = insert_mode and {
-        Helpers.footer_item("C-f", can_link and (self.state.link_file and "file link on" or "file link off") or "file link n/a"),
-        Helpers.footer_item("C-l", can_link and (self.state.link_line and "line link on" or "line link off") or "line link n/a"),
-    } or {
-        Helpers.footer_item("F", can_link and (self.state.link_file and "file link on" or "file link off") or "file link n/a"),
-        Helpers.footer_item("L", can_link and (self.state.link_line and "line link on" or "line link off") or "line link n/a"),
-    }
+    local can_link_selection = can_link and context_has_selection(self.state.context)
+    local link_actions = {}
+    if insert_mode then
+        link_actions[#link_actions + 1] = Helpers.footer_item("C-f", can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a")
+        link_actions[#link_actions + 1] = Helpers.footer_item("C-l", can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a")
+        if can_link_selection then
+            link_actions[#link_actions + 1] = Helpers.footer_item("C-x", toggle_action_label(self.state.link_selection, "selection"))
+        end
+    else
+        link_actions[#link_actions + 1] = Helpers.footer_item("F", can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a")
+        link_actions[#link_actions + 1] = Helpers.footer_item("L", can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a")
+        if can_link_selection then
+            link_actions[#link_actions + 1] = Helpers.footer_item("X", toggle_action_label(self.state.link_selection, "selection"))
+        end
+    end
     local key_hl = Prompt.title_group(self.state.kind)
     local lines, marks =
         Helpers.render_footer_rows(
@@ -1486,21 +1513,26 @@ function Creator:render_footer(insert_mode)
     end
 end
 
----@param kind "file"|"line"
+---@param kind "file"|"line"|"selection"
 function Creator:toggle_context_link(kind)
     if not context_from_project_file(self.state.context) then
-        notify.warn("File and line links are only available when the source buffer is a project file")
+        notify.warn("File, line, and selection links are only available when the source buffer is a project file")
         return
     end
     if kind == "file" then
         self.state.link_file = not self.state.link_file
     elseif kind == "line" then
         self.state.link_line = not self.state.link_line
+    elseif kind == "selection" then
+        if not context_has_selection(self.state.context) then
+            return
+        end
+        self.state.link_selection = not self.state.link_selection
     end
     self.state.linked_context = PromptContext.linked_context(self.state.context, {
         include_file = self.state.link_file,
         include_line = self.state.link_line,
-        include_selection = true,
+        include_selection = self.state.link_selection,
     })
     self:save_current_draft()
     self:render_footer()
@@ -1996,11 +2028,17 @@ function Creator:apply_common_keymaps(buf)
     vim.keymap.set("n", "L", function()
         self:toggle_context_link("line")
     end, { buffer = buf, silent = true })
+    vim.keymap.set("n", "X", function()
+        self:toggle_context_link("selection")
+    end, { buffer = buf, silent = true })
     vim.keymap.set("i", "<C-f>", function()
         self:toggle_context_link("file")
     end, { buffer = buf, silent = true })
     vim.keymap.set("i", "<C-l>", function()
         self:toggle_context_link("line")
+    end, { buffer = buf, silent = true })
+    vim.keymap.set("i", "<C-x>", function()
+        self:toggle_context_link("selection")
     end, { buffer = buf, silent = true })
     vim.keymap.set("n", "q", function()
         self:close()

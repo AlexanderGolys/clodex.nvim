@@ -847,6 +847,7 @@ describe("clodex.ui.prompt_creator", function()
 
         assert.is_false(creator.state.link_file)
         assert.is_false(creator.state.link_line)
+        assert.is_true(creator.state.link_selection)
 
         trigger_buffer_mapping(creator.footer_buf, "F")
         trigger_buffer_mapping(creator.footer_buf, "L")
@@ -857,6 +858,10 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal("file", creator.state.linked_context[1].kind)
         assert.are.equal("line", creator.state.linked_context[2].kind)
         assert.are.equal("selection", creator.state.linked_context[3].kind)
+
+        trigger_buffer_mapping(creator.footer_buf, "X")
+        assert.is_false(creator.state.link_selection)
+        assert.are.equal(2, #creator.state.linked_context)
 
         creator.state.context = {
             buf = source_buf,
@@ -875,6 +880,43 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_false(creator.state.link_file)
         assert.is_false(creator.state.link_line)
         assert.are.equal(0, #creator.state.linked_context)
+    end)
+
+    it("renders factual link toggle actions and hides selection toggle without selection", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                file_path = "/tmp/demo/a.lua",
+                project_root = "/tmp/demo",
+                relative_path = "a.lua",
+                cursor_row = 3,
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
+        local text = table.concat(lines, "\n")
+        assert.is_truthy(text:find("file link on", 1, true))
+        assert.is_truthy(text:find("line link on", 1, true))
+        assert.is_nil(text:find("selection link", 1, true))
+
+        trigger_buffer_mapping(creator.footer_buf, "F")
+        lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
+        text = table.concat(lines, "\n")
+        assert.is_truthy(text:find("file link off", 1, true))
     end)
 
     it("matches prompt border and footer keymap colors to the active kind", function()
