@@ -32,7 +32,7 @@ local did_register = false
 ---@field field? Clodex.KeymapField
 ---@field raw_mode? string|string[]
 
----@alias Clodex.KeymapField "toggle"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"go_to_readme"
+---@alias Clodex.KeymapField "toggle"|"main_panel"|"queue_workspace"|"state_preview"|"mini_state_preview"|"backend_toggle"|"chat_toggle"|"refresh"|"new_bug_prompt"|"new_improvement_prompt"|"go_to_readme"
 
 ---@class Clodex.GlobalKeymapDefinition
 ---@field field Clodex.KeymapField
@@ -104,8 +104,9 @@ local function enum(label, choices)
 end
 
 local CLODEX_ACTION = enum("action", {
-    { value = "panel", desc = "Toggle the queue workspace panel" },
-    { value = "dashboard", aliases = { "experimental-panel", "experimental_panel" }, desc = "Toggle the experimental project dashboard" },
+    { value = "panel", desc = "Toggle the legacy queue workspace panel (deprecated)" },
+    { value = "main-panel", aliases = { "main_panel" }, desc = "Toggle the main project panel" },
+    { value = "dashboard", aliases = { "experimental-panel", "experimental_panel" }, desc = "Toggle the main project dashboard panel" },
     { value = "terminal", aliases = { "cli", "term", "chat" }, desc = "Toggle the project terminal" },
     { value = "history", desc = "Open global Clodex history" },
     { value = "backend", desc = "Toggle or set the active backend" },
@@ -200,10 +201,16 @@ local GLOBAL_KEYMAPS = {
         desc = "Toggle Codex terminal",
     },
     {
+        field = "main_panel",
+        mode = "n",
+        action = "open_main_panel",
+        desc = "Toggle Clodex main panel",
+    },
+    {
         field = "queue_workspace",
         mode = "n",
         action = "open_queue_workspace",
-        desc = "Open Clodex project queue workspace",
+        desc = "Open Clodex legacy queue workspace (deprecated)",
     },
     {
         field = "state_preview",
@@ -466,7 +473,9 @@ end
 local function top_level_palette_specs()
     local specs = {
         { name = "Clodex", desc = "Toggle the queue workspace panel", invoke = "Clodex" },
-        { name = "Clodex panel", desc = "Toggle the queue workspace panel", invoke = "Clodex panel" },
+        { name = "Clodex main-panel", desc = "Toggle the main project panel", invoke = "Clodex main-panel" },
+        { name = "Clodex panel", desc = "Toggle the legacy queue workspace panel (deprecated)", invoke = "Clodex panel" },
+        { name = "Clodex dashboard", desc = "Toggle the main project dashboard panel", invoke = "Clodex dashboard" },
         { name = "Clodex cli", desc = "Toggle the project terminal", invoke = "Clodex cli" },
         { name = "Clodex history", desc = "Open global Clodex history", invoke = "Clodex history" },
         { name = "Clodex backend", desc = "Toggle the active backend", invoke = "Clodex backend" },
@@ -535,7 +544,13 @@ local function registered_command_specs()
                     if not check_extra_args("Clodex", vim.list_slice(command.fargs, 2), "at most one action argument") then
                         return
                     end
+                    notify.warn("Clodex panel is deprecated; use Clodex main-panel")
                     clodex.open_queue_workspace()
+                elseif action == "main-panel" then
+                    if not check_extra_args("Clodex", vim.list_slice(command.fargs, 2), "at most one action argument") then
+                        return
+                    end
+                    clodex.open_main_panel()
                 elseif action == "dashboard" then
                     if not check_extra_args("Clodex", vim.list_slice(command.fargs, 2), "at most one action argument") then
                         return

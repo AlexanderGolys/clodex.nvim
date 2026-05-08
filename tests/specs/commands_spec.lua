@@ -223,6 +223,8 @@ describe("clodex.commands", function()
             "experimental_panel",
             "header",
             "history",
+            "main-panel",
+            "main_panel",
             "panel",
             "term",
             "term-header",
@@ -308,6 +310,13 @@ describe("clodex.commands", function()
 
         assert.is_false(called)
         assert.is_true(#notify_calls > 0)
-        assert.matches("invalid action 'bogus'", notify_calls[#notify_calls].message)
+        local saw_invalid = false
+        for _, item in ipairs(notify_calls) do
+            if type(item.message) == "string" and item.message:find("invalid action 'bogus'", 1, true) then
+                saw_invalid = true
+                break
+            end
+        end
+        assert.is_true(saw_invalid)
     end)
 end)

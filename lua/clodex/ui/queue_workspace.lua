@@ -64,6 +64,9 @@ local util = require("clodex.util")
 local Workspace = {}
 Workspace.__index = Workspace
 
+-- DEPRECATED: This legacy queue-workspace panel remains for queue-specific workflows.
+-- The project dashboard is the main panel surface and should be preferred for panel toggles.
+
 ---@alias Clodex.QueueWorkspace.AppHost Clodex.App
 
 ---@alias Clodex.QueueWorkspace.ConfigHost Clodex.Config.Values

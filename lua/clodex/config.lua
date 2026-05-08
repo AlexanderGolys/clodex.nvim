@@ -1,3 +1,5 @@
+
+-- @@@clodex.config
 local HighlightConfig = require("clodex.config.highlights")
 local Backend = require("clodex.backend")
 local fs = require("clodex.util.fs")
@@ -93,6 +95,7 @@ local fs = require("clodex.util.fs")
 --- Set a value to `false` to disable it.
 ---@class Clodex.Config.Keymaps
 ---@field toggle string|Clodex.Config.KeymapConfig|false
+---@field main_panel string|Clodex.Config.KeymapConfig|false
 ---@field queue_workspace string|Clodex.Config.KeymapConfig|false
 ---@field state_preview string|Clodex.Config.KeymapConfig|false
 ---@field mini_state_preview string|Clodex.Config.KeymapConfig|false
@@ -132,6 +135,7 @@ local function default_storage_root()
     return fs.join(vim.fn.stdpath("data"), "clodex")
 end
 
+-- @@@clodex.opts
 local function defaults()
     local storage_root = default_storage_root()
     return {
@@ -218,6 +222,9 @@ local function defaults()
         keymaps = {
             toggle = {
                 lhs = "<leader>pt",
+            },
+            main_panel = {
+                lhs = "<leader>pp",
             },
             queue_workspace = {
                 lhs = "<leader>pq",

@@ -2,6 +2,7 @@
 
 ---@alias Clodex.PublicAction
 ---| "toggle"
+---| "open_main_panel"
 ---| "toggle_state_preview"
 ---| "toggle_mini_state_preview"
 ---| "toggle_backend"
@@ -42,6 +43,7 @@ M.lualine = require("clodex.lualine")
 
 local PUBLIC_ACTIONS = {
     "toggle",
+    "open_main_panel",
     "toggle_state_preview",
     "toggle_mini_state_preview",
     "toggle_backend",

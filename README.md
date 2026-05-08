@@ -125,6 +125,7 @@ require("clodex").setup({
     },
     keymaps = {
         toggle = { lhs = "<leader>pt" },
+        main_panel = { lhs = "<leader>pp" },
         queue_workspace = { lhs = "<leader>pq" },
         state_preview = { lhs = "<leader>ps" },
         mini_state_preview = { lhs = "<leader>pS" },
@@ -165,7 +166,7 @@ Bug prompt accents and queue commit ids prefer Neovim's `DiagnosticError` color,
 
 ## Commands
 
-- `:Clodex[ panel|dashboard|cli|term|chat|history|backend [codex|opencode]|header]`
+- `:Clodex[ main-panel|panel|dashboard|cli|term|chat|history|backend [codex|opencode]|header]`
 - `:ClodexDebug[ panel|mini|reload]` (`reload` captures Clodex runtime state, stops old timers/autocmds, runs `:Lazy reload clodex.nvim` when Lazy is available, reloads Clodex modules, and restores tab/session state)
 - `:ClodexProject add [name]`
 - `:ClodexProject readme`
@@ -190,7 +191,7 @@ Clodex terminal buffers map `<localleader>s` in normal and terminal mode to inse
 
 The main queue workspace panel uses the shared Clodex UI panel shell, with project, queue, and footer panes owned as one panel. Opening the panel from insert mode returns Neovim to normal mode automatically, selects the current tab's active project, selects that project's first queued prompt when one exists, and focuses the queue pane by default. When implementing from the workspace with no existing project session, Clodex closes the workspace and opens the project terminal before dispatching the prompt so the new CLI receives the prompt in the project session. Project file counts use tracked Git files when available, so checked-in files are counted even if they also match local ignore patterns. Project detail rows use cached metadata while moving the project selection, so selecting a project does not refresh its displayed last-edit time by itself. Language summaries count Rust projects through `Cargo.toml` and `.rs` files, and skip HTML and CSS files as project language signals. Queue filtering matches prompt titles, body text, details, full prompt text, and queue labels. Clicking either main panel pane moves focus to that pane, even when the click lands on empty panel space. Its panel cursor highlights match the pane backgrounds so the text cursor stays hidden while selection highlights show the active row. Project rows color the current tab's active project with the current-project accent, and color projects with any open background or other-tab session with the active-session accent even when that session is not the current tab target.
 
-The experimental project dashboard is available separately through `:Clodex dashboard` or `require("clodex").open_project_dashboard()`. It does not replace the stable queue workspace yet. The dashboard shows a cyclic project carousel on top, bordered queue prompt cards on the left, project panels on the right, and a compact one-line footer. Use `Ctrl-Left` and `Ctrl-Right` to cycle projects, `j`/`k` to move the selected prompt, `[`/`]` to cycle right-side project panels, and `c` to replace the right panels with the selected project's embedded chat session. The Roadmap panel reads root `TODO.md`, and the README panel previews the project README.
+The project dashboard is the main panel surface, available through `:Clodex main-panel`, `:Clodex dashboard`, `require("clodex").open_main_panel()`, or `require("clodex").open_project_dashboard()`. It shows a cyclic project carousel on top, bordered queue prompt cards on the left, project panels on the right, and a compact one-line footer. Use `Ctrl-Left` and `Ctrl-Right` to cycle projects, `j`/`k` to move the selected prompt, `[`/`]` to cycle right-side project panels, and `c` to replace the right panels with the selected project's embedded chat session. The Roadmap panel reads root `TODO.md`, and the README panel previews the project README. The old queue workspace panel remains available through `:Clodex panel` and `require("clodex").open_queue_workspace()` for queue-focused workflows, but it is deprecated as the main panel toggle target.
 
 The debug state panel uses the same shared Clodex UI panel API as the prompt creator, with panel-owned command and state blocks. The state pane includes backend, focus, session, project, tab, queued workflow, prompt skill, and the global keymaps currently registered by Clodex. Mouse clicks select command-list rows or focus the state pane, and double-clicking a command-list row runs that command. Before rendering, and when terminal chrome looks up a session by buffer, Clodex re-adopts existing `clodex_terminal` buffers that still carry Clodex buffer metadata, so restored or already-open terminal sessions are included in the session list and runtime project status instead of appearing offline.
 
@@ -242,6 +243,7 @@ Main entrypoints live in `lua/clodex/init.lua`:
 
 - `require("clodex").setup(opts)`
 - `require("clodex").toggle()`
+- `require("clodex").open_main_panel()`
 - `require("clodex").toggle_state_preview()`
 - `require("clodex").toggle_mini_state_preview()`
 - `require("clodex").toggle_backend()`

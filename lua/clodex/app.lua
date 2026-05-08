@@ -1269,6 +1269,8 @@ function App:save_focused_queue_session(session_id)
     return false
 end
 
+--- DEPRECATED: Legacy queue-workspace panel toggle.
+--- Prefer `open_main_panel()` for the main panel UX.
 App.open_queue_workspace = function(self)
     if self.queue_workspace:is_open() then
         self.queue_workspace:close()
@@ -1283,6 +1285,12 @@ App.open_project_dashboard = function(self)
         return
     end
     self.project_dashboard:open()
+end
+
+--- Opens the current main panel implementation.
+--- The project dashboard is now the main panel surface.
+App.open_main_panel = function(self)
+    self:open_project_dashboard()
 end
 
 App.open_history = function()
