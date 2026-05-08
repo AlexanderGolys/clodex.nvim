@@ -368,6 +368,60 @@ describe("clodex.commands", function()
         }, improvement)
     end)
 
+    it("supports multiple keymap descriptors per keymap field", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                refresh = {
+                    { lhs = "<leader>pR", mode = "n" },
+                    { lhs = "<Home>R", mode = "v" },
+                },
+            },
+        })
+
+        local refresh = {}
+        for _, item in ipairs(keymaps) do
+            if item.field == "refresh" then
+                refresh[#refresh + 1] = {
+                    lhs = item.lhs,
+                    mode = item.mode,
+                }
+            end
+        end
+
+        assert.are.same({
+            { lhs = "<leader>pR", mode = "n" },
+            { lhs = "<Home>R", mode = "v" },
+        }, refresh)
+    end)
+
+    it("supports descriptor lists for grouped new prompt keymaps", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                new_prompt = {
+                    improvement = {
+                        { lhs = "<leader>pI", mode = "n" },
+                        { lhs = "<Home>I", mode = "v" },
+                    },
+                },
+            },
+        })
+
+        local improvement = {}
+        for _, item in ipairs(keymaps) do
+            if item.field == "new_improvement_prompt" then
+                improvement[#improvement + 1] = {
+                    lhs = item.lhs,
+                    mode = item.mode,
+                }
+            end
+        end
+
+        assert.are.same({
+            { lhs = "<leader>pI", mode = "n" },
+            { lhs = "<Home>I", mode = "v" },
+        }, improvement)
+    end)
+
     it("prefers grouped new prompt keymaps over legacy prompt fields", function()
         local keymaps = Commands.list_keymaps({
             keymaps = {

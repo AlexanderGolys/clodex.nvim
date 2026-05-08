@@ -288,23 +288,10 @@ end
 ---@param values Clodex.Commands.KeymapValues
 ---@param field Clodex.KeymapField
 ---@param definition Clodex.GlobalKeymapDefinition
+---@param value any
+---@param definition Clodex.GlobalKeymapDefinition
 ---@return Clodex.ResolvedKeymap?
-local function resolve_keymap(values, field, definition)
-    local configured = values.keymaps or {}
-    local value = configured[field]
-    local new_prompt_key = NEW_PROMPT_FIELD_MAP[field]
-    if new_prompt_key ~= nil and type(configured.new_prompt) == "table" then
-        local nested_value = configured.new_prompt[new_prompt_key]
-        if nested_value ~= nil then
-            value = nested_value
-        end
-        if field == "new_line_linked_prompt" and value == nil and configured.new_prompt.line_linked_home ~= nil then
-            value = configured.new_prompt.line_linked_home
-        end
-    end
-    if field == "new_line_linked_prompt" and value == nil and configured.new_line_linked_prompt_home ~= nil then
-        value = configured.new_line_linked_prompt_home
-    end
+local function resolve_keymap_entry(value, definition)
     if value == false then
         return nil
     end
@@ -375,6 +362,48 @@ local function resolve_keymap(values, field, definition)
         desc = opts.desc,
         opts = opts,
     }
+end
+
+---@param values Clodex.Commands.KeymapValues
+---@param field Clodex.KeymapField
+---@param definition Clodex.GlobalKeymapDefinition
+---@return Clodex.ResolvedKeymap[]
+local function resolve_keymap(values, field, definition)
+    local configured = values.keymaps or {}
+    local value = configured[field]
+    local new_prompt_key = NEW_PROMPT_FIELD_MAP[field]
+    if new_prompt_key ~= nil and type(configured.new_prompt) == "table" then
+        local nested_value = configured.new_prompt[new_prompt_key]
+        if nested_value ~= nil then
+            value = nested_value
+        end
+        if field == "new_line_linked_prompt" and value == nil and configured.new_prompt.line_linked_home ~= nil then
+            value = configured.new_prompt.line_linked_home
+        end
+    end
+    if field == "new_line_linked_prompt" and value == nil and configured.new_line_linked_prompt_home ~= nil then
+        value = configured.new_line_linked_prompt_home
+    end
+    if value == nil then
+        return {}
+    end
+
+    local resolved = {} ---@type Clodex.ResolvedKeymap[]
+    if type(value) == "table" and vim.islist(value) then
+        for _, item in ipairs(value) do
+            local keymap = resolve_keymap_entry(item, definition)
+            if keymap then
+                resolved[#resolved + 1] = keymap
+            end
+        end
+        return resolved
+    end
+
+    local keymap = resolve_keymap_entry(value, definition)
+    if keymap then
+        resolved[#resolved + 1] = keymap
+    end
+    return resolved
 end
 
 ---@param cmd_line string
@@ -754,8 +783,8 @@ end
 function M.list_keymaps(values)
     local keymaps = {} ---@type Clodex.KeymapSpec[]
     for _, definition in ipairs(GLOBAL_KEYMAPS) do
-        local keymap = resolve_keymap(values, definition.field, definition)
-        if keymap ~= nil then
+        local resolved = resolve_keymap(values, definition.field, definition)
+        for _, keymap in ipairs(resolved) do
             for _, lhs in ipairs(keymap.lhses) do
                 keymaps[#keymaps + 1] = {
                     context = "Global",
@@ -783,8 +812,8 @@ function M.register_keymaps(values)
     REGISTERED_KEYMAPS = {}
 
     for _, definition in ipairs(GLOBAL_KEYMAPS) do
-        local keymap = resolve_keymap(values, definition.field, definition)
-        if keymap ~= nil then
+        local resolved = resolve_keymap(values, definition.field, definition)
+        for _, keymap in ipairs(resolved) do
             for _, lhs in ipairs(keymap.lhses) do
                 vim.keymap.set(keymap.mode, lhs, function()
                     return require_clodex()[definition.action]()
