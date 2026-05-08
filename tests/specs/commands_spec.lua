@@ -368,6 +368,27 @@ describe("clodex.commands", function()
         }, improvement)
     end)
 
+    it("expands mode 'a' to all keymap modes", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                refresh = {
+                    lhs = "<leader>pR",
+                    mode = "a",
+                },
+            },
+        })
+
+        local refresh_mode = nil
+        for _, item in ipairs(keymaps) do
+            if item.field == "refresh" and item.lhs == "<leader>pR" then
+                refresh_mode = item.mode
+                break
+            end
+        end
+
+        assert.are.equal("n,i,v,x,s,o,c,t", refresh_mode)
+    end)
+
     it("supports multiple keymap descriptors per keymap field", function()
         local keymaps = Commands.list_keymaps({
             keymaps = {

@@ -275,6 +275,32 @@ local GLOBAL_KEYMAPS = {
 } ---@type Clodex.GlobalKeymapDefinition[]
 
 local REGISTERED_KEYMAPS = {} ---@type Clodex.KeymapSpec[]
+local ALL_KEYMAP_MODES = { "n", "i", "v", "x", "s", "o", "c", "t" }
+
+---@param mode string|string[]
+---@return string|string[]
+local function normalize_keymap_mode(mode)
+    if type(mode) == "string" then
+        if mode == "a" then
+            return vim.deepcopy(ALL_KEYMAP_MODES)
+        end
+        return mode
+    end
+
+    if type(mode) ~= "table" then
+        return mode
+    end
+
+    local normalized = {} ---@type string[]
+    for _, item in ipairs(mode) do
+        if item == "a" then
+            vim.list_extend(normalized, ALL_KEYMAP_MODES)
+        else
+            normalized[#normalized + 1] = item
+        end
+    end
+    return normalized
+end
 
 ---@param mode string|string[]
 ---@return string
@@ -325,7 +351,7 @@ local function resolve_keymap_entry(value, definition)
             end
         end
         if value.mode ~= nil then
-            mode = value.mode
+            mode = normalize_keymap_mode(value.mode)
         end
         if type(value.desc) == "string" then
             opts.desc = value.desc
@@ -358,7 +384,7 @@ local function resolve_keymap_entry(value, definition)
 
     return {
         lhses = lhses,
-        mode = mode,
+        mode = normalize_keymap_mode(mode),
         desc = opts.desc,
         opts = opts,
     }
