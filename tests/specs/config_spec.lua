@@ -247,6 +247,24 @@ describe("clodex.config", function()
             assert.is_true(active.bold)
         end)
 
+        it("maps vision prompt accents to @keyword", function()
+            vim.api.nvim_set_hl(0, "@keyword", { fg = "#b366ff" })
+            vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#101010" })
+
+            Config.apply_highlights({
+                highlights = require("clodex.config.highlights"),
+            })
+
+            local title = vim.api.nvim_get_hl(0, { name = "ClodexPromptVisionTitle", link = false })
+            local kind = vim.api.nvim_get_hl(0, { name = "ClodexPromptVisionKindName", link = false })
+            local active = vim.api.nvim_get_hl(0, { name = "ClodexPromptVisionTitleActive", link = false })
+
+            assert.are.equal(0xb366ff, title.fg)
+            assert.are.equal(title.fg, kind.fg)
+            assert.are.equal(title.fg, active.bg)
+            assert.are.equal(0x101010, active.fg)
+        end)
+
         it("keeps prompt border backgrounds aligned with editor backgrounds", function()
             vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222" })
             vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#101010" })

@@ -44,7 +44,9 @@ local HLGroups = {
     not_working = { "@variable.builtin", "@error", "DiagnosticError" },
     improvement = { "@constructor", "Function", "Identifier" },
     fix = { "@symbol", "Function", "Identifier" },
+    vision = { "@keyword", "Keyword", "PreProc" },
 }
+
 
 
 local function float_win_bg(adjust)
@@ -179,11 +181,11 @@ ClodexPromptRefactorKindName = {
     },
 -- &&&ClodexPromptVisionTitle&&&Lorem Ipsum&&&
 ClodexPromptVisionTitle = {
-      fg = { from = "PreProc" },
+      fg = { from = HLGroups.vision },
     },
 -- &&&ClodexPromptVisionKindName&&&Lorem Ipsum&&&
 ClodexPromptVisionKindName = {
-      fg = { from = "PreProc" },
+      fg = { from = HLGroups.vision },
       bold = true,
     },
 -- &&&ClodexPromptIdeaTitle&&&Lorem Ipsum&&&
@@ -259,7 +261,7 @@ ClodexPromptRestructureTitleBorder = {
     },
 -- &&&ClodexPromptVisionTitleBorder&&&Lorem Ipsum&&&
 ClodexPromptVisionTitleBorder = {
-      fg = { from = "PreProc" },
+      fg = { from = HLGroups.vision },
       bg = float_win_bg(),
       bold = true,
     },
@@ -334,7 +336,7 @@ ClodexPromptRefactorTitleActive = {
 -- &&&ClodexPromptVisionTitleActive&&&Lorem Ipsum&&&
 ClodexPromptVisionTitleActive = {
       fg = float_win_bg(),
-      bg = { from = "PreProc", attr = "fg" },
+      bg = { from = HLGroups.vision, attr = "fg" },
       bold = true,
     },
 -- &&&ClodexPromptIdeaTitleActive&&&Lorem Ipsum&&&
