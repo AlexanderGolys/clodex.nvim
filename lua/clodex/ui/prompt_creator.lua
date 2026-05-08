@@ -763,11 +763,14 @@ end
 
 ---@return integer
 function Creator:variant_row()
-    return self:footer_row() - LAYOUT.footer_gap_rows
+    return self:kind_row() + LAYOUT.tab_row_height
 end
 
 ---@return integer
 function Creator:title_row()
+    if #self:variants() > 0 then
+        return self:variant_row() + LAYOUT.tab_row_height
+    end
     return self:kind_row() + LAYOUT.title_gap_rows
 end
 
@@ -783,8 +786,7 @@ end
 
 ---@return integer
 function Creator:body_height()
-    local next_row = #self:variants() > 0 and self:variant_row() or self:footer_row()
-    return math.max(next_row - self:body_row() - LAYOUT.footer_gap_rows, LAYOUT.body_min_height)
+    return math.max(self:footer_row() - self:body_row() - LAYOUT.footer_gap_rows, LAYOUT.body_min_height)
 end
 
 ---@return integer
@@ -1377,7 +1379,7 @@ function Creator:render_variant_tabs()
         labels[#labels + 1] = {
             label = variant.label,
             hl_group = "ClodexPromptSourceTab",
-            active_hl_group = "ClodexPromptSourceTabActive",
+            active_hl_group = Prompt.title_active_group(self.state.kind),
         }
     end
     self.variant_tab_spans = self:render_tab_line(self.variant_buf, labels, self.variant_index, self:content_frame_width())

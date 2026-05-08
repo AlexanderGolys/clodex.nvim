@@ -303,6 +303,15 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(vim.tbl_contains(groups, "ClodexPromptImprovementTitleActive"))
         assert.is_false(vim.tbl_contains(groups, "ClodexPromptImprovementKindName"))
         assert.is_true(vim.tbl_contains(groups, "ClodexPromptBugKindName"))
+
+        creator:switch_kind(1)
+        wait_for(function()
+            return creator.state.kind == "bug" and creator.variant_buf ~= nil
+        end)
+
+        local variant_groups = extmark_groups(creator.variant_buf)
+        assert.is_true(vim.tbl_contains(variant_groups, "ClodexPromptBugTitleActive"))
+        assert.is_false(vim.tbl_contains(variant_groups, "ClodexPromptSourceTabActive"))
     end)
 
     it("centers tab rows and removes tab borders", function()
@@ -682,7 +691,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
     end)
 
-    it("places secondary tabs between the body and footer", function()
+    it("places secondary tabs below primary tabs and above the title field", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -709,10 +718,10 @@ describe("clodex.ui.prompt_creator", function()
             return creator.state.kind == "bug"
         end)
 
-        assert.are.equal(creator:kind_row() + 2, creator:title_row())
-        assert.is_true(creator:variant_row() > creator:body_row())
-        assert.are.equal(creator:body_row() + creator:body_height() + 2, creator:variant_row())
-        assert.is_true(creator:variant_row() < creator:footer_row())
+        assert.are.equal(creator:kind_row() + 2, creator:variant_row())
+        assert.are.equal(creator:variant_row() + 2, creator:title_row())
+        assert.is_true(creator:variant_row() < creator:title_row())
+        assert.is_true(creator:title_row() < creator:body_row())
     end)
 
     it("updates footer state from prompt editor mode events", function()
