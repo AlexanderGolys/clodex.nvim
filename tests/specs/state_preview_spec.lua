@@ -184,6 +184,82 @@ describe("clodex.ui.state_preview", function()
         fs.remove(root)
     end)
 
+    it("formats last queue update using configured queue date format", function()
+        local preview = Preview.new(Config.new():setup({
+            queue_workspace = {
+                date_format = "dd.MM.yyyy hh:mm",
+            },
+        }))
+        preview:ensure_buffers()
+        preview.app = {
+            queue_summary = function()
+                return {
+                    counts = {
+                        planned = 0,
+                        queued = 0,
+                        implemented = 0,
+                        history = 0,
+                    },
+                    last_updated_at = "2026-05-08T05:53:33Z",
+                }
+            end,
+            terminals = {
+                snapshot = function()
+                    return {}
+                end,
+            },
+            execution = {
+                uses_prompt_skill = function()
+                    return false
+                end,
+            },
+        }
+
+        preview:render_state({
+            backend = "codex",
+            current_tab = {
+                tabpage = 1,
+                has_visible_window = false,
+                session_key = nil,
+            },
+            sessions = {},
+            current_path = "/tmp",
+            active_project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            detected_project = nil,
+            resolved_target = {
+                kind = "project",
+                project = {
+                    name = "Demo",
+                    root = "/tmp/demo",
+                },
+            },
+            runtime_projects = {
+                {
+                    name = "Demo",
+                    root = "/tmp/demo",
+                },
+            },
+            runtime_project_states = {},
+            tabs = {},
+        })
+
+        local lines = vim.api.nvim_buf_get_lines(preview.state_buf, 0, -1, false)
+        local value = nil
+        for _, line in ipairs(lines) do
+            if vim.startswith(line, "last queue update:") then
+                value = vim.trim(line:sub(#("last queue update:") + 1))
+                break
+            end
+        end
+
+        assert.is_not_nil(value)
+        assert.is_true(value ~= "2026-05-08T05:53:33Z")
+        assert.is_truthy(value:match("^%d%d%.%d%d%.%d%d%d%d %d%d:%d%d$"))
+    end)
+
     it("renders the command pane with bare command names only", function()
         local preview = Preview.new(Config.new():setup())
         preview:ensure_buffers()

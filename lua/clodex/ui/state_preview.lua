@@ -112,6 +112,82 @@ local function append_field(self, block, label, value)
   push_line(self, block, text, extmarks)
 end
 
+---@param date_format? string
+---@return string
+local function normalize_date_format(date_format)
+  date_format = type(date_format) == "string" and vim.trim(date_format) or ""
+  if date_format == "" then
+    return "%H:%M %d.%m.%Y"
+  end
+  if date_format:find("%%") then
+    return date_format
+  end
+
+  local token_map = {
+    yyyy = "%Y",
+    YYYY = "%Y",
+    yy = "%y",
+    MM = "%m",
+    dd = "%d",
+    HH = "%H",
+    hh = "%H",
+    mm = "%M",
+    ss = "%S",
+  }
+  local parts = {} ---@type string[]
+  local index = 1
+  while index <= #date_format do
+    local matched = false
+    for _, token in ipairs({ "yyyy", "YYYY", "yy", "MM", "dd", "HH", "hh", "mm", "ss" }) do
+      if date_format:sub(index, index + #token - 1) == token then
+        parts[#parts + 1] = token_map[token]
+        index = index + #token
+        matched = true
+        break
+      end
+    end
+    if not matched then
+      parts[#parts + 1] = date_format:sub(index, index)
+      index = index + 1
+    end
+  end
+  return table.concat(parts)
+end
+
+---@param value any
+---@param config Clodex.Config.Values
+---@return string
+local function format_queue_update_timestamp(value, config)
+  if type(value) ~= "string" or vim.trim(value) == "" then
+    return "none"
+  end
+
+  local year, month, day, hour, minute, second = value:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)Z?$")
+  if not year then
+    return value
+  end
+
+  local timestamp = os.time({
+    year = tonumber(year),
+    month = tonumber(month),
+    day = tonumber(day),
+    hour = tonumber(hour),
+    min = tonumber(minute),
+    sec = tonumber(second),
+    isdst = false,
+  })
+  if type(timestamp) ~= "number" then
+    return value
+  end
+
+  local date_format = config and config.queue_workspace and config.queue_workspace.date_format or nil
+  if date_format ~= "ago" then
+    local formatted = os.date(normalize_date_format(date_format), timestamp)
+    return type(formatted) == "string" and formatted or value
+  end
+  return value
+end
+
 ---@param project? Clodex.Project
 ---@return string
 --- Returns user-friendly project name text for snapshot rendering.
@@ -258,7 +334,7 @@ local function append_project_summary(self, block, project)
   append_field(self, block, "root", project.root)
   append_field(self, block, "queues", queue_counts_text(summary.counts))
   append_field(self, block, "session", session and session_status(session) or "offline")
-  append_field(self, block, "last queue update", summary.last_updated_at ~= "" and summary.last_updated_at or "none")
+  append_field(self, block, "last queue update", format_queue_update_timestamp(summary.last_updated_at, self.config))
 end
 
 ---@param self Clodex.StatePreview
