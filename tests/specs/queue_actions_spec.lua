@@ -242,7 +242,8 @@ describe("clodex.app.queue_actions", function()
             set_active_prompt_title = function(self, title, kind, opts)
                 self.active_prompt_title = title
                 self.active_prompt_kind = kind
-                authoritative = title and opts and opts.authoritative == true or nil
+                self.active_prompt_authoritative = title and opts and opts.authoritative == true or nil
+                authoritative = self.active_prompt_authoritative
             end,
         }
         actions.app.config = {
@@ -284,7 +285,7 @@ describe("clodex.app.queue_actions", function()
         package.loaded["clodex.terminal.ui"] = original_terminal_ui
     end)
 
-    it("does not continue the queue before MCP has claimed the submitted prompt", function()
+    it("keeps the submitted prompt title before MCP has claimed the task", function()
         local send_count = 0
         local session = {
             active_prompt_title = "Submitted prompt",
@@ -321,8 +322,10 @@ describe("clodex.app.queue_actions", function()
             end,
         }
 
-        assert.is_true(actions:poll_active_prompt_titles())
-        assert.is_nil(session.active_prompt_title)
+        assert.is_false(actions:poll_active_prompt_titles())
+        assert.are.equal("Submitted prompt", session.active_prompt_title)
+        assert.are.equal("todo", session.active_prompt_kind)
+        assert.is_nil(session.active_prompt_authoritative)
         assert.are.equal(0, send_count)
     end)
 

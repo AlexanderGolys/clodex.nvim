@@ -15,6 +15,7 @@ When the prompt provides a queue item id or tells you to use the Clodex queued-w
    - Treat the returned task id and `work_prompt` as authoritative. They may differ from a queued item id shown in the prompt text when another item was already active.
    - A prompt creator implement action may arrive through direct `codex exec` or through the interactive terminal fallback; the MCP task response is authoritative in both cases.
    - The MCP helper writes the active task id, title, and kind to its local runtime `active.json`; clodex.nvim polls that file to keep open project terminal winbars and Neovim terminal title metadata aligned with the authoritative active prompt until MCP clears the active state.
+   - Before MCP claims a just-dispatched interactive prompt, clodex.nvim keeps the provisional queued title visible in terminal chrome instead of clearing it during the pre-claim poll window.
    - When `get_task` resumes an existing active item, it refreshes the active file title and kind from the current queue item so older or stale active metadata still updates the terminal winbar.
    - Neovim refreshes visible terminal chrome after MCP-polled active titles change, so adopted or restored terminal windows receive the Clodex winbar expression before redraw.
    - Claimed tasks stay in the queued lane until `close_task(success = true, ...)` records completion; unsuccessful closes keep the task queued with the blocker note.
