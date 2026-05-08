@@ -48,6 +48,7 @@ Start with the least invasive checks and only apply a fix when the matching caus
 8. Use safe reload for stale live Neovim state.
    - Prefer `:ClodexDebug reload` over manually running `:Lazy reload clodex.nvim`.
    - The reload command captures Clodex tab/session state, stops old timers and autocmds, runs Lazy reload when available, reloads Clodex modules, and restores the captured state into the fresh app instance.
+   - The debug state panel supports mouse selection: click command rows to select them, double-click command rows to run them, and click the state pane to focus it.
 
 # Legacy Queue Migration Fix
 

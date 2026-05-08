@@ -447,6 +447,23 @@ function Preview:common_actions()
         self:set_focus("state")
       end,
     },
+    {
+      lhs = "<LeftMouse>",
+      label = "click select",
+      visible = false,
+      callback = function()
+        local mouse = vim.fn.getmousepos()
+        if mouse.winid == self.command_win then
+          if not self:select_command_at_line(mouse.line) then
+            self:set_focus("commands")
+          end
+          return
+        end
+        if mouse.winid == self.state_win then
+          self:set_focus("state")
+        end
+      end,
+    },
   }
 end
 
@@ -487,6 +504,20 @@ function Preview:command_actions()
       label = "Enter run",
       callback = function()
         self:execute_selected_command()
+      end,
+    },
+    {
+      lhs = "<2-LeftMouse>",
+      label = "double-click run",
+      visible = false,
+      callback = function()
+        local mouse = vim.fn.getmousepos()
+        if mouse.winid ~= self.command_win then
+          return
+        end
+        if self:select_command_at_line(mouse.line) then
+          self:execute_selected_command()
+        end
       end,
     },
   })
@@ -900,6 +931,21 @@ function Preview:move_command_selection(delta)
   end
   self.command_index = util.clamp(self.command_index + delta, 1, #self.commands)
   self:update_cursor()
+end
+
+---@param line integer?
+---@return boolean
+--- Selects the command row under a mouse click.
+--- Returns false for empty command panes or clicks outside rendered command rows.
+function Preview:select_command_at_line(line)
+  line = tonumber(line)
+  if not line or line < 1 or line > #self.commands then
+    return false
+  end
+
+  self.command_index = line
+  self:set_focus("commands")
+  return true
 end
 
 --- Executes the currently selected command and closes preview unless it's a toggle.

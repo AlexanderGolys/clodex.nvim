@@ -24,6 +24,14 @@ local function temp_dir()
     return dir
 end
 
+local function action_by_lhs(actions, lhs)
+    for _, action in ipairs(actions) do
+        if action.lhs == lhs then
+            return action
+        end
+    end
+end
+
 describe("clodex.ui.state_preview", function()
     after_each(function()
         Commands.register_keymaps({ keymaps = disabled_keymaps() })
@@ -188,5 +196,75 @@ describe("clodex.ui.state_preview", function()
         assert.is_true(vim.startswith(lines[1], "Clodex"))
         assert.is_nil(lines[1]:find(":", 1, true))
         assert.is_nil(lines[1]:find("  ", 1, true))
+    end)
+
+    it("selects command and state panel items with the mouse", function()
+        local preview = Preview.new(Config.new():setup())
+        preview.commands = {
+            { name = "Clodex" },
+            { name = "ClodexProject" },
+            { name = "ClodexDebug" },
+        }
+        preview.command_win = 101
+        preview.state_win = 202
+        preview.command_index = 1
+
+        local original_getmousepos = vim.fn.getmousepos
+        vim.fn.getmousepos = function()
+            return {
+                winid = preview.command_win,
+                line = 3,
+            }
+        end
+        local click = action_by_lhs(preview:common_actions(), "<LeftMouse>")
+        assert.is_not_nil(click)
+        click.callback()
+
+        assert.are.equal("commands", preview.focus)
+        assert.are.equal(3, preview.command_index)
+
+        vim.fn.getmousepos = function()
+            return {
+                winid = preview.state_win,
+                line = 1,
+            }
+        end
+        click.callback()
+
+        assert.are.equal("state", preview.focus)
+        assert.are.equal(3, preview.command_index)
+
+        vim.fn.getmousepos = original_getmousepos
+    end)
+
+    it("runs command panel items on double mouse click", function()
+        local preview = Preview.new(Config.new():setup())
+        preview.commands = {
+            { name = "Clodex" },
+            { name = "ClodexProject" },
+        }
+        preview.command_win = 303
+        preview.command_index = 1
+
+        local executed_index
+        preview.execute_selected_command = function(self)
+            executed_index = self.command_index
+        end
+
+        local original_getmousepos = vim.fn.getmousepos
+        vim.fn.getmousepos = function()
+            return {
+                winid = preview.command_win,
+                line = 2,
+            }
+        end
+        local double_click = action_by_lhs(preview:command_actions(), "<2-LeftMouse>")
+        assert.is_not_nil(double_click)
+        double_click.callback()
+
+        assert.are.equal(2, preview.command_index)
+        assert.are.equal(2, executed_index)
+
+        vim.fn.getmousepos = original_getmousepos
     end)
 end)
