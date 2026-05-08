@@ -715,22 +715,19 @@ end
 local function history_commit_suffix(item)
     local suffix = ""
     local spans = {} ---@type { start_col: integer, end_col: integer }[]
-    for _, commit_id in ipairs(item_history_commits(item)) do
-        local part = ("%s%s"):format(COMMIT_ICON, commit_id:sub(1, 8))
-        if suffix == "" then
-            suffix = "  "
-        else
-            suffix = suffix .. " "
-        end
-        local start_col = #suffix
-        suffix = suffix .. part
-        spans[#spans + 1] = {
-            start_col = start_col,
-            end_col = #suffix,
-        }
-    end
-    if suffix == "" then
+    local commits = item_history_commits(item)
+    if #commits == 0 then
         return "", spans
+    end
+
+    local first = commits[1]
+    suffix = ("  %s%s"):format(COMMIT_ICON, first:sub(1, 8))
+    spans[#spans + 1] = {
+        start_col = 2,
+        end_col = #suffix,
+    }
+    if #commits > 1 then
+        suffix = ("%s (+%d)"):format(suffix, #commits - 1)
     end
     return suffix, spans
 end

@@ -500,6 +500,7 @@ end
 ---  clear_history?: boolean,
 ---  execution_instructions?: string|false,
 ---  front?: boolean,
+---  reset_created_at?: boolean,
 ---}
 ---@return Clodex.QueueItem?
 function Queue:put_item(project, queue_name, item, opts)
@@ -514,6 +515,8 @@ function Queue:put_item(project, queue_name, item, opts)
 
     if opts.copy then
         moved.id = util.uuid_v4()
+        moved.created_at = timestamp
+    elseif opts.reset_created_at then
         moved.created_at = timestamp
     end
     moved.updated_at = timestamp

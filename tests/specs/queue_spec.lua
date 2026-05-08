@@ -268,6 +268,24 @@ describe("clodex.workspace.queue", function()
         assert.are.equal(first.id, queued[2].id)
     end)
 
+    it("can reset created_at when moving an item between queues", function()
+        local item = queue:add_todo(project, {
+            title = "refresh timestamp",
+            queue = "implemented",
+            kind = "todo",
+        })
+        local taken = queue:take_item(project, item.id, "implemented")
+        assert.is_not_nil(taken)
+        taken.created_at = "2000-01-01T00:00:00Z"
+
+        local moved = queue:put_item(project, "queued", taken, {
+            reset_created_at = true,
+        })
+
+        assert.are_not.equal("2000-01-01T00:00:00Z", moved.created_at)
+        assert.are.equal(moved.created_at, moved.updated_at)
+    end)
+
     it("marks idea prompts as non-commit work", function()
         local Prompt = require("clodex.prompt")
 

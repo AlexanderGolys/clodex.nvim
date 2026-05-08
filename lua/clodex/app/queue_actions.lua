@@ -949,6 +949,7 @@ function QueueActions:rewind_queue_item(project, item_id, opts)
         end
         moved_item = self.app.queue:put_item(project, previous_queue, rewind_item, {
             clear_history = clear_history,
+            reset_created_at = opts.mark_not_working == true,
         })
     end
 
