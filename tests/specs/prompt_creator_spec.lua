@@ -762,7 +762,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_truthy(table.concat(normal_lines, "\n"):find("S", 1, true))
         assert.is_truthy(table.concat(normal_lines, "\n"):find(". / S-.: implement", 1, true))
         assert.is_truthy(table.concat(normal_lines, "\n"):find("p: plan impl", 1, true))
-        assert.is_truthy(table.concat(insert_lines, "\n"):find("C-. / C-S-.: implement", 1, true))
+        assert.is_truthy(table.concat(insert_lines, "\n"):find("C-m: implement", 1, true))
         assert.is_truthy(table.concat(insert_lines, "\n"):find("C-p: plan impl", 1, true))
         assert.is_nil(table.concat(normal_lines, "\n"):find("M", 1, true))
     end)
@@ -2753,7 +2753,7 @@ describe("clodex.ui.prompt_creator", function()
             end,
         })
 
-        trigger_buffer_mapping(creator.layout.title_buf, "<C-.>", "i")
+        trigger_buffer_mapping(creator.layout.title_buf, "<C-m>", "i")
 
         wait_for(function()
             return submitted_actions[2] == "exec" and creator.footer_win == nil and creator.layout == nil
