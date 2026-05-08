@@ -283,7 +283,7 @@ function ComposerLayout:prepend_details(overflow, cursor_at_start)
         body_lines = {}
     end
     vim.list_extend(overflow_lines, body_lines)
-    vim.api.nvim_buf_set_lines(self.body_buf, 0, -1, false, nonempty_or_blank(overflow_lines))
+    safe_replace_lines(self.body_buf, nonempty_or_blank(overflow_lines))
 
     if self.body_win and self.body_win:valid() then
         self:focus_body(true)

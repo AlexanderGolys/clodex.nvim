@@ -1529,7 +1529,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.same({ "Gamma Delta" }, vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false))
     end)
 
-    it("keeps title enter handling safe when text changes are temporarily blocked", function()
+    it("keeps title enter handling safe when details writes are temporarily blocked", function()
         creator = Creator.open({
             app = {
                 config = {
@@ -1555,7 +1555,7 @@ describe("clodex.ui.prompt_creator", function()
         local original_set_lines = vim.api.nvim_buf_set_lines
         local blocked_once = false
         vim.api.nvim_buf_set_lines = function(buf, start, finish, strict, lines)
-            if not blocked_once and buf == creator.layout.title_buf then
+            if not blocked_once and buf == creator.layout.body_buf then
                 blocked_once = true
                 error("E565: Not allowed to change text or change window")
             end
@@ -1570,7 +1570,11 @@ describe("clodex.ui.prompt_creator", function()
 
         assert.are.equal("", result)
         wait_for(function()
+            local title_lines = vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, -1, false)
+            local body_lines = vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false)
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
+                and title_lines[1] == "Fix parser"
+                and body_lines[1] == "details"
         end)
     end)
 
