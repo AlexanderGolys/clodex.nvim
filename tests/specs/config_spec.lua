@@ -117,9 +117,13 @@ describe("clodex.config", function()
                     prompt_refresh = { lhs = "<leader>pF" },
                 },
             })
+            local queue_workspace = values.keymaps.queue_workspace
+            local queue_workspace_lhs = (queue_workspace[1] and queue_workspace[1].lhs) or queue_workspace.lhs
+            local refresh = values.keymaps.refresh
+            local refresh_lhs = (refresh[1] and refresh[1].lhs) or refresh.lhs
 
-            assert.are.equal("<leader>pP", values.keymaps.main_panel[1].lhs)
-            assert.are.equal("<leader>pF", values.keymaps.refresh[1].lhs)
+            assert.are.equal("<leader>pP", queue_workspace_lhs)
+            assert.are.equal("<leader>pF", refresh_lhs)
         end)
 
         it("keeps an explicit git workflow override", function()

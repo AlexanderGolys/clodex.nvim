@@ -309,12 +309,9 @@ local function normalize_keymap_aliases(opts)
         return normalized
     end
     local keymaps = normalized.keymaps
-    if keymaps.main_panel == nil then
-        if keymaps.prompt_panel ~= nil then
-            keymaps.main_panel = keymaps.prompt_panel
-        elseif keymaps.panel ~= nil then
-            keymaps.main_panel = keymaps.panel
-        end
+    local legacy_prompt_panel = keymaps.prompt_panel or keymaps.panel
+    if legacy_prompt_panel ~= nil then
+        keymaps.queue_workspace = legacy_prompt_panel
     end
     if keymaps.refresh == nil and keymaps.prompt_refresh ~= nil then
         keymaps.refresh = keymaps.prompt_refresh
