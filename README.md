@@ -134,7 +134,9 @@ require("clodex").setup({
     },
 })
 ```
-a
+
+`queue_workspace.date_format` accepts `"ago"` for relative timestamps, existing `os.date` formats such as `"%H:%M %d.%m.%Y"`, and token formats such as `"dd.MM.yyyy hh:mm"`. Queue data keeps its saved timestamps unchanged, so older ISO queue files remain readable when the display format changes.
+
 Set `terminal.prefer_native_statusline = false` to leave Codex terminal statusline and winbar handling to your global UI configuration. The default keeps Clodex's native terminal chrome enabled and disables lualine for `clodex_terminal` buffers when lualine is loaded.
 
 ## Prompt kinds

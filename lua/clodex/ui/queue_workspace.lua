@@ -819,6 +819,48 @@ local function footer_text(text)
     return normalized
 end
 
+---@param date_format? string
+---@return string
+local function normalize_date_format(date_format)
+    date_format = type(date_format) == "string" and vim.trim(date_format) or ""
+    if date_format == "" then
+        return "%H:%M %d.%m.%Y"
+    end
+    if date_format:find("%%") then
+        return date_format
+    end
+
+    local tokens = {
+        yyyy = "%Y",
+        YYYY = "%Y",
+        yy = "%y",
+        MM = "%m",
+        dd = "%d",
+        HH = "%H",
+        hh = "%H",
+        mm = "%M",
+        ss = "%S",
+    }
+    local parts = {} ---@type string[]
+    local index = 1
+    while index <= #date_format do
+        local matched = false
+        for _, token in ipairs({ "yyyy", "YYYY", "yy", "MM", "dd", "HH", "hh", "mm", "ss" }) do
+            if date_format:sub(index, index + #token - 1) == token then
+                parts[#parts + 1] = tokens[token]
+                index = index + #token
+                matched = true
+                break
+            end
+        end
+        if not matched then
+            parts[#parts + 1] = date_format:sub(index, index)
+            index = index + 1
+        end
+    end
+    return table.concat(parts)
+end
+
 ---@param timestamp? integer
 ---@param config Clodex.Config.Values
 ---@return string
@@ -829,7 +871,7 @@ local function format_timestamp(timestamp, config)
 
     local date_format = config and config.queue_workspace and config.queue_workspace.date_format or nil
     if date_format ~= "ago" then
-        local formatted = os.date(date_format or "%H:%M %d.%m.%Y", timestamp)
+        local formatted = os.date(normalize_date_format(date_format), timestamp)
         return type(formatted) == "string" and formatted or "-"
     end
 
@@ -856,6 +898,47 @@ local function format_timestamp(timestamp, config)
     end
 
     return "just now"
+end
+
+---@param year string|number
+---@param month string|number
+---@param day string|number
+---@param hour? string|number
+---@param minute? string|number
+---@param second? string|number
+---@return integer
+local function sortable_timestamp(year, month, day, hour, minute, second)
+    return (tonumber(year) or 0) * 10000000000
+        + (tonumber(month) or 0) * 100000000
+        + (tonumber(day) or 0) * 1000000
+        + (tonumber(hour) or 0) * 10000
+        + (tonumber(minute) or 0) * 100
+        + (tonumber(second) or 0)
+end
+
+---@param value any
+---@return integer
+local function timestamp_sort_key(value)
+    if type(value) ~= "string" then
+        return 0
+    end
+
+    local year, month, day, hour, minute, second = value:match("^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)Z?$")
+    if year then
+        return sortable_timestamp(year, month, day, hour, minute, second)
+    end
+
+    day, month, year, hour, minute, second = value:match("^(%d%d?)%.(%d%d?)%.(%d%d%d%d)%s+(%d%d?):(%d%d):?(%d*)$")
+    if year then
+        return sortable_timestamp(year, month, day, hour, minute, second)
+    end
+
+    hour, minute, day, month, year = value:match("^(%d%d?):(%d%d)%s+(%d%d?)%.(%d%d?)%.(%d%d%d%d)$")
+    if year then
+        return sortable_timestamp(year, month, day, hour, minute, 0)
+    end
+
+    return 0
 end
 
 local LanguageProfile = require("clodex.project.language")
@@ -1981,6 +2064,11 @@ function Workspace:render_queue()
                 if queue_name == "implemented" then
                     items = vim.deepcopy(items)
                     table.sort(items, function(left, right)
+                        local left_key = timestamp_sort_key(left.created_at)
+                        local right_key = timestamp_sort_key(right.created_at)
+                        if left_key ~= right_key then
+                            return left_key > right_key
+                        end
                         return (left.created_at or "") > (right.created_at or "")
                     end)
                 end
