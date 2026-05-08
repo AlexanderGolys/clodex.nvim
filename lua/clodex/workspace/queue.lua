@@ -499,6 +499,7 @@ end
 ---  copy?: boolean,
 ---  clear_history?: boolean,
 ---  execution_instructions?: string|false,
+---  front?: boolean,
 ---}
 ---@return Clodex.QueueItem?
 function Queue:put_item(project, queue_name, item, opts)
@@ -527,7 +528,11 @@ function Queue:put_item(project, queue_name, item, opts)
     end
     sanitize_history_metadata(moved)
 
-    insert_queue_item(items, queue_name, moved)
+    if queue_name == "queued" and opts.front then
+        table.insert(items, 1, moved)
+    else
+        insert_queue_item(items, queue_name, moved)
+    end
     save_queue_file(self.root_dir, project.root, queue_name, items)
     return moved
 end

@@ -796,6 +796,66 @@ describe("clodex.app.queue_actions", function()
         assert.are.equal(1, refresh_count)
     end)
 
+    it("prioritizes the selected queued item before dispatching it", function()
+        local first = queue:add_todo(project, {
+            title = "first queued",
+            queue = "queued",
+            kind = "todo",
+        })
+        local second = queue:add_todo(project, {
+            title = "second queued",
+            queue = "queued",
+            kind = "todo",
+        })
+        local dispatched_item
+
+        actions.dispatch_item = function(_, _, queued_item)
+            dispatched_item = queued_item
+            return true
+        end
+
+        local ok = actions:implement_queue_item(project, second.id)
+        local queued = queue:queue(project, "queued")
+
+        assert.is_true(ok)
+        assert.are.equal(second.id, dispatched_item.id)
+        assert.are.equal(second.id, queued[1].id)
+        assert.are.equal(first.id, queued[2].id)
+    end)
+
+    it("queues creator implement submissions at the front before starting them", function()
+        local existing = queue:add_todo(project, {
+            title = "existing queued work",
+            queue = "queued",
+            kind = "todo",
+        })
+        local started_item_id
+
+        actions.start_queued_item = function(_, _, item_id)
+            started_item_id = item_id
+            return true
+        end
+        actions.app.prompt_actions = {
+            normalize_spec = function(_, _, spec)
+                return spec
+            end,
+        }
+
+        local item = actions:add_project_todo(project, {
+            title = "new implement item",
+            kind = "todo",
+        }, {
+            queue = "queued",
+            implement = true,
+            run_mode = "interactive",
+        })
+        local queued = queue:queue(project, "queued")
+
+        assert.are.equal(item.id, started_item_id)
+        assert.are.equal(item.id, queued[1].id)
+        assert.are.equal(existing.id, queued[2].id)
+    end)
+
     it("still dispatches a queued item while the project is already working", function()
         local item = queue:add_todo(project, {
             title = "queued while busy",

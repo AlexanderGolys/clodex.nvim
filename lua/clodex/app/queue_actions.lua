@@ -439,6 +439,25 @@ function QueueActions:start_queued_item(project, item_id, mode)
     return self:dispatch_item(project, queued_item)
 end
 
+---@param project Clodex.Project
+---@param item_id string
+---@return Clodex.QueueItem?
+function QueueActions:prioritize_queued_item(project, item_id)
+    local queue_name, index, item = self.app.queue:find_item(project, item_id, "queued")
+    if queue_name ~= "queued" or not item then
+        return nil
+    end
+    if index == 1 then
+        return item
+    end
+
+    local taken = self.app.queue:take_item(project, item_id, "queued")
+    if not taken then
+        return item
+    end
+    return self.app.queue:put_item(project, "queued", taken, { front = true }) or item
+end
+
 --- Checks configured queue workspace files for external updates.
 --- This keeps the editor in sync when queued prompts complete through the MCP helper.
 function QueueActions:poll_workspace_updates()
@@ -534,6 +553,7 @@ function QueueActions:add_project_todo(project, spec, opts)
         completion_target = spec.completion_target,
         start_mode = opts.start_mode,
         queue = queue_name,
+        front = queue_name == "queued" and opts.implement == true,
     })
     if queue_name == "queued" then
         item = self:refresh_queue_item_instructions(project, item.id) or item
@@ -615,6 +635,7 @@ function QueueActions:implement_queue_item(project, item_id)
         return false, "blocked"
     end
 
+    item = self:prioritize_queued_item(project, item.id) or item
     if self:start_queued_item(project, item_id, "interactive") then
         notify.notify(("Started %s prompt for %s: %s"):format(
             moved_from_planned and "planned" or "queued",
