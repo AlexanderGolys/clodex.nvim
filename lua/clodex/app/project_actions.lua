@@ -93,6 +93,23 @@ local function open_project_readme_for_new_tab(project)
     edit_if_safe(readme)
 end
 
+---@param self Clodex.AppProjectActions
+---@param state Clodex.TabState
+---@param project Clodex.Project
+local function open_new_tab_project_session(self, state, project)
+    if not self.app.terminals or type(self.app.terminals.ensure_project_session) ~= "function" then
+        return
+    end
+    local session = self.app.terminals:ensure_project_session(project)
+    if not session then
+        return
+    end
+    self:show_target(state, {
+        kind = "project",
+        project = project,
+    })
+end
+
 ---@class Clodex.AppProjectActions.ProjectPicker
 ---@field registry Clodex.ProjectRegistry
 local ProjectPicker = {}
@@ -310,12 +327,7 @@ function ProjectActions:prompt_new_tab_active_project(state, source_active_root)
             state:set_active_project(project.root)
             self.app.project_details_store:touch_activity(project)
             open_project_readme_for_new_tab(project)
-            if state:has_visible_window() then
-                self:show_target(state, {
-                    kind = "project",
-                    project = project,
-                })
-            end
+            open_new_tab_project_session(self, state, project)
         end
         self.app:refresh_views()
     end)

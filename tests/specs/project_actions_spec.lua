@@ -179,6 +179,67 @@ describe("clodex.app.project_actions", function()
         vim.fn.delete(root, "rf")
     end)
 
+    it("opens the selected project session in the new tab after project selection", function()
+        local root = vim.fn.tempname()
+        local ensured_project
+        local shown_target
+        local shown_state
+        vim.fn.mkdir(root, "p")
+
+        local state = {
+            prompted = false,
+            active_project_root = nil,
+            has_prompted_project = function(self)
+                return self.prompted
+            end,
+            mark_prompted_project = function(self)
+                self.prompted = true
+            end,
+            clear_active_project = function() end,
+            set_active_project = function(self, value)
+                self.active_project_root = value
+            end,
+            has_visible_window = function()
+                return false
+            end,
+        }
+        local app = {
+            projects_for_queue_workspace = function()
+                return {
+                    { name = "Beta", root = root },
+                }
+            end,
+            project_details_store = {
+                touch_activity = function() end,
+            },
+            terminals = {
+                ensure_project_session = function(_, project)
+                    ensured_project = project
+                    return { key = project.root }
+                end,
+            },
+            refresh_views = function() end,
+        }
+        local actions = ProjectActions.new(app)
+        actions.show_target = function(_, received_state, target)
+            shown_state = received_state
+            shown_target = target
+            return { key = target.project.root }
+        end
+
+        actions:prompt_new_tab_active_project(state)
+
+        assert.are.equal(root, state.active_project_root)
+        assert.are.same({ name = "Beta", root = root }, ensured_project)
+        assert.are.same(state, shown_state)
+        assert.are.same({
+            kind = "project",
+            project = { name = "Beta", root = root },
+        }, shown_target)
+
+        vim.fn.delete(root, "rf")
+    end)
+
     it("does not jump to README when the new tab already shows a selected project file", function()
         local root = vim.fn.tempname()
         local readme = root .. "/README.md"
