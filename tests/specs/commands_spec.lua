@@ -320,4 +320,23 @@ describe("clodex.commands", function()
         end
         assert.is_true(saw_invalid)
     end)
+
+    it("supports multiple lhs entries in a single keymap config", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                refresh = {
+                    lhs = { "<leader>pR", "<Home>R" },
+                },
+            },
+        })
+
+        local refresh_lhs = {}
+        for _, item in ipairs(keymaps) do
+            if item.field == "refresh" then
+                refresh_lhs[#refresh_lhs + 1] = item.lhs
+            end
+        end
+
+        assert.are.same({ "<leader>pR", "<Home>R" }, refresh_lhs)
+    end)
 end)

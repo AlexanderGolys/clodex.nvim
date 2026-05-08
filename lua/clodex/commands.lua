@@ -42,7 +42,7 @@ local did_register = false
 
 ---@class Clodex.ResolvedKeymap
 ---@field mode string|string[]
----@field lhs string
+---@field lhses string[]
 ---@field desc string
 ---@field opts vim.api.keyset.keymap
 
@@ -296,7 +296,7 @@ local function resolve_keymap(values, field, definition)
         return nil
     end
 
-    local lhs = nil ---@type string?
+    local lhses = {} ---@type string[]
     local mode = definition.mode
     local opts = {
         desc = ("Clodex: %s"):format(definition.desc),
@@ -309,12 +309,21 @@ local function resolve_keymap(values, field, definition)
         if value == "" then
             return nil
         end
-        lhs = value
+        lhses = { value }
     elseif value_type == "table" then
         if value.enabled == false or value.enable == false then
             return nil
         end
-        lhs = value.lhs or value.key or value[1]
+        local lhs_value = value.lhs or value.key or value[1]
+        if type(lhs_value) == "string" then
+            lhses = { lhs_value }
+        elseif vim.islist(lhs_value) then
+            for _, lhs in ipairs(lhs_value) do
+                if type(lhs) == "string" and lhs ~= "" then
+                    lhses[#lhses + 1] = lhs
+                end
+            end
+        end
         if value.mode ~= nil then
             mode = value.mode
         end
@@ -343,12 +352,12 @@ local function resolve_keymap(values, field, definition)
         return nil
     end
 
-    if type(lhs) ~= "string" or lhs == "" then
+    if #lhses == 0 then
         return nil
     end
 
     return {
-        lhs = lhs,
+        lhses = lhses,
         mode = mode,
         desc = opts.desc,
         opts = opts,
@@ -734,13 +743,15 @@ function M.list_keymaps(values)
     for _, definition in ipairs(GLOBAL_KEYMAPS) do
         local keymap = resolve_keymap(values, definition.field, definition)
         if keymap ~= nil then
-            keymaps[#keymaps + 1] = {
-                context = "Global",
-                mode = keymap_mode_label(keymap.mode),
-                lhs = keymap.lhs,
-                desc = keymap.desc,
-                field = definition.field,
-            }
+            for _, lhs in ipairs(keymap.lhses) do
+                keymaps[#keymaps + 1] = {
+                    context = "Global",
+                    mode = keymap_mode_label(keymap.mode),
+                    lhs = lhs,
+                    desc = keymap.desc,
+                    field = definition.field,
+                }
+            end
         end
     end
     return keymaps
@@ -761,17 +772,19 @@ function M.register_keymaps(values)
     for _, definition in ipairs(GLOBAL_KEYMAPS) do
         local keymap = resolve_keymap(values, definition.field, definition)
         if keymap ~= nil then
-            vim.keymap.set(keymap.mode, keymap.lhs, function()
-                return require_clodex()[definition.action]()
-            end, keymap.opts)
-            REGISTERED_KEYMAPS[#REGISTERED_KEYMAPS + 1] = {
-                context = "Global",
-                mode = keymap_mode_label(keymap.mode),
-                raw_mode = keymap.mode,
-                lhs = keymap.lhs,
-                desc = keymap.desc,
-                field = definition.field,
-            }
+            for _, lhs in ipairs(keymap.lhses) do
+                vim.keymap.set(keymap.mode, lhs, function()
+                    return require_clodex()[definition.action]()
+                end, keymap.opts)
+                REGISTERED_KEYMAPS[#REGISTERED_KEYMAPS + 1] = {
+                    context = "Global",
+                    mode = keymap_mode_label(keymap.mode),
+                    raw_mode = keymap.mode,
+                    lhs = lhs,
+                    desc = keymap.desc,
+                    field = definition.field,
+                }
+            end
         end
     end
 end

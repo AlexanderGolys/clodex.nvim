@@ -143,6 +143,7 @@ require("clodex").setup({
 
 `codex_cmd` and `opencode_cmd` set the executable used for each backend. `codex_args` and `opencode_args` add backend-specific CLI flags whenever Clodex starts that backend, including project/free chat sessions, resumed sessions, and direct Codex execution. Codex MCP config arguments are appended after `codex_args` so the bundled queue helper remains wired to the configured workspace directory.
 The default `new_line_linked_prompt` keymaps (`<leader>pl` and `<Home>l`) open the prompt creator with the current cursor line linked as prompt context.
+Each `keymaps.<action>` entry accepts either a single `lhs` string or an `lhs` list to register multiple shortcuts for the same action.
 
 `queue_workspace.date_format` accepts `"ago"` for relative timestamps, existing `os.date` formats such as `"%H:%M %d.%m.%Y"`, and token formats such as `"dd.MM.yyyy hh:mm"`. Queue data keeps its saved timestamps unchanged, so older ISO queue files remain readable when the display format changes.
 

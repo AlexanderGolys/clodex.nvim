@@ -78,7 +78,7 @@ local fs = require("clodex.util.fs")
 ---@field runtime_dir string
 
 ---@class Clodex.Config.KeymapConfig
----@field lhs? string|false
+---@field lhs? string|string[]|false
 ---@field enabled? boolean
 ---@field enable? boolean
 ---@field mode? string|string[]
