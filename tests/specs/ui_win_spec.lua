@@ -71,4 +71,18 @@ describe("clodex.ui.win", function()
 
         assert.are.equal(1, win.opts.zindex)
     end)
+
+    it("reuses an existing named buffer instead of failing on duplicate names", function()
+        local first = ui_win.create_buffer({
+            preset = "workspace",
+            name = "clodex-test-duplicate-name",
+        })
+        local second = ui_win.create_buffer({
+            preset = "workspace",
+            name = "clodex-test-duplicate-name",
+        })
+
+        assert.are.equal(first, second)
+        assert.is_true(vim.api.nvim_buf_is_valid(first))
+    end)
 end)

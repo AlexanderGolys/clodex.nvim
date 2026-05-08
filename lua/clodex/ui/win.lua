@@ -243,10 +243,27 @@ end
 function M.create_buffer(opts)
   opts = opts or {}
   local preset = resolve_named_table(opts.preset or "scratch", BUFFER_PRESETS)
+  local requested_name = type(opts.name) == "string" and vim.trim(opts.name) or ""
+  if requested_name ~= "" then
+    local existing = vim.fn.bufnr(requested_name)
+    if type(existing) == "number" and existing > 0 and vim.api.nvim_buf_is_valid(existing) then
+      apply_buf_options(existing, vim.tbl_deep_extend("force", preset, opts.bo or {}))
+      return existing
+    end
+  end
+
   local buf = vim.api.nvim_create_buf(opts.listed == true, opts.scratch ~= false)
   apply_buf_options(buf, vim.tbl_deep_extend("force", preset, opts.bo or {}))
-  if opts.name and opts.name ~= "" then
-    vim.api.nvim_buf_set_name(buf, opts.name)
+  if requested_name ~= "" then
+    local renamed = pcall(vim.api.nvim_buf_set_name, buf, requested_name)
+    if not renamed then
+      local existing = vim.fn.bufnr(requested_name)
+      if type(existing) == "number" and existing > 0 and vim.api.nvim_buf_is_valid(existing) then
+        pcall(vim.api.nvim_buf_delete, buf, { force = true })
+        apply_buf_options(existing, vim.tbl_deep_extend("force", preset, opts.bo or {}))
+        return existing
+      end
+    end
   end
   return buf
 end
