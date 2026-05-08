@@ -91,6 +91,7 @@ function ComposerLayout:open()
         theme = "prompt_editor",
         bo = { modifiable = true },
     })
+    vim.bo[self.body_buf].filetype = "markdown"
     self:apply_keymaps()
     self:update()
 end

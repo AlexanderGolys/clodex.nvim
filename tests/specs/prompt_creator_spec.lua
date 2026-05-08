@@ -353,6 +353,28 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal("", title)
     end)
 
+    it("uses markdown filetype for the details buffer", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        assert.are.equal("markdown", vim.bo[creator.layout.body_buf].filetype)
+    end)
+
     it("normalizes raw edit prompt drafts into title and details fields", function()
         creator = Creator.open({
             app = {
