@@ -427,6 +427,54 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(vim.api.nvim_win_get_width(creator.preview_win.win) < 28)
     end)
 
+    it("keeps linked context preview beside input forms on medium editor grids", function()
+        local old_columns = vim.o.columns
+        local old_lines = vim.o.lines
+        vim.o.columns = 80
+        vim.o.lines = 28
+
+        local ok, err = pcall(function()
+            creator = Creator.open({
+                app = {
+                    config = {
+                        get = function()
+                            return {
+                                storage = { workspaces_dir = "/tmp" },
+                            }
+                        end,
+                    },
+                },
+                project = {
+                    name = "Demo",
+                    root = "/tmp/demo",
+                },
+                context = {
+                    file_path = "/tmp/demo/a.lua",
+                    relative_path = "a.lua",
+                    project_root = "/tmp/demo",
+                    cursor_row = 3,
+                },
+                initial_kind = "todo",
+                initial_draft = {
+                    title = "Linked context",
+                    link_line = true,
+                },
+                on_submit = function() end,
+            })
+
+            local title_config = vim.api.nvim_win_get_config(creator.layout.title_win.win)
+            local body_config = vim.api.nvim_win_get_config(creator.layout.body_win.win)
+            local preview_config = vim.api.nvim_win_get_config(creator.preview_win.win)
+
+            assert.is_true(title_config.col + title_config.width < preview_config.col)
+            assert.is_true(body_config.col + body_config.width < preview_config.col)
+        end)
+
+        vim.o.columns = old_columns
+        vim.o.lines = old_lines
+        assert.is_true(ok, err)
+    end)
+
     it("renders linked context preview items as two-line blocks with spacer rows", function()
         creator = Creator.open({
             app = {

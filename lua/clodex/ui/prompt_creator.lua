@@ -784,6 +784,9 @@ end
 function Creator:content_width()
     local available_width = self:left_width() - self:project_panel_width() - LAYOUT.creator_panel_gap_cols
     local editor_width = self:editor_size()
+    if self:has_side_panel() and available_width < LAYOUT.content_min_width then
+        return math.max(available_width, LAYOUT.min_window_offset)
+    end
     if editor_width >= LAYOUT.compact_editor_width then
         return math.max(available_width, LAYOUT.content_min_width)
     end
