@@ -40,6 +40,7 @@ local RESET_AFTER_SUBMIT_ACTIONS = {}
 
 local TAB_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-tabs")
 local FOOTER_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-footer")
+local BACKGROUND_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-background")
 local LINKED_CONTEXT_HIGHLIGHT_NS = vim.api.nvim_create_namespace("clodex-prompt-linked-context")
 local PROMPT_EDITOR_NORMAL = "ClodexPromptEditorNormal"
 local PROMPT_FOOTER_NORMAL = "ClodexPromptEditorFooter"
@@ -1387,6 +1388,10 @@ function Creator:render_project_background()
     vim.bo[self.project_bg_buf].modifiable = true
     vim.api.nvim_buf_set_lines(self.project_bg_buf, 0, -1, false, lines)
     vim.bo[self.project_bg_buf].modifiable = false
+    vim.api.nvim_buf_clear_namespace(self.project_bg_buf, BACKGROUND_NS, 0, -1)
+    for row = 0, rect.height - 1 do
+        Extmark.line(row, PROMPT_BACKGROUND_OVERLAY, 100):place(self.project_bg_buf, BACKGROUND_NS)
+    end
 end
 
 function Creator:refresh_project_background()

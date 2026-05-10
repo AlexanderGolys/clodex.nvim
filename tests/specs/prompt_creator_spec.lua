@@ -20,6 +20,16 @@ local function extmarks_with_group(buf, group)
     return marks
 end
 
+local function line_extmarks_with_group(buf, group)
+    local marks = {}
+    for _, mark in ipairs(vim.api.nvim_buf_get_extmarks(buf, -1, 0, -1, { details = true })) do
+        if mark[4].line_hl_group == group then
+            marks[#marks + 1] = mark
+        end
+    end
+    return marks
+end
+
 local function trigger_buffer_mapping(buf, lhs, mode)
     local map = vim.fn.maparg(lhs, mode or "n", false, true)
     assert.is_table(map)
@@ -2764,6 +2774,7 @@ describe("clodex.ui.prompt_creator", function()
             string.rep(" ", background_config.width),
             vim.api.nvim_buf_get_lines(creator.project_bg_buf, 0, 1, false)[1]
         )
+        assert.are.equal(background_config.height, #line_extmarks_with_group(creator.project_bg_buf, "ClodexPromptBackgroundOverlay"))
         assert.are.equal(left - 1, background_config.col)
         assert.are.equal(top - 1, background_config.row)
         assert.are.equal(math.min((right - left) + 3, vim.o.columns), background_config.width)
