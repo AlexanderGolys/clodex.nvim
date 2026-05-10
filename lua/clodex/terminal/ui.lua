@@ -297,6 +297,11 @@ function M.refresh_all_chrome()
     for _, win in ipairs(vim.api.nvim_list_wins()) do
         M.apply_window(win)
     end
+    vim.schedule(function()
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+            M.apply_window(win)
+        end
+    end)
 end
 
 return M

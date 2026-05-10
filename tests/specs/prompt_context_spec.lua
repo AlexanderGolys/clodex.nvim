@@ -48,6 +48,36 @@ describe("clodex.prompt.context", function()
         assert.are.equal("Keep &selection and &filex as written", expanded)
     end)
 
+    it("flattens multiline diagnostic messages during expansion", function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(buf, "/Users/dev/project/src/main.lua")
+        local diagnostic_ns = vim.api.nvim_create_namespace("clodex-prompt-context-diag-test")
+        vim.diagnostic.set(diagnostic_ns, buf, {
+            {
+                lnum = 2,
+                col = 4,
+                message = "context failure\nwith extra detail",
+                severity = vim.diagnostic.severity.ERROR,
+            },
+        })
+
+        local expanded = PromptContext.expand_text("&diagnostic", {
+            buf = buf,
+            file_path = "/Users/dev/project/src/main.lua",
+            project_root = "/Users/dev/project",
+            relative_path = "src/main.lua",
+            cursor_row = 3,
+        })
+
+        assert.are.equal(
+            '"context failure with extra detail" [ERROR]: file @src/main.lua : line 3 ([Inserted context from &diagnostic])',
+            expanded
+        )
+
+        vim.diagnostic.reset(diagnostic_ns, buf)
+        vim.api.nvim_buf_delete(buf, { force = true })
+    end)
+
     it("filters completion tokens to only currently available context", function()
         local context = {
             buf = vim.api.nvim_create_buf(false, true),

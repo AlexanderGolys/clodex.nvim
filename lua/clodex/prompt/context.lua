@@ -417,6 +417,12 @@ local function severity_name(value)
     return map[value] or "UNKNOWN"
 end
 
+---@param message string?
+---@return string
+local function normalize_diagnostic_message(message)
+    return vim.trim(tostring(message or "")):gsub("%s+", " ")
+end
+
 ---@param diags vim.Diagnostic[]
 ---@param fallback_path string
 ---@param root? string
@@ -432,7 +438,7 @@ local function format_diagnostics(diags, fallback_path, root)
         local path = diag.bufnr and vim.api.nvim_buf_get_name(diag.bufnr) or fallback_path
         path = path ~= "" and fs.normalize(path) or fallback_path
         lines[#lines + 1] = ('"%s" [%s]: file @%s : line %d'):format(
-            diag.message,
+            normalize_diagnostic_message(diag.message),
             severity_name(diag.severity),
             relative_path(path, root),
             (diag.lnum or 0) + 1

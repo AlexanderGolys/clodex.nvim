@@ -549,8 +549,13 @@ function Manager:open_window(session, parent_win, overrides)
         wo = wo,
         on_win = function()
             if use_clodex_chrome then
-                TerminalUi.statusline()
-                TerminalUi.winbar()
+                local win = vim.api.nvim_get_current_win()
+                TerminalUi.apply_window(win)
+                vim.schedule(function()
+                    if vim.api.nvim_win_is_valid(win) then
+                        TerminalUi.apply_window(win)
+                    end
+                end)
             end
             if self.config.terminal.start_insert then
                 vim.cmd.startinsert()
