@@ -532,7 +532,6 @@ ClodexTerminalStatusline = {
 ClodexTerminalStatuslineActive = {
       fg = { from = { "Normal", "Title" } },
       bg = { from = { "StatusLine", "Normal", "NormalFloat" }, attr = "bg" },
-      bold = true,
     },
 -- &&&ClodexConfirmButton&&&Lorem Ipsum&&&
 ClodexConfirmButton = {

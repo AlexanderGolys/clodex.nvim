@@ -330,6 +330,7 @@ describe("clodex.config", function()
 
             assert.are.equal(0x445566, active.bg)
             assert.are.equal(0x445566, inactive.bg)
+            assert.is_nil(active.bold)
         end)
 
         it("hides queue panel cursor highlights against their panel backgrounds", function()

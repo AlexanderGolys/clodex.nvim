@@ -720,7 +720,7 @@ describe("clodex.terminal.session", function()
 
         assert.are.equal(0x445566, active.bg)
         assert.are.equal(0xDDEEFF, active.fg)
-        assert.is_true(active.bold)
+        assert.is_nil(active.bold)
         assert.are.equal(0x445566, inactive.bg)
         assert.are.equal(0xDDEEFF, inactive.fg)
         assert.are.equal(0x445566, winbar.bg)

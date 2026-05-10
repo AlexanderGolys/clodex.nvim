@@ -97,7 +97,7 @@ local function ensure_terminal_highlights(win, session)
     local active = STATUSLINE_HL_PREFIX .. "Active_" .. suffix
     local inactive = STATUSLINE_HL_PREFIX .. "Inactive_" .. suffix
     vim.api.nvim_set_hl(0, inactive, { fg = fg, bg = bg })
-    vim.api.nvim_set_hl(0, active, { fg = fg, bg = bg, bold = true })
+    vim.api.nvim_set_hl(0, active, { fg = fg, bg = bg })
 
     local title_suffix = color_key(bg) .. "_" .. color_key(title_fg)
     local title_active = TITLE_HL_PREFIX .. "Active_" .. title_suffix
