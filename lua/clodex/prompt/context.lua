@@ -109,6 +109,8 @@ local LINKED_CONTEXT_TOKENS = {
     ["&file"] = "file",
     ["&line"] = "line",
     ["&selection"] = "selection",
+    ["&diagnostic"] = "line",
+    ["&buff_diagnostics"] = "file",
 }
 
 ---@param context Clodex.PromptContext.Capture?
@@ -210,12 +212,13 @@ local function token_available(token, context)
 end
 
 ---@param text string?
----@return table<string, boolean>
+---@return table<string, string>
 local function referenced_tokens(text)
-    local tokens = {} ---@type table<string, boolean>
+    local tokens = {} ---@type table<string, string>
     for token in tostring(text or ""):gmatch("&[%a_][%w_]*") do
-        if LINKED_CONTEXT_TOKENS[token] then
-            tokens[token] = true
+        local kind = LINKED_CONTEXT_TOKENS[token]
+        if kind and tokens[kind] == nil then
+            tokens[kind] = token
         end
     end
     return tokens
@@ -676,14 +679,14 @@ function M.linked_context(context, opts)
     local include_file = opts.include_current or opts.include_file
     local include_line = opts.include_current or opts.include_line
     local include_selection = opts.include_current or opts.include_selection
-    if tokens["&file"] or include_file then
-        append_context_item(items, file_context(context, tokens["&file"] and "&file" or nil))
+    if tokens.file or include_file then
+        append_context_item(items, file_context(context, tokens.file))
     end
-    if tokens["&line"] or include_line then
-        append_context_item(items, line_context(context, tokens["&line"] and "&line" or nil))
+    if tokens.line or include_line then
+        append_context_item(items, line_context(context, tokens.line))
     end
-    if tokens["&selection"] or include_selection then
-        append_context_item(items, selection_context(context, tokens["&selection"] and "&selection" or nil))
+    if tokens.selection or include_selection then
+        append_context_item(items, selection_context(context, tokens.selection))
     end
     return items
 end

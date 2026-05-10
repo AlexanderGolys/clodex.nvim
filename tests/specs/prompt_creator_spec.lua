@@ -513,6 +513,44 @@ describe("clodex.ui.prompt_creator", function()
         }, vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false))
     end)
 
+    it("turns diagnostic draft tokens into linked context", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                file_path = "/tmp/demo/a.lua",
+                relative_path = "a.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 3,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Fix diagnostics",
+                details = "&buff_diagnostics\n\n&diagnostic",
+            },
+            on_submit = function() end,
+        })
+
+        assert.is_true(creator.state.link_file)
+        assert.is_true(creator.state.link_line)
+        assert.are.equal(2, #creator.state.linked_context)
+        assert.are.equal("file", creator.state.linked_context[1].kind)
+        assert.are.equal("&buff_diagnostics", creator.state.linked_context[1].token)
+        assert.are.equal("line", creator.state.linked_context[2].kind)
+        assert.are.equal("&diagnostic", creator.state.linked_context[2].token)
+    end)
+
     it("normalizes raw edit prompt drafts into title and details fields", function()
         creator = Creator.open({
             app = {

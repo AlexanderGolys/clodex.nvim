@@ -151,6 +151,27 @@ local function linked_context_for_capture(context)
 end
 
 ---@param context? Clodex.PromptContext.Capture
+---@param draft table
+---@return Clodex.PromptContext.Linked[]
+local function linked_context_for_draft(context, draft)
+    if draft.context or draft.linked_context then
+        return draft.context or draft.linked_context
+    end
+
+    local linked = PromptContext.linked_context(context, {
+        text = table.concat({
+            draft.title or "",
+            draft.details or "",
+        }, "\n"),
+        include_selection = true,
+    })
+    if #linked > 0 then
+        return linked
+    end
+    return linked_context_for_capture(context)
+end
+
+---@param context? Clodex.PromptContext.Capture
 ---@return boolean
 local function context_from_project_file(context)
     if not context or not context.file_path or not context.project_root then
@@ -463,7 +484,11 @@ function Creator:sync_state_from_draft()
     end
     self.state.project = self.project
     self.state.context = self.context
-    local captured = draft.context or draft.linked_context or linked_context_for_capture(self.context)
+    local draft_text = table.concat({
+        draft.title or "",
+        draft.details or "",
+    }, "\n")
+    local captured = linked_context_for_draft(self.context, draft)
     local can_link = context_from_project_file(self.context)
     local draft_link_file = type(draft.link_file) == "boolean" and draft.link_file or linked_context_has_kind(captured, "file")
     local draft_link_line = type(draft.link_line) == "boolean" and draft.link_line or linked_context_has_kind(captured, "line")
@@ -474,6 +499,7 @@ function Creator:sync_state_from_draft()
     self.state.link_line = can_link and draft_link_line or false
     self.state.link_selection = can_link and context_has_selection(self.context) and draft_link_selection or false
     self.state.linked_context = PromptContext.linked_context(self.context, {
+        text = not draft.context and not draft.linked_context and draft_text or nil,
         include_file = self.state.link_file,
         include_line = self.state.link_line,
         include_selection = self.state.link_selection,

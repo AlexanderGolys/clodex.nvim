@@ -148,6 +148,32 @@ describe("clodex.prompt.context", function()
         assert.are.equal("Selection @src/main.lua:7-9", PromptContext.linked_context_summary(linked[2]))
     end)
 
+    it("builds durable linked context for diagnostic references", function()
+        local context = {
+            relative_path = "src/main.lua",
+            file_path = "/Users/dev/project/src/main.lua",
+            project_root = "/Users/dev/project",
+            cursor_row = 9,
+        }
+
+        local line_linked = PromptContext.linked_context(context, {
+            text = "Fix this diagnostic\n\n&diagnostic",
+        })
+        local file_linked = PromptContext.linked_context(context, {
+            text = "Fix buffer diagnostics\n\n&buff_diagnostics",
+        })
+
+        assert.are.equal(1, #line_linked)
+        assert.are.equal("line", line_linked[1].kind)
+        assert.are.equal("&diagnostic", line_linked[1].token)
+        assert.are.equal(9, line_linked[1].line)
+
+        assert.are.equal(1, #file_linked)
+        assert.are.equal("file", file_linked[1].kind)
+        assert.are.equal("&buff_diagnostics", file_linked[1].token)
+        assert.are.equal("src/main.lua", file_linked[1].relative_path)
+    end)
+
     it("can attach the captured file, line, and selection without explicit tokens", function()
         local linked = PromptContext.linked_context({
             relative_path = "src/main.lua",
