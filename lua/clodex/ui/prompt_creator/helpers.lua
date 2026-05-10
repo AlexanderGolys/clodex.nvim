@@ -304,9 +304,42 @@ end
 
 -- Footer render
 ---@param rows Clodex.PromptCreator.FooterItem[][]
+---@param max_width? integer
+---@return Clodex.PromptCreator.FooterItem[][]
+function Helpers.wrap_footer_rows(rows, max_width)
+    if not max_width or max_width <= 0 then
+        return rows
+    end
+
+    local wrapped = {} ---@type Clodex.PromptCreator.FooterItem[][]
+    for _, row in ipairs(rows) do
+        local current = {} ---@type Clodex.PromptCreator.FooterItem[]
+        local current_width = 0
+        for _, item in ipairs(row) do
+            local item_width = vim.fn.strdisplaywidth(Helpers.footer_item_text(item))
+            local next_width = #current == 0 and item_width or current_width + 3 + item_width
+            if #current > 0 and next_width > max_width then
+                wrapped[#wrapped + 1] = current
+                current = { item }
+                current_width = item_width
+            else
+                current[#current + 1] = item
+                current_width = next_width
+            end
+        end
+        if #current > 0 then
+            wrapped[#wrapped + 1] = current
+        end
+    end
+    return wrapped
+end
+
+---@param rows Clodex.PromptCreator.FooterItem[][]
 ---@param key_hl string
+---@param max_width? integer
 ---@return string[], Clodex.Extmark[]
-function Helpers.render_footer_rows(rows, key_hl)
+function Helpers.render_footer_rows(rows, key_hl, max_width)
+    rows = Helpers.wrap_footer_rows(rows, max_width)
     local lines = {}
     local marks = {} ---@type Clodex.Extmark[]
     for row_index, row in ipairs(rows) do

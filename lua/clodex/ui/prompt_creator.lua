@@ -217,6 +217,30 @@ local function toggle_action_label(enabled, name)
     return ("%s link %s"):format(name, enabled and "off" or "on")
 end
 
+---@param insert_mode boolean
+---@return Clodex.PromptCreator.FooterItem[][]
+function Creator:footer_rows(insert_mode)
+    local has_variants = #self:variants() > 0
+    local has_multiple_projects = #self.projects > 1
+    local can_link = context_from_project_file(self.state.context)
+    local can_link_selection = can_link and context_has_selection(self.state.context)
+    local link_actions = {}
+    if insert_mode then
+        link_actions[#link_actions + 1] = Helpers.footer_item("C-f", can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a")
+        link_actions[#link_actions + 1] = Helpers.footer_item("C-l", can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a")
+        if can_link_selection then
+            link_actions[#link_actions + 1] = Helpers.footer_item("C-x", toggle_action_label(self.state.link_selection, "selection"))
+        end
+    else
+        link_actions[#link_actions + 1] = Helpers.footer_item("F", can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a")
+        link_actions[#link_actions + 1] = Helpers.footer_item("L", can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a")
+        if can_link_selection then
+            link_actions[#link_actions + 1] = Helpers.footer_item("X", toggle_action_label(self.state.link_selection, "selection"))
+        end
+    end
+    return Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, link_actions)
+end
+
 ---@param item Clodex.PromptContext.Linked
 ---@return string
 local function linked_context_kind_label(item)
@@ -744,7 +768,7 @@ function Creator:project_background_rect()
     local top = self:kind_row()
     local bottom = math.max(
         self:project_row() + self:project_height() + LAYOUT.min_window_offset,
-        self:footer_row() + LAYOUT.tab_row_height,
+        self:footer_row() + self:footer_height(),
         self:body_row() + self:body_height() + LAYOUT.min_window_offset
     )
 
@@ -892,12 +916,19 @@ end
 
 ---@return integer
 function Creator:footer_row()
-    return self:top_row() + self:total_height()
+    return self:top_row() + self:total_height() - math.max(self:footer_height() - 2, 0)
 end
 
 ---@return integer
 function Creator:body_height()
     return math.max(self:footer_row() - self:body_row() - LAYOUT.footer_gap_rows, LAYOUT.body_min_height)
+end
+
+---@return integer
+function Creator:footer_height()
+    local insert_mode = self:in_insert_mode()
+    local rows = self:footer_rows(insert_mode)
+    return math.max(#Helpers.wrap_footer_rows(rows, self:content_width()), 1)
 end
 
 ---@return integer
@@ -1524,29 +1555,12 @@ end
 ---@param insert_mode? boolean
 function Creator:render_footer(insert_mode)
     insert_mode = insert_mode == nil and self:in_insert_mode() or insert_mode
-    local has_variants = #self:variants() > 0
-    local has_multiple_projects = #self.projects > 1
-    local can_link = context_from_project_file(self.state.context)
-    local can_link_selection = can_link and context_has_selection(self.state.context)
-    local link_actions = {}
-    if insert_mode then
-        link_actions[#link_actions + 1] = Helpers.footer_item("C-f", can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a")
-        link_actions[#link_actions + 1] = Helpers.footer_item("C-l", can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a")
-        if can_link_selection then
-            link_actions[#link_actions + 1] = Helpers.footer_item("C-x", toggle_action_label(self.state.link_selection, "selection"))
-        end
-    else
-        link_actions[#link_actions + 1] = Helpers.footer_item("F", can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a")
-        link_actions[#link_actions + 1] = Helpers.footer_item("L", can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a")
-        if can_link_selection then
-            link_actions[#link_actions + 1] = Helpers.footer_item("X", toggle_action_label(self.state.link_selection, "selection"))
-        end
-    end
     local key_hl = Prompt.title_group(self.state.kind)
     local lines, marks =
         Helpers.render_footer_rows(
-            Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, link_actions),
-            key_hl
+            self:footer_rows(insert_mode),
+            key_hl,
+            self:content_width()
         )
 
     vim.bo[self.footer_buf].modifiable = true
@@ -1712,7 +1726,9 @@ function Creator:ensure_shell_windows()
         width = function()
             return self:content_width()
         end,
-        height = 2,
+        height = function()
+            return self:footer_height()
+        end,
         row = function()
             return self:footer_row()
         end,

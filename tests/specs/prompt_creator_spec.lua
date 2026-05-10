@@ -1702,6 +1702,63 @@ describe("clodex.ui.prompt_creator", function()
         )
     end)
 
+    it("wraps creator footer actions and grows the footer window", function()
+        local old_columns = vim.o.columns
+        local old_lines = vim.o.lines
+        vim.o.columns = 86
+        vim.o.lines = 30
+
+        local ok, err = pcall(function()
+            creator = Creator.open({
+                app = {
+                    config = {
+                        get = function()
+                            return {
+                                storage = { workspaces_dir = "/tmp" },
+                            }
+                        end,
+                    },
+                },
+                project = {
+                    name = "Demo",
+                    root = "/tmp/demo",
+                },
+                projects = {
+                    { name = "Demo", root = "/tmp/demo" },
+                    { name = "Other", root = "/tmp/other" },
+                },
+                context = {
+                    file_path = "/tmp/demo/a.lua",
+                    relative_path = "a.lua",
+                    project_root = "/tmp/demo",
+                    cursor_row = 3,
+                    selection_start_row = 2,
+                    selection_end_row = 4,
+                    selection_text = "local value = call()",
+                },
+                initial_kind = "bug",
+                initial_draft = {
+                    title = "Footer wrap",
+                    link_file = true,
+                    link_line = true,
+                    link_selection = true,
+                },
+                on_submit = function() end,
+            })
+
+            local lines = vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false)
+            assert.is_true(#lines > 2)
+            assert.are.equal(#lines, vim.api.nvim_win_get_height(creator.footer_win.win))
+            for _, line in ipairs(lines) do
+                assert.is_true(vim.fn.strdisplaywidth(line) <= creator:content_width())
+            end
+        end)
+
+        vim.o.columns = old_columns
+        vim.o.lines = old_lines
+        assert.is_true(ok, err)
+    end)
+
     it("keeps insert-mode left and right arrows available for text editing", function()
         creator = Creator.open({
             app = {
@@ -2710,12 +2767,15 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(left - 1, background_config.col)
         assert.are.equal(top - 1, background_config.row)
         assert.are.equal(math.min((right - left) + 3, vim.o.columns), background_config.width)
-        assert.are.equal(math.min((bottom - top) + 3, vim.o.lines), background_config.height)
+        assert.are.equal(
+            math.min((bottom - top) + 3 + math.max(creator:footer_height() - 2, 0), vim.o.lines),
+            background_config.height
+        )
         assert.are.equal(70, background_config.zindex)
         assert.are.equal(71, picker_config.zindex)
         assert.are.equal(71, footer_config.zindex)
         assert.are.equal(title_config.row, picker_config.row)
-        assert.are.equal(footer_config.row + footer_config.height + 1, picker_config.row + picker_config.height + 1)
+        assert.is_true(footer_config.row > body_config.row)
         assert.is_true(background_config.row < title_config.row)
         assert.is_true(background_config.col < picker_config.col)
         assert.is_true(background_config.col < title_config.col)

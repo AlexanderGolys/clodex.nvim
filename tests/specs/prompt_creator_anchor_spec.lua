@@ -130,9 +130,6 @@ describe("clodex.ui.prompt_creator editor anchoring", function()
         vim.cmd.vsplit()
         vim.cmd("vertical resize 60")
 
-        local anchor_win = vim.api.nvim_get_current_win()
-        local anchor_pos = vim.api.nvim_win_get_position(anchor_win)
-        local anchor_width = vim.api.nvim_win_get_width(anchor_win)
         local editor_width = vim.o.columns
         local editor_height = vim.o.lines
 
@@ -163,8 +160,11 @@ describe("clodex.ui.prompt_creator editor anchoring", function()
 
         assert.are.equal(editor_width, creator:editor_size())
         assert.are.equal(editor_height, select(2, creator:editor_size()))
-        assert.is_true(title_config.col < anchor_pos[2] or title_config.col + title_config.width > anchor_pos[2] + anchor_width)
-        assert.is_true(body_config.col < anchor_pos[2] or body_config.col + body_config.width > anchor_pos[2] + anchor_width)
-        assert.is_true(footer_config.col < anchor_pos[2] or footer_config.col + footer_config.width > anchor_pos[2] + anchor_width)
+        assert.are.equal(creator:content_col(), title_config.col)
+        assert.are.equal(creator:content_col(), body_config.col)
+        assert.are.equal(creator:content_width(), title_config.width)
+        assert.are.equal(creator:content_width(), body_config.width)
+        assert.are.equal(body_config.col, footer_config.col)
+        assert.are.equal(body_config.width, footer_config.width)
     end)
 end)
