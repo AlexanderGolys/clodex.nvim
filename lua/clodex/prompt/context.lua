@@ -43,6 +43,11 @@ local unpack_values = require("clodex.util").unpack_values
 ---@field text? string
 ---@field summary? string
 
+---@class Clodex.PromptContext.PreviewItem
+---@field token string
+---@field label string
+---@field text string
+
 --- Defines the Clodex.PromptContext.QuickPrompt type for this module.
 --- This annotation documents structured state so modules can pass data with consistent expectations.
 ---@class Clodex.PromptContext.QuickPrompt
@@ -97,6 +102,21 @@ local TOKEN_SPECS = {
         token = "&all_diagnostics",
         label = "&all_diagnostics",
         detail = "Insert every diagnostic from the current project.",
+    },
+}
+
+local PREVIEW_TOKEN_SPECS = {
+    {
+        token = "&diagnostic",
+        label = "Diagnostics",
+    },
+    {
+        token = "&buff_diagnostics",
+        label = "Buffer diagnostics",
+    },
+    {
+        token = "&all_diagnostics",
+        label = "Project diagnostics",
     },
 }
 
@@ -220,6 +240,16 @@ local function referenced_tokens(text)
         if kind and tokens[kind] == nil then
             tokens[kind] = token
         end
+    end
+    return tokens
+end
+
+---@param text string?
+---@return table<string, boolean>
+local function referenced_preview_tokens(text)
+    local tokens = {} ---@type table<string, boolean>
+    for token in tostring(text or ""):gmatch("&[%a_][%w_]*") do
+        tokens[token] = true
     end
     return tokens
 end
@@ -655,6 +685,32 @@ function M.expand_text(text, context)
         local replacement = M.expand_token_with_note(token, context)
         return replacement or token
     end))
+end
+
+--- Returns resolved preview text for context tokens that benefit from a richer editor-side preview.
+---@param context Clodex.PromptContext.Capture?
+---@param text string?
+---@return Clodex.PromptContext.PreviewItem[]
+function M.preview_items(context, text)
+    if not context then
+        return {}
+    end
+
+    local tokens = referenced_preview_tokens(text)
+    local items = {} ---@type Clodex.PromptContext.PreviewItem[]
+    for _, spec in ipairs(PREVIEW_TOKEN_SPECS) do
+        if tokens[spec.token] then
+            local resolved = M.expand_token(spec.token, context)
+            if type(resolved) == "string" and vim.trim(resolved) ~= "" then
+                items[#items + 1] = {
+                    token = spec.token,
+                    label = spec.label,
+                    text = resolved,
+                }
+            end
+        end
+    end
+    return items
 end
 
 ---@class Clodex.PromptContext.LinkedOpts

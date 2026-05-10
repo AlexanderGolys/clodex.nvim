@@ -174,6 +174,79 @@ describe("clodex.prompt.context", function()
         assert.are.equal("src/main.lua", file_linked[1].relative_path)
     end)
 
+    it("previews diagnostic tokens as clean resolved text", function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(buf, "/Users/dev/project/src/main.lua")
+        local diagnostic_ns = vim.api.nvim_create_namespace("clodex-prompt-context-preview-test")
+        vim.diagnostic.set(diagnostic_ns, buf, {
+            {
+                lnum = 8,
+                col = 4,
+                message = "preview failure",
+                severity = vim.diagnostic.severity.WARN,
+            },
+        })
+
+        local items = PromptContext.preview_items({
+            buf = buf,
+            file_path = "/Users/dev/project/src/main.lua",
+            project_root = "/Users/dev/project",
+            relative_path = "src/main.lua",
+            cursor_row = 9,
+        }, "Fix it\n\n&diagnostic")
+
+        assert.are.equal(1, #items)
+        assert.are.same({
+            token = "&diagnostic",
+            label = "Diagnostics",
+            text = '"preview failure" [WARN]: file @src/main.lua : line 9',
+        }, items[1])
+        assert.is_nil(items[1].text:find("Inserted context", 1, true))
+
+        vim.diagnostic.reset(diagnostic_ns, buf)
+        vim.api.nvim_buf_delete(buf, { force = true })
+    end)
+
+    it("does not preview file and line tokens as resolved text", function()
+        local items = PromptContext.preview_items({
+            relative_path = "src/main.lua",
+            file_path = "/Users/dev/project/src/main.lua",
+            project_root = "/Users/dev/project",
+            cursor_row = 9,
+        }, "Use &file and &line")
+
+        assert.are.same({}, items)
+    end)
+
+    it("previews multiple diagnostic tokens in diagnostic order", function()
+        local buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(buf, "/Users/dev/project/src/main.lua")
+        local diagnostic_ns = vim.api.nvim_create_namespace("clodex-prompt-context-preview-order-test")
+        vim.diagnostic.set(diagnostic_ns, buf, {
+            {
+                lnum = 2,
+                col = 4,
+                message = "line issue",
+                severity = vim.diagnostic.severity.ERROR,
+            },
+        })
+
+        local items = PromptContext.preview_items({
+            buf = buf,
+            file_path = "/Users/dev/project/src/main.lua",
+            project_root = "/Users/dev/project",
+            relative_path = "src/main.lua",
+            cursor_row = 3,
+        }, "&buff_diagnostics\n&diagnostic")
+
+        assert.are.equal(2, #items)
+        assert.are.equal("&diagnostic", items[1].token)
+        assert.are.equal("&buff_diagnostics", items[2].token)
+
+        vim.diagnostic.reset(diagnostic_ns, buf)
+        vim.api.nvim_buf_delete(buf, { force = true })
+    end)
+
     it("can attach the captured file, line, and selection without explicit tokens", function()
         local linked = PromptContext.linked_context({
             relative_path = "src/main.lua",

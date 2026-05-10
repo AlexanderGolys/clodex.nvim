@@ -587,6 +587,277 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(changedtick, vim.api.nvim_buf_get_changedtick(creator.preview_buf))
     end)
 
+    it("renders diagnostic preview text with compact linked line context", function()
+        local diagnostic_ns = vim.api.nvim_create_namespace("clodex-prompt-creator-preview-line-test")
+        local source_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(source_buf, "/tmp/demo/lua/demo.lua")
+        vim.diagnostic.set(diagnostic_ns, source_buf, {
+            {
+                lnum = 6,
+                col = 0,
+                message = "context failure",
+                severity = vim.diagnostic.severity.ERROR,
+            },
+        })
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                buf = source_buf,
+                file_path = "/tmp/demo/lua/demo.lua",
+                relative_path = "lua/demo.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 7,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Fix diagnostics",
+                details = "&line\n\n&diagnostic",
+            },
+            on_submit = function() end,
+        })
+
+        assert.are.same({
+            "Diagnostics",
+            '"context failure" [ERROR]: file @lua/demo.lua : line 7',
+            "",
+            "Line",
+            "lua/demo.lua:7  &line",
+            "",
+        }, vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false))
+
+        vim.diagnostic.reset(diagnostic_ns, source_buf)
+        vim.api.nvim_buf_delete(source_buf, { force = true })
+    end)
+
+    it("renders multiple diagnostic preview sections in one wrapped preview buffer", function()
+        local diagnostic_ns = vim.api.nvim_create_namespace("clodex-prompt-creator-preview-multi-test")
+        local source_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(source_buf, "/tmp/demo/lua/demo.lua")
+        vim.diagnostic.set(diagnostic_ns, source_buf, {
+            {
+                lnum = 2,
+                col = 0,
+                message = "line failure",
+                severity = vim.diagnostic.severity.ERROR,
+            },
+        })
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                buf = source_buf,
+                file_path = "/tmp/demo/lua/demo.lua",
+                relative_path = "lua/demo.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 3,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Fix diagnostics",
+                details = "&buff_diagnostics\n\n&diagnostic",
+            },
+            on_submit = function() end,
+        })
+
+        local lines = vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false)
+        assert.are.equal("Diagnostics", lines[1])
+        assert.are.equal('"line failure" [ERROR]: file @lua/demo.lua : line 3', lines[2])
+        assert.are.equal("Buffer diagnostics", lines[4])
+        assert.are.equal('"line failure" [ERROR]: file @lua/demo.lua : line 3', lines[5])
+        assert.are.equal("wrapped_text", creator.preview_block.win_opts.view)
+
+        vim.diagnostic.reset(diagnostic_ns, source_buf)
+        vim.api.nvim_buf_delete(source_buf, { force = true })
+    end)
+
+    it("keeps image fallback and diagnostic context in the same preview pane", function()
+        local diagnostic_ns = vim.api.nvim_create_namespace("clodex-prompt-creator-preview-image-test")
+        local source_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(source_buf, "/tmp/demo/lua/demo.lua")
+        vim.diagnostic.set(diagnostic_ns, source_buf, {
+            {
+                lnum = 0,
+                col = 0,
+                message = "image context failure",
+                severity = vim.diagnostic.severity.WARN,
+            },
+        })
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                buf = source_buf,
+                file_path = "/tmp/demo/lua/demo.lua",
+                relative_path = "lua/demo.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 1,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Fix image",
+                details = "&diagnostic",
+                image_path = "/tmp/demo/clipboard.png",
+            },
+            on_submit = function() end,
+        })
+
+        local preview = table.concat(vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false), "\n")
+        assert.matches("# Clipboard image", preview)
+        assert.matches("/tmp/demo/clipboard%.png", preview)
+        assert.matches("Diagnostics", preview)
+        assert.matches("image context failure", preview)
+
+        vim.diagnostic.reset(diagnostic_ns, source_buf)
+        vim.api.nvim_buf_delete(source_buf, { force = true })
+    end)
+
+    it("keeps long resolved context in the scrollable wrapped preview window", function()
+        local old_lines = vim.o.lines
+        vim.o.lines = 28
+        local diagnostic_ns = vim.api.nvim_create_namespace("clodex-prompt-creator-preview-long-test")
+        local source_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(source_buf, "/tmp/demo/lua/demo.lua")
+        local diagnostics = {}
+        for idx = 1, 30 do
+            diagnostics[#diagnostics + 1] = {
+                lnum = idx - 1,
+                col = 0,
+                message = ("long context %02d"):format(idx),
+                severity = vim.diagnostic.severity.INFO,
+            }
+        end
+        vim.diagnostic.set(diagnostic_ns, source_buf, diagnostics)
+
+        local ok, err = pcall(function()
+            creator = Creator.open({
+                app = {
+                    config = {
+                        get = function()
+                            return {
+                                storage = { workspaces_dir = "/tmp" },
+                            }
+                        end,
+                    },
+                },
+                project = {
+                    name = "Demo",
+                    root = "/tmp/demo",
+                },
+                context = {
+                    buf = source_buf,
+                    file_path = "/tmp/demo/lua/demo.lua",
+                    relative_path = "lua/demo.lua",
+                    project_root = "/tmp/demo",
+                    cursor_row = 1,
+                },
+                initial_kind = "todo",
+                initial_draft = {
+                    title = "Fix buffer",
+                    details = "&buff_diagnostics",
+                },
+                on_submit = function() end,
+            })
+
+            local line_count = vim.api.nvim_buf_line_count(creator.preview_buf)
+            local win_height = vim.api.nvim_win_get_height(creator.preview_win.win)
+            assert.is_true(line_count > win_height)
+            assert.are.equal("wrapped_text", creator.preview_block.win_opts.view)
+        end)
+
+        vim.o.lines = old_lines
+        vim.diagnostic.reset(diagnostic_ns, source_buf)
+        vim.api.nvim_buf_delete(source_buf, { force = true })
+        assert.is_true(ok, err)
+    end)
+
+    it("does not rewrite unchanged resolved context previews", function()
+        local diagnostic_ns = vim.api.nvim_create_namespace("clodex-prompt-creator-preview-stable-test")
+        local source_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(source_buf, "/tmp/demo/lua/demo.lua")
+        vim.diagnostic.set(diagnostic_ns, source_buf, {
+            {
+                lnum = 0,
+                col = 0,
+                message = "stable context",
+                severity = vim.diagnostic.severity.HINT,
+            },
+        })
+
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                buf = source_buf,
+                file_path = "/tmp/demo/lua/demo.lua",
+                relative_path = "lua/demo.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 1,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Fix stable",
+                details = "&diagnostic",
+            },
+            on_submit = function() end,
+        })
+
+        local changedtick = vim.api.nvim_buf_get_changedtick(creator.preview_buf)
+        creator:render_preview()
+
+        assert.are.equal(changedtick, vim.api.nvim_buf_get_changedtick(creator.preview_buf))
+
+        vim.diagnostic.reset(diagnostic_ns, source_buf)
+        vim.api.nvim_buf_delete(source_buf, { force = true })
+    end)
+
     it("normalizes raw edit prompt drafts into title and details fields", function()
         creator = Creator.open({
             app = {

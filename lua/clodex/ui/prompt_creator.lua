@@ -265,16 +265,6 @@ local function linked_context_preview_lines(context_items)
     return lines
 end
 
----@param kind string
----@param lines string[]
----@return string
-local function linked_context_preview_signature(kind, lines)
-    return table.concat({
-        kind,
-        table.concat(lines, "\n"),
-    }, "\n\n")
-end
-
 ---@param draft table?
 ---@return table?
 local function normalize_initial_draft(draft)
@@ -299,6 +289,13 @@ local function normalize_initial_draft(draft)
     end
     draft.prompt = nil
     return draft
+end
+
+---@param lines string[]
+local function append_blank(lines)
+    if #lines > 0 and lines[#lines] ~= "" then
+        lines[#lines + 1] = ""
+    end
 end
 
 -- New creator
@@ -618,6 +615,11 @@ function Creator:attach_prompt_context(buf)
         buffer = buf,
         callback = function()
             self:refresh_prompt_context(buf)
+            vim.schedule(function()
+                if not self.is_closing then
+                    self:render_preview()
+                end
+            end)
             if vim.api.nvim_get_current_buf() == buf and vim.api.nvim_get_mode().mode:sub(1, 1) == "i" then
                 self:maybe_trigger_prompt_context_completion(buf)
             end
@@ -766,7 +768,9 @@ end
 
 ---@return boolean
 function Creator:has_side_panel()
-    return self.state.image_path ~= nil or PromptContext.has_linked_context(self.state.linked_context)
+    return self.state.image_path ~= nil
+        or PromptContext.has_linked_context(self.state.linked_context)
+        or #self:context_preview_items() > 0
 end
 
 ---@return integer
@@ -784,7 +788,8 @@ function Creator:preview_width()
         LAYOUT.preview_min_width,
         math.max(LAYOUT.preview_min_width, math.min(LAYOUT.preview_max_width, max_preview_width))
     )
-    if self.state.image_path ~= nil or not PromptContext.has_linked_context(self.state.linked_context) then
+    local has_resolved_context = #self:context_preview_items() > 0
+    if self.state.image_path ~= nil or has_resolved_context or not PromptContext.has_linked_context(self.state.linked_context) then
         return width
     end
 
@@ -930,7 +935,8 @@ end
 ---@return integer
 function Creator:preview_height()
     local max_height = math.max(self:footer_row() - self:preview_row() + LAYOUT.creator_panel_gap_cols, LAYOUT.preview_min_height)
-    if self.state.image_path ~= nil or not PromptContext.has_linked_context(self.state.linked_context) then
+    local has_resolved_context = #self:context_preview_items() > 0
+    if self.state.image_path ~= nil or has_resolved_context or not PromptContext.has_linked_context(self.state.linked_context) then
         return max_height
     end
 
@@ -1768,55 +1774,96 @@ function Creator:apply_preview_keymaps()
     vim.b[self.preview_buf].clodex_prompt_keymaps_applied = true
 end
 
----@param opts? { replace_buffer?: boolean }
-function Creator:render_preview_fallback(opts)
-    if opts and opts.replace_buffer then
-        self:remove_block("image_preview")
-        self.preview_block = nil
-        self.preview_win = nil
-        self.preview_buf = Helpers.prompt_buffer("scratch")
-        self:open_image_preview_window()
-        self:apply_preview_keymaps()
+---@return string, string
+function Creator:current_prompt_text()
+    if self.layout and self.layout.get_draft then
+        local draft = self.layout:get_draft()
+        if draft then
+            return draft.title or "", draft.details or ""
+        end
     end
+    return self.state.title or "", self.state.details or ""
+end
+
+---@return Clodex.PromptContext.PreviewItem[]
+function Creator:context_preview_items()
+    local title, details = self:current_prompt_text()
+    return PromptContext.preview_items(self:prompt_context(), table.concat({ title, details }, "\n"))
+end
+
+---@param items Clodex.PromptContext.PreviewItem[]
+---@return string[]
+function Creator:context_preview_lines(items)
+    local lines = {} ---@type string[]
+    for _, item in ipairs(items) do
+        append_blank(lines)
+        lines[#lines + 1] = item.label
+        for _, line in ipairs(vim.split(item.text, "\n", { plain = true })) do
+            lines[#lines + 1] = line
+        end
+    end
+    return lines
+end
+
+---@param opts? { include_image_fallback?: boolean }
+---@return string[]
+function Creator:preview_lines(opts)
+    opts = opts or {}
+    local lines = {} ---@type string[]
+    if opts.include_image_fallback and self.state.image_path then
+        vim.list_extend(lines, Helpers.preview_fallback_lines(self.state.image_path))
+    end
+
+    local context_lines = self:context_preview_lines(self:context_preview_items())
+    if #context_lines > 0 then
+        append_blank(lines)
+        vim.list_extend(lines, context_lines)
+    end
+
+    local linked_lines = linked_context_preview_lines(self.state.linked_context)
+    if #linked_lines > 0 then
+        append_blank(lines)
+        if linked_lines[1] == "" and #lines > 0 and lines[#lines] == "" then
+            for index = 2, #linked_lines do
+                lines[#lines + 1] = linked_lines[index]
+            end
+        else
+            vim.list_extend(lines, linked_lines)
+        end
+    end
+
+    return lines
+end
+
+---@param lines string[]
+---@return string
+function Creator:preview_signature(lines)
+    return table.concat({
+        self.state.kind or "",
+        self.state.image_path or "",
+        table.concat(lines, "\n"),
+    }, "\n\n")
+end
+
+---@param lines string[]
+function Creator:render_preview_buffer(lines)
     if not self.preview_buf or not vim.api.nvim_buf_is_valid(self.preview_buf) then
         return
     end
-    vim.bo[self.preview_buf].modifiable = true
-    vim.bo[self.preview_buf].filetype = "markdown"
-    vim.api.nvim_buf_set_lines(self.preview_buf, 0, -1, false, Helpers.preview_fallback_lines(self.state.image_path))
-    vim.bo[self.preview_buf].modifiable = false
-end
 
-function Creator:render_context_preview()
-    if not PromptContext.has_linked_context(self.state.linked_context) then
-        self:remove_block("image_preview")
-        self.preview_win = nil
-        self.preview_buf = nil
-        return
-    end
-
-    self.preview_buf = self.preview_buf or Helpers.prompt_buffer("scratch")
-    if self.preview_block and self.preview_block:is_valid() then
-        self.preview_win = self.preview_block.win
-        self:update_preview_title()
-    else
-        self:open_image_preview_window()
-    end
-    self:apply_preview_keymaps()
-
-    local lines = linked_context_preview_lines(self.state.linked_context)
-    local signature = linked_context_preview_signature(self.state.kind, lines)
-    if vim.b[self.preview_buf].clodex_linked_context_signature == signature then
+    local signature = self:preview_signature(lines)
+    if vim.b[self.preview_buf].clodex_preview_signature == signature then
         return
     end
 
     vim.bo[self.preview_buf].modifiable = true
     vim.bo[self.preview_buf].filetype = "markdown"
-    vim.api.nvim_buf_set_lines(self.preview_buf, 0, -1, false, #lines > 0 and lines or { "No linked context" })
+    vim.api.nvim_buf_set_lines(self.preview_buf, 0, -1, false, #lines > 0 and lines or { "No context preview" })
     vim.api.nvim_buf_clear_namespace(self.preview_buf, LINKED_CONTEXT_HIGHLIGHT_NS, 0, -1)
     local value_highlight = Prompt.kind_name_group(self.state.kind)
     for row, line in ipairs(lines) do
-        if row > 1 and (row % 3 == 0) and vim.trim(line) ~= "" then
+        local previous = lines[row - 1] or ""
+        if previous == "File" or previous == "Line" or previous == "Selection" then
             vim.api.nvim_buf_set_extmark(self.preview_buf, LINKED_CONTEXT_HIGHLIGHT_NS, row - 1, 0, {
                 end_row = row - 1,
                 end_col = #line,
@@ -1833,7 +1880,7 @@ function Creator:render_context_preview()
         end
     end
     vim.bo[self.preview_buf].modifiable = false
-    vim.b[self.preview_buf].clodex_linked_context_signature = signature
+    vim.b[self.preview_buf].clodex_preview_signature = signature
 end
 
 -- Render preview
@@ -1841,11 +1888,6 @@ function Creator:render_preview()
     if self.preview_placement and self.preview_placement.close then
         self.preview_placement:close()
         self.preview_placement = nil
-    end
-
-    if not self.state.image_path then
-        self:render_context_preview()
-        return
     end
 
     if not self:has_side_panel() then
@@ -1863,6 +1905,12 @@ function Creator:render_preview()
         self:open_image_preview_window()
     end
     self:apply_preview_keymaps()
+
+    self:render_preview_buffer(self:preview_lines({ include_image_fallback = self.state.image_path ~= nil }))
+
+    if not self.state.image_path then
+        return
+    end
 
     local ok, Snacks = pcall(require, "snacks")
     local terminal_env = ok
@@ -1898,11 +1946,16 @@ function Creator:render_preview()
             if self.preview_placement == placement then
                 self.preview_placement = nil
             end
-            self:render_preview_fallback({ replace_buffer = true })
+            self:remove_block("image_preview")
+            self.preview_block = nil
+            self.preview_win = nil
+            self.preview_buf = Helpers.prompt_buffer("scratch")
+            self:open_image_preview_window()
+            self:apply_preview_keymaps()
+            self:render_preview_buffer(self:preview_lines({ include_image_fallback = true }))
         end, 1500)
         return
     end
-    self:render_preview_fallback()
 end
 
 ---@param focus_context? { area: string, slot?: string, insert: boolean }
