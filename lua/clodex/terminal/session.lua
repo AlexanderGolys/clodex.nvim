@@ -527,26 +527,9 @@ function Session:last_cli_line()
     return vim.trim(last_nonempty_line(self.buf))
 end
 
----@param win integer
----@return boolean
-function Session:window_shows_bottom(win)
-    if not self:buf_valid() or not vim.api.nvim_win_is_valid(win) then
-        return true
-    end
-    local line_count = vim.api.nvim_buf_line_count(self.buf)
-    if line_count <= 0 then
-        return true
-    end
-    local info = vim.fn.getwininfo(win)[1]
-    return not not (info and info.botline and info.botline >= line_count)
-end
-
----@param win integer
+---@param _win integer
 ---@return string
-function Session:statusline_text(win)
-    if self:window_shows_bottom(win) then
-        return ""
-    end
+function Session:statusline_text(_win)
     return self:statusline_line_text()
 end
 
