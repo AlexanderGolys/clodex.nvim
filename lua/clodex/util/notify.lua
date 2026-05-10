@@ -12,27 +12,9 @@ local function split_message(message)
         }
     end
 
-    local lines = vim.split(text, "\n", { plain = true })
-    if #lines == 1 then
-        return {
-            title = "clodex.nvim",
-            body = lines[1],
-            ft = "text",
-        }
-    end
-
-    local title = vim.trim(lines[1])
-    local body = vim.trim(table.concat(vim.list_slice(lines, 2), "\n"))
-    if title == "" then
-        title = "clodex.nvim"
-    end
-    if body == "" then
-        body = title
-        title = "clodex.nvim"
-    end
     return {
-        title = title,
-        body = body,
+        title = "clodex.nvim",
+        body = text,
         ft = "text",
     }
 end
