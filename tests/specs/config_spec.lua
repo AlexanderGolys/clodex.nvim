@@ -305,6 +305,22 @@ describe("clodex.config", function()
             assert.is_true(kind_border.bold)
         end)
 
+        it("keeps the prompt background overlay visible when source backgrounds match the editor", function()
+            vim.api.nvim_set_hl(0, "NormalFloat", { fg = "#dddddd", bg = "#101010" })
+            vim.api.nvim_set_hl(0, "ColorColumn", { bg = "#101010" })
+
+            Config.apply_highlights({
+                highlights = require("clodex.config.highlights"),
+            })
+
+            local editor = vim.api.nvim_get_hl(0, { name = "ClodexPromptEditorNormal", link = false })
+            local overlay = vim.api.nvim_get_hl(0, { name = "ClodexPromptBackgroundOverlay", link = false })
+
+            assert.are.equal(0x101010, editor.bg)
+            assert.are.equal(0x3b3b3b, overlay.bg)
+            assert.are_not.equal(editor.bg, overlay.bg)
+        end)
+
         it("maps commit ids to the diagnostic error color", function()
             vim.api.nvim_set_hl(0, "DiagnosticError", { fg = "#aa2222" })
 

@@ -503,8 +503,8 @@ ClodexPromptEditorFooter = {
 ClodexPromptBackgroundOverlay = {
       fg = { from = { "Comment", "LineNr" } },
       bg = {
-        { from = { "ColorColumn", "CursorLine", "Visual", "Pmenu" }, attr = "bg" },
-        { from = HLGroups.float_win, attr = "bg", adjust = 0.12 },
+        { from = { "ColorColumn", "CursorLine", "Visual", "Pmenu" }, attr = "bg", adjust = 0.18 },
+        { from = HLGroups.float_win, attr = "bg", adjust = 0.18 },
         "#202830",
       },
     },
