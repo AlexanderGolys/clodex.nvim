@@ -265,6 +265,16 @@ local function linked_context_preview_lines(context_items)
     return lines
 end
 
+---@param kind string
+---@param lines string[]
+---@return string
+local function linked_context_preview_signature(kind, lines)
+    return table.concat({
+        kind,
+        table.concat(lines, "\n"),
+    }, "\n\n")
+end
+
 ---@param draft table?
 ---@return table?
 local function normalize_initial_draft(draft)
@@ -1795,6 +1805,11 @@ function Creator:render_context_preview()
     self:apply_preview_keymaps()
 
     local lines = linked_context_preview_lines(self.state.linked_context)
+    local signature = linked_context_preview_signature(self.state.kind, lines)
+    if vim.b[self.preview_buf].clodex_linked_context_signature == signature then
+        return
+    end
+
     vim.bo[self.preview_buf].modifiable = true
     vim.bo[self.preview_buf].filetype = "markdown"
     vim.api.nvim_buf_set_lines(self.preview_buf, 0, -1, false, #lines > 0 and lines or { "No linked context" })
@@ -1818,6 +1833,7 @@ function Creator:render_context_preview()
         end
     end
     vim.bo[self.preview_buf].modifiable = false
+    vim.b[self.preview_buf].clodex_linked_context_signature = signature
 end
 
 -- Render preview

@@ -551,6 +551,42 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal("&diagnostic", creator.state.linked_context[2].token)
     end)
 
+    it("does not rewrite unchanged linked context previews", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                file_path = "/tmp/demo/a.lua",
+                relative_path = "a.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 3,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Linked context",
+                link_line = true,
+            },
+            on_submit = function() end,
+        })
+
+        local changedtick = vim.api.nvim_buf_get_changedtick(creator.preview_buf)
+
+        creator:render_preview()
+
+        assert.are.equal(changedtick, vim.api.nvim_buf_get_changedtick(creator.preview_buf))
+    end)
+
     it("normalizes raw edit prompt drafts into title and details fields", function()
         creator = Creator.open({
             app = {
