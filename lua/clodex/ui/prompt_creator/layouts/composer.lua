@@ -20,13 +20,23 @@ local function schedule_focus(focus)
     return ""
 end
 
----@param win snacks.win?
+---@param block Clodex.UiBlock?
+---@return integer?
+local function block_winid(block)
+    if not block or not block:is_valid() then
+        return nil
+    end
+    return block:winid()
+end
+
+---@param block Clodex.UiBlock?
 ---@return integer
-local function cursor_row(win)
-    if not win or not win:valid() then
+local function cursor_row(block)
+    local winid = block_winid(block)
+    if not winid then
         return 1
     end
-    return vim.api.nvim_win_get_cursor(win.win)[1]
+    return vim.api.nvim_win_get_cursor(winid)[1]
 end
 
 ---@param buf integer
@@ -285,12 +295,13 @@ function ComposerLayout:prepend_details(overflow, cursor_at_start)
     vim.list_extend(overflow_lines, body_lines)
     safe_replace_lines(self.body_buf, nonempty_or_blank(overflow_lines))
 
-    if self.body_win and self.body_win:valid() then
+    local body_winid = block_winid(self.body_block)
+    if body_winid then
         self:focus_body(true)
         local row = 1
         local inserted_line_count = #split_lines(overflow)
         local col = cursor_at_start and 0 or #(overflow_lines[inserted_line_count] or "")
-        vim.api.nvim_win_set_cursor(self.body_win.win, { row, col })
+        vim.api.nvim_win_set_cursor(body_winid, { row, col })
     end
 end
 
@@ -330,11 +341,12 @@ function ComposerLayout:normalize_title_continuation(focus_overflow)
 end
 
 function ComposerLayout:split_title_at_cursor()
-    if not self.title_win or not self.title_win:valid() then
+    local title_winid = block_winid(self.title_block)
+    if not title_winid then
         return
     end
 
-    local cursor = vim.api.nvim_win_get_cursor(self.title_win.win)
+    local cursor = vim.api.nvim_win_get_cursor(title_winid)
     local lines = vim.api.nvim_buf_get_lines(self.title_buf, 0, -1, false)
     local line = lines[cursor[1]] or ""
     local col = cursor[2]
@@ -348,28 +360,29 @@ function ComposerLayout:split_title_at_cursor()
     safe_replace_lines(self.title_buf, { title })
     self.normalizing_title = false
     local overflow = table.concat(overflow_parts, "\n")
+    local body_winid = block_winid(self.body_block)
     if vim.trim(overflow) ~= "" then
         self:prepend_details(overflow, true)
-    elseif self.body_win and self.body_win:valid() then
+    elseif body_winid then
         self:focus_body(true)
-        vim.api.nvim_win_set_cursor(self.body_win.win, { 1, 0 })
+        vim.api.nvim_win_set_cursor(body_winid, { 1, 0 })
     end
 end
 
 ---@return boolean
 function ComposerLayout:should_focus_title_from_body()
-    if not self.body_win or not self.body_win:valid() or vim.fn.pumvisible() == 1 then
+    if not block_winid(self.body_block) or vim.fn.pumvisible() == 1 then
         return false
     end
-    return cursor_row(self.body_win) <= 1
+    return cursor_row(self.body_block) <= 1
 end
 
 ---@return boolean
 function ComposerLayout:should_focus_body_from_title()
-    if not self.title_win or not self.title_win:valid() or vim.fn.pumvisible() == 1 then
+    if not block_winid(self.title_block) or vim.fn.pumvisible() == 1 then
         return false
     end
-    return cursor_row(self.title_win) >= line_count(self.title_buf)
+    return cursor_row(self.title_block) >= line_count(self.title_buf)
 end
 
 function ComposerLayout:update()
@@ -441,10 +454,10 @@ end
 ---@return string?
 function ComposerLayout:focused_slot(winid)
     winid = winid or vim.api.nvim_get_current_win()
-    if self.title_win and self.title_win:valid() and winid == self.title_win.win then
+    if winid == block_winid(self.title_block) then
         return "title"
     end
-    if self.body_win and self.body_win:valid() and winid == self.body_win.win then
+    if winid == block_winid(self.body_block) then
         return "body"
     end
 end
