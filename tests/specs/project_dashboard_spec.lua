@@ -96,4 +96,46 @@ describe("clodex.ui.project_dashboard", function()
         assert.are.equal(1, dashboard.queue_index)
         assert.are.equal("queue-2", ({ dashboard:selected_queue_item() })[1].id)
     end)
+
+    it("opens queue item edits with normal and insert save keymaps", function()
+        local project = { name = "Alpha", root = "/tmp/alpha" }
+        local open_creator_calls = {}
+        local app = app_with_projects({ project }, {
+            [project.root] = {
+                planned = {},
+                queued = {
+                    { id = "queue-1", title = "Edit me", details = "Old details", kind = "todo" },
+                },
+                implemented = {},
+                history = {},
+            },
+        })
+        app.prompt_actions = {
+            open_creator = function(_, queued_project, opts)
+                open_creator_calls[#open_creator_calls + 1] = {
+                    project = queued_project,
+                    opts = opts,
+                }
+            end,
+        }
+        app.queue_actions = {
+            edit_queue_item = function() end,
+        }
+
+        local dashboard = Dashboard.new(app, {
+            queue_workspace = {},
+        })
+        dashboard:refresh_state(true)
+        dashboard:edit_queue_item()
+
+        assert.are.equal(1, #open_creator_calls)
+        assert.are.same(project, open_creator_calls[1].project)
+        assert.are.same({
+            {
+                value = "save",
+                label = "save",
+                keymap = { normal = "s", insert = "<C-s>" },
+            },
+        }, open_creator_calls[1].opts.submit_actions)
+    end)
 end)

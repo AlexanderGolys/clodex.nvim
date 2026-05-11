@@ -787,7 +787,7 @@ function Dashboard:edit_queue_item()
         mode = "edit",
         lock_kind = true,
         submit_actions = {
-            { value = "save", label = "save", key = "<C-s>" },
+            { value = "save", label = "save", keymap = { normal = "s", insert = "<C-s>" } },
         },
         initial_draft = {
             title = item.title,

@@ -897,6 +897,13 @@ describe("clodex.ui.queue_workspace", function()
         assert.are.equal("todo", open_creator_calls[1].opts.category)
         assert.is_true(open_creator_calls[1].opts.lock_kind)
         assert.are.equal("edit", open_creator_calls[1].opts.mode)
+        assert.are.same({
+            {
+                value = "save",
+                label = "save",
+                keymap = { normal = "s", insert = "<C-s>" },
+            },
+        }, open_creator_calls[1].opts.submit_actions)
         assert.is_true(suppressed_close_watchers)
         assert.is_true(modal_during_open)
         assert.is_function(open_creator_calls[1].opts.on_close)
