@@ -824,7 +824,7 @@ end
 ---@return boolean
 function Creator:has_side_panel()
     return self.state.image_path ~= nil
-        or PromptContext.has_linked_context(self.state.linked_context)
+        or PromptContext.has_linked_context(self:current_linked_context())
         or #self:context_preview_items() > 0
 end
 
@@ -847,12 +847,12 @@ function Creator:preview_width()
     if
         self.state.image_path ~= nil
         or has_resolved_context
-        or not PromptContext.has_linked_context(self.state.linked_context)
+        or not PromptContext.has_linked_context(self:current_linked_context())
     then
         return width
     end
 
-    local lines = linked_context_preview_lines(self.state.linked_context)
+    local lines = linked_context_preview_lines(self:current_linked_context())
     local max_text_width = 0
     for _, line in ipairs(lines) do
         max_text_width = math.max(max_text_width, vim.fn.strdisplaywidth(line))
@@ -1007,12 +1007,12 @@ function Creator:preview_height()
     if
         self.state.image_path ~= nil
         or has_resolved_context
-        or not PromptContext.has_linked_context(self.state.linked_context)
+        or not PromptContext.has_linked_context(self:current_linked_context())
     then
         return max_height
     end
 
-    local lines = linked_context_preview_lines(self.state.linked_context)
+    local lines = linked_context_preview_lines(self:current_linked_context())
     local desired = math.max(#lines, 3)
     return Helpers.clamp(desired, 3, max_height)
 end
@@ -1851,6 +1851,21 @@ function Creator:context_preview_items()
     return PromptContext.preview_items(self:prompt_context(), table.concat({ title, details }, "\n"))
 end
 
+---@return Clodex.PromptContext.Linked[]
+function Creator:current_linked_context()
+    local title, details = self:current_prompt_text()
+    local linked = PromptContext.linked_context(self:prompt_context(), {
+        text = table.concat({ title, details }, "\n"),
+        include_file = self.state.link_file,
+        include_line = self.state.link_line,
+        include_selection = self.state.link_selection,
+    })
+    if #linked > 0 then
+        return linked
+    end
+    return self.state.linked_context or {}
+end
+
 ---@param items Clodex.PromptContext.PreviewItem[]
 ---@return string[]
 function Creator:context_preview_lines(items)
@@ -1870,6 +1885,7 @@ end
 function Creator:preview_lines(opts)
     opts = opts or {}
     local lines = {} ---@type string[]
+    local linked_context = self:current_linked_context()
     if opts.include_image_fallback and self.state.image_path then
         vim.list_extend(lines, Helpers.preview_fallback_lines(self.state.image_path))
     end
@@ -1880,7 +1896,7 @@ function Creator:preview_lines(opts)
         vim.list_extend(lines, context_lines)
     end
 
-    local linked_lines = linked_context_preview_lines(self.state.linked_context)
+    local linked_lines = linked_context_preview_lines(linked_context)
     if #linked_lines > 0 then
         append_blank(lines)
         if linked_lines[1] == "" and #lines > 0 and lines[#lines] == "" then

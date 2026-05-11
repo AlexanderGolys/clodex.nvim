@@ -565,6 +565,49 @@ describe("clodex.ui.prompt_creator", function()
         }, vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false))
     end)
 
+    it("shows linked file context immediately after inserting a context token", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                file_path = "/tmp/demo/a.lua",
+                relative_path = "a.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 3,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Use context",
+                details = "",
+            },
+            on_submit = function() end,
+        })
+
+        assert.is_nil(creator.preview_buf)
+
+        vim.api.nvim_buf_set_lines(creator.layout.body_buf, 0, -1, false, { "Use &file" })
+        creator:render_preview()
+
+        assert.is_not_nil(creator.preview_buf)
+        assert.are.same({
+            "",
+            "File",
+            "a.lua  &file",
+            "",
+        }, vim.api.nvim_buf_get_lines(creator.preview_buf, 0, -1, false))
+    end)
+
     it("turns diagnostic draft tokens into linked context", function()
         creator = Creator.open({
             app = {
