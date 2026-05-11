@@ -318,6 +318,7 @@ describe("clodex.config", function()
 
             assert.are.equal(0x101010, editor.bg)
             assert.are.equal(0x3b3b3b, overlay.bg)
+            assert.are.equal(overlay.bg, overlay.fg)
             assert.are_not.equal(editor.bg, overlay.bg)
         end)
 

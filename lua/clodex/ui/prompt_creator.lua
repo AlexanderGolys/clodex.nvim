@@ -43,6 +43,7 @@ local TAB_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-tabs")
 local FOOTER_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-footer")
 local BACKGROUND_NS = vim.api.nvim_create_namespace("clodex-prompt-creator-background")
 local LINKED_CONTEXT_HIGHLIGHT_NS = vim.api.nvim_create_namespace("clodex-prompt-linked-context")
+local PROMPT_BACKGROUND_FILL = "█"
 local PROMPT_EDITOR_NORMAL = "ClodexPromptEditorNormal"
 local PROMPT_FOOTER_NORMAL = "ClodexPromptEditorFooter"
 local PROMPT_BACKGROUND_OVERLAY = "ClodexPromptBackgroundOverlay"
@@ -1423,7 +1424,7 @@ end
 function Creator:render_project_background()
     local lines = {}
     local rect = self:project_background_rect()
-    local line = string.rep(" ", rect.width)
+    local line = string.rep(PROMPT_BACKGROUND_FILL, rect.width)
     for _ = 1, rect.height do
         lines[#lines + 1] = line
     end

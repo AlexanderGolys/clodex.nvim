@@ -2851,10 +2851,9 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(0, creator.project_bg_win.opts.theme_overrides.winblend)
         assert.are.equal(creator:project_background_width(), background_config.width)
         assert.are.equal(creator:project_background_height(), background_config.height)
-        assert.are.equal(
-            string.rep(" ", background_config.width),
-            vim.api.nvim_buf_get_lines(creator.project_bg_buf, 0, 1, false)[1]
-        )
+        local background_line = vim.api.nvim_buf_get_lines(creator.project_bg_buf, 0, 1, false)[1]
+        assert.are.equal(background_config.width, vim.fn.strdisplaywidth(background_line))
+        assert.is_nil(background_line:find(" ", 1, true))
         assert.are.equal(
             background_config.height,
             #line_extmarks_with_group(creator.project_bg_buf, "ClodexPromptBackgroundOverlay")
@@ -2976,7 +2975,10 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_true(background_config.row < variant_config.row)
         assert.is_true(background_config.col + background_config.width > preview_config.col + preview_config.width)
         assert.is_true(background_config.row + background_config.height > variant_config.row + variant_config.height)
-        assert.are.equal(background_config.width, #vim.api.nvim_buf_get_lines(creator.project_bg_buf, 0, 1, false)[1])
+        assert.are.equal(
+            background_config.width,
+            vim.fn.strdisplaywidth(vim.api.nvim_buf_get_lines(creator.project_bg_buf, 0, 1, false)[1])
+        )
     end)
 
     it("destroys the variant tab panel after toggling bug tabs off more than once", function()
