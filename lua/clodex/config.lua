@@ -26,16 +26,6 @@ local fs = require("clodex.util.fs")
 ---@class Clodex.Config.ProjectDetection
 ---@field auto_suggest_git_root boolean
 
---- Floating preview window sizing and placement options.
----@class Clodex.Config.StatePreview
----@field min_width integer
----@field max_width integer
----@field max_height integer # Non-positive values mean "use full available height".
----@field row integer
----@field col integer
----@field winblend integer
----@field mini { width: integer, height: integer, col: integer, winblend: integer }
-
 --- Queue workspace layout and presentation defaults for queue/project panes.
 ---@class Clodex.Config.QueueWorkspace
 ---@field width number
@@ -129,7 +119,6 @@ local fs = require("clodex.util.fs")
 ---@field storage Clodex.Config.Storage
 ---@field terminal Clodex.Config.Terminal
 ---@field project_detection Clodex.Config.ProjectDetection
----@field state_preview Clodex.Config.StatePreview
 ---@field queue_workspace Clodex.Config.QueueWorkspace
 ---@field bug_prompt Clodex.Config.BugPrompt
 ---@field highlights Clodex.Config.Highlights
@@ -185,21 +174,6 @@ local function defaults()
         project_detection = {
             auto_suggest_git_root = false,
         },
-        state_preview = {
-            min_width = 36,
-            max_width = 72,
-            max_height = 0,
-            row = 1,
-            col = 2,
-            winblend = 18,
-            mini = {
-                width = 42,
-                height = 11,
-                col = 2,
-                winblend = 0,
-            },
-        },
-
         queue_workspace = {
             width = 1,
             height = 1,
@@ -566,7 +540,9 @@ end
 ---@param opts? table
 ---@return Clodex.Config.Values
 function Config:setup(opts)
-    self.values = Config.merge(defaults(), normalize_keymap_aliases(opts or {}))
+    local normalized = normalize_keymap_aliases(opts or {})
+    normalized.state_preview = nil
+    self.values = Config.merge(defaults(), normalized)
     apply_backend_defaults(self.values)
     return self.values
 end

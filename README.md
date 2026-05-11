@@ -80,20 +80,6 @@ require("clodex").setup({
     project_detection = {
         auto_suggest_git_root = false,
     },
-    state_preview = {
-        min_width = 36,
-        max_width = 72,
-        max_height = 0,
-        row = 1,
-        col = 2,
-        winblend = 18,
-        mini = {
-            width = 42,
-            height = 11,
-            col = 2,
-            winblend = 0,
-        },
-    },
     queue_workspace = {
         width = 1,
         height = 1,
@@ -214,7 +200,7 @@ The main queue workspace panel uses the shared Clodex UI panel shell, with proje
 
 The project dashboard is the main panel surface, available through `:Clodex main-panel`, `:Clodex dashboard`, `require("clodex").open_main_panel()`, or `require("clodex").open_project_dashboard()`. It shows a cyclic project carousel on top, bordered queue prompt cards on the left, project panels on the right, and a compact one-line footer. Use `Ctrl-Left` and `Ctrl-Right` to cycle projects, `j`/`k` to move the selected prompt, `[`/`]` to cycle right-side project panels, and `c` to replace the right panels with the selected project's embedded chat session. The Roadmap panel reads root `TODO.md`, and the README panel previews the project README. Dashboard card and panel buffers reuse stable internal names so repeated open/refresh cycles avoid duplicate-buffer-name runtime errors. The queue workspace panel remains available through `:Clodex panel` and `require("clodex").open_queue_workspace()` for queue-focused workflows.
 
-The debug state panel uses the same shared Clodex UI panel API as the prompt creator, with panel-owned command and state blocks. The state pane includes backend, focus, session, project, tab, queued workflow, prompt skill, and the global keymaps currently registered by Clodex, and formats `last queue update` using the configured `queue_workspace.date_format` token/os.date setting when the queue summary timestamp is ISO-formatted. Mouse clicks select command-list rows or focus the state pane, and double-clicking a command-list row runs that command. Before rendering, and when terminal chrome looks up a session by buffer, Clodex re-adopts existing `clodex_terminal` buffers that still carry Clodex buffer metadata, so restored or already-open terminal sessions are included in the session list and runtime project status instead of appearing offline.
+The debug state panel uses the same shared Clodex UI panel API as the prompt creator, with panel-owned command and state blocks. Its layout uses internal debug UI defaults instead of public plugin options. The state pane includes backend, focus, session, project, tab, queued workflow, prompt skill, and the global keymaps currently registered by Clodex, and formats `last queue update` using the configured `queue_workspace.date_format` token/os.date setting when the queue summary timestamp is ISO-formatted. Mouse clicks select command-list rows or focus the state pane, and double-clicking a command-list row runs that command. Before rendering, and when terminal chrome looks up a session by buffer, Clodex re-adopts existing `clodex_terminal` buffers that still carry Clodex buffer metadata, so restored or already-open terminal sessions are included in the session list and runtime project status instead of appearing offline.
 
 ## Queue workflow
 

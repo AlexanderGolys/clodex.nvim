@@ -61,6 +61,7 @@ describe("clodex.config", function()
             assert.are.same({ "--yolo" }, values.codex_args)
             assert.are.equal("opencode", values.opencode_cmd[1])
             assert.are.same({}, values.opencode_args)
+            assert.is_nil(values.state_preview)
             assert.are.equal(".codex/skills", values.prompt_execution.skills_dir)
             assert.are.equal("commit", values.prompt_execution.git_workflow)
             assert.are.equal(false, values.prompt_execution.review_after_completion)
@@ -82,6 +83,18 @@ describe("clodex.config", function()
                 { lhs = "<Home>l", mode = { "n", "i", "v" } },
             }, values.keymaps.new_prompt.line_linked)
             assert.are.equal("<leader>pr", values.keymaps.go_to_readme[1].lhs)
+        end)
+
+        it("keeps debug state preview layout out of public setup options", function()
+            local cfg = Config.new()
+            local values = cfg:setup({
+                state_preview = {
+                    row = 99,
+                    col = 99,
+                },
+            })
+
+            assert.is_nil(values.state_preview)
         end)
 
         it("keeps the project-local skill root when opencode backend is selected", function()

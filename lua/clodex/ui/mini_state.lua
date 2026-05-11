@@ -1,10 +1,12 @@
 local Backend = require("clodex.backend")
 local Extmark = require("clodex.ui.extmark")
+local StatePreviewConfig = require("clodex.ui.state_preview.config")
 local TextBlock = require("clodex.ui.text_block")
 local ui_win = require("clodex.ui.win")
 
 ---@class Clodex.MiniStatePreview
 ---@field config Clodex.Config.Values
+---@field preview_config Clodex.StatePreview.Config
 ---@field buf? integer
 ---@field win? integer
 ---@field ns integer
@@ -106,6 +108,7 @@ end
 function Preview.new(config)
     local self = setmetatable({}, Preview)
     self.config = config
+    self.preview_config = StatePreviewConfig.defaults()
     self.ns = vim.api.nvim_create_namespace("clodex-mini-state")
     return self
 end
@@ -113,6 +116,7 @@ end
 ---@param config Clodex.Config.Values
 function Preview:update_config(config)
     self.config = config
+    self.preview_config = StatePreviewConfig.defaults()
 end
 
 ---@return boolean
@@ -147,7 +151,7 @@ function Preview:apply_window_style()
     ui_win.configure(self.win, {
         view = "panel",
         wo = {
-            winblend = self.config.state_preview.mini.winblend,
+            winblend = self.preview_config.mini.winblend,
         },
         theme = "default_float",
     })
@@ -178,10 +182,10 @@ function Preview:render(snapshot)
     append_field(block, "path", snapshot.current_path)
     block:render(self.buf, self.ns)
 
-    local width = math.max(28, math.min(self.config.state_preview.mini.width, vim.o.columns - 2))
-    local height = math.max(6, math.min(self.config.state_preview.mini.height, vim.o.lines - 2))
+    local width = math.max(28, math.min(self.preview_config.mini.width, vim.o.columns - 2))
+    local height = math.max(6, math.min(self.preview_config.mini.height, vim.o.lines - 2))
     local row = math.max(vim.o.lines - height - 2, 0)
-    local col = math.max((self.config.state_preview.mini.col or 1) - 1, 0)
+    local col = math.max((self.preview_config.mini.col or 1) - 1, 0)
     local opts = {
         relative = "editor",
         anchor = "NW",

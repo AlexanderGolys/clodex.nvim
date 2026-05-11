@@ -3,6 +3,7 @@ local Backend = require("clodex.backend")
 local Extmark = require("clodex.ui.extmark")
 local UiPanel = require("clodex.ui.panel").Panel
 local TextBlock = require("clodex.ui.text_block")
+local StatePreviewConfig = require("clodex.ui.state_preview.config")
 local ui_win = require("clodex.ui.win")
 local fs = require("clodex.util.fs")
 local util = require("clodex.util")
@@ -11,6 +12,7 @@ local util = require("clodex.util")
 --- This annotation documents structured state so modules can pass data with consistent expectations.
 ---@class Clodex.StatePreview
 ---@field config Clodex.Config.Values
+---@field preview_config Clodex.StatePreview.Config
 ---@field app? Clodex.App
 ---@field state_buf? integer
 ---@field command_buf? integer
@@ -405,7 +407,7 @@ end
 --- This keeps the panel flexible across larger or smaller editor windows.
 ---@return integer
 local function state_width(self)
-  local preview = self.config.state_preview
+  local preview = self.preview_config
   local reserved_cols = FLOAT_BORDER_COLS + FLOAT_RIGHT_MARGIN_COLS + PANEL_GAP_COLS + command_width(self)
   local available = math.max(vim.o.columns - (preview.col + reserved_cols), preview.min_width)
   local target = math.max(preview.min_width, (self.max_state_width or 0) + FLOAT_CONTENT_PADDING_COLS)
@@ -417,7 +419,7 @@ end
 --- The result avoids clipping when the editor is resized or constrained.
 ---@return integer
 local function panel_height(self)
-  local preview = self.config.state_preview
+  local preview = self.preview_config
   local ui = vim.api.nvim_list_uis()[1]
   local editor_height = ui and ui.height or vim.o.lines
   local row = math.max(math.floor(preview.row or 0), 0)
@@ -434,6 +436,7 @@ end
 function Preview.new(config)
   local self = setmetatable({}, Preview)
   self.config = config
+  self.preview_config = StatePreviewConfig.defaults()
   self.state_ns = vim.api.nvim_create_namespace("clodex-state-preview")
   self.command_ns = vim.api.nvim_create_namespace("clodex-state-preview-commands")
   self.commands = Commands.list()
@@ -447,6 +450,7 @@ end
 ---@param config Clodex.Config.Values
 function Preview:update_config(config)
   self.config = config
+  self.preview_config = StatePreviewConfig.defaults()
 end
 
 --- Checks a open condition for ui state preview.
@@ -625,10 +629,10 @@ function Preview:ensure_panel()
           relative = "editor",
           anchor = "NW",
           row = function()
-            return self.config.state_preview.row
+            return self.preview_config.row
           end,
           col = function()
-            return self.config.state_preview.col
+            return self.preview_config.col
           end,
           width = function()
             return command_width(self)
@@ -657,10 +661,10 @@ function Preview:ensure_panel()
           relative = "editor",
           anchor = "NW",
           row = function()
-            return self.config.state_preview.row
+            return self.preview_config.row
           end,
           col = function()
-            return self.config.state_preview.col + command_width(self) + PANEL_GAP_COLS
+            return self.preview_config.col + command_width(self) + PANEL_GAP_COLS
           end,
           width = function()
             return state_width(self)
@@ -706,7 +710,7 @@ function Preview:apply_window_style()
     block:set_style({
       view = "panel",
       wo = {
-        winblend = self.config.state_preview.winblend,
+        winblend = self.preview_config.winblend,
         cursorline = active,
       },
       theme = "default_float",
