@@ -1951,6 +1951,7 @@ function Creator:render_preview()
 
     if not self:has_side_panel() then
         self:remove_block("image_preview")
+        self.preview_block = nil
         self.preview_win = nil
         self.preview_buf = nil
         return
@@ -2264,7 +2265,9 @@ function Creator:close(clear_layout)
     self.kind_win = nil
     self.variant_win = nil
     self.footer_win = nil
+    self.preview_block = nil
     self.preview_win = nil
+    self.preview_buf = nil
     if self.on_close then
         pcall(self.on_close, self)
     end

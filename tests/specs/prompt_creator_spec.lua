@@ -228,6 +228,48 @@ describe("clodex.ui.prompt_creator", function()
         end)
     end)
 
+    it("destroys the linked context block when the creator closes", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                file_path = "/tmp/demo/a.lua",
+                relative_path = "a.lua",
+                project_root = "/tmp/demo",
+                cursor_row = 3,
+            },
+            initial_kind = "todo",
+            initial_draft = {
+                title = "Linked context",
+                link_line = true,
+            },
+            on_submit = function() end,
+        })
+
+        local preview_win = creator.preview_win
+
+        assert.is_not_nil(creator.preview_block)
+        assert.is_true(preview_win:valid())
+
+        creator:close()
+
+        assert.is_false(preview_win:valid())
+        assert.is_nil(creator.preview_block)
+        assert.is_nil(creator.preview_win)
+        assert.is_nil(creator.preview_buf)
+    end)
+
     it("closes the footer when a destroyed prompt window handle becomes vim.NIL", function()
         creator = Creator.open({
             app = {
