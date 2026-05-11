@@ -210,6 +210,7 @@ local function rewind_item_spec(item, opts)
     local comments_seen = {} ---@type table<string, boolean>
     local summaries_seen = {} ---@type table<string, boolean>
     local commits_seen = {} ---@type table<string, boolean>
+    local all_history_commits = {} ---@type string[]
 
     if moved.kind == "notworking" and original_details ~= "" then
         local parsed_sections = markdown_h2_sections(original_details)
@@ -285,6 +286,7 @@ local function rewind_item_spec(item, opts)
                 commit_parts[#commit_parts + 1] = ("`%s%s`"):format(COMMIT_ICON, commit_id)
             end
             impl_section[#impl_section + 1] = ("**Commits:** %s"):format(table.concat(commit_parts, " "))
+            all_history_commits = vim.deepcopy(all_commits)
         end
         local all_summaries = {} ---@type string[]
         local all_summaries_seen = {} ---@type table<string, boolean>
@@ -320,7 +322,7 @@ local function rewind_item_spec(item, opts)
     moved.prompt = ("%s\n\n%s"):format(moved.title, moved.details)
     moved.kind = "notworking"
     moved.history_summary = nil
-    moved.history_commits = vim.deepcopy(commits)
+    moved.history_commits = all_history_commits
     moved.history_completed_at = nil
     return moved
 end
@@ -933,7 +935,7 @@ function QueueActions:rewind_queue_item(project, item_id, opts)
         return
     end
     local rewind_item = rewind_item_spec(item, opts)
-    local clear_history = queue_name == "implemented" or queue_name == "history"
+    local clear_history = (queue_name == "implemented" or queue_name == "history") and opts.mark_not_working ~= true
 
     local moved_item
     if opts.copy then
