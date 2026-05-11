@@ -110,7 +110,7 @@ local function enum(label, choices)
 end
 
 local CLODEX_ACTION = enum("action", {
-    { value = "panel", desc = "Toggle the legacy queue workspace panel (deprecated)" },
+    { value = "panel", desc = "Toggle the queue workspace panel" },
     { value = "main-panel", aliases = { "main_panel" }, desc = "Toggle the main project panel" },
     { value = "dashboard", aliases = { "experimental-panel", "experimental_panel" }, desc = "Toggle the main project dashboard panel" },
     { value = "terminal", aliases = { "cli", "term", "chat" }, desc = "Toggle the project terminal" },
@@ -213,7 +213,7 @@ local GLOBAL_KEYMAPS = {
         field = "queue_workspace",
         mode = "n",
         action = "open_queue_workspace",
-        desc = "Open Clodex legacy queue workspace (deprecated)",
+        desc = "Open Clodex queue workspace",
     },
     {
         field = "state_preview",
@@ -634,7 +634,7 @@ local function top_level_palette_specs()
     local specs = {
         { name = "Clodex", desc = "Toggle the queue workspace panel", invoke = "Clodex" },
         { name = "Clodex main-panel", desc = "Toggle the main project panel", invoke = "Clodex main-panel" },
-        { name = "Clodex panel", desc = "Toggle the legacy queue workspace panel (deprecated)", invoke = "Clodex panel" },
+        { name = "Clodex panel", desc = "Toggle the queue workspace panel", invoke = "Clodex panel" },
         { name = "Clodex dashboard", desc = "Toggle the main project dashboard panel", invoke = "Clodex dashboard" },
         { name = "Clodex cli", desc = "Toggle the project terminal", invoke = "Clodex cli" },
         { name = "Clodex history", desc = "Open global Clodex history", invoke = "Clodex history" },
@@ -704,7 +704,6 @@ local function registered_command_specs()
                     if not check_extra_args("Clodex", vim.list_slice(command.fargs, 2), "at most one action argument") then
                         return
                     end
-                    notify.warn("Clodex panel is deprecated; use Clodex main-panel")
                     clodex.open_queue_workspace()
                 elseif action == "main-panel" then
                     if not check_extra_args("Clodex", vim.list_slice(command.fargs, 2), "at most one action argument") then
