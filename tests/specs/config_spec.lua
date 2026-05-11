@@ -330,7 +330,7 @@ describe("clodex.config", function()
 
             local commit = vim.api.nvim_get_hl(0, { name = "ClodexCommitId", link = false })
             assert.are.equal(0xaa2222, commit.fg)
-            assert.is_true(commit.bold)
+            assert.is_nil(commit.bold)
         end)
 
         it("maps terminal statusline highlights to the StatusLine background", function()

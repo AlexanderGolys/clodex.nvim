@@ -1671,7 +1671,7 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "       Task  Fix parser  󰜘 abc1234",
+            "       Task  Fix parser  󰜘abc1234",
             "                 Implemented parser fix",
             "                 Adjust token handling",
             "",
@@ -1681,7 +1681,7 @@ describe("clodex.ui.queue_workspace", function()
         assert.are.equal(1, #commit_marks)
         assert.are.equal(1, commit_marks[1][2])
         assert.is_true(commit_marks[1][4].priority > muted_marks[1][4].priority)
-        assert.are.equal(lines[2]:find("󰜘 abc1234", 1, true) - 1, commit_marks[1][3])
+        assert.are.equal(lines[2]:find("󰜘abc1234", 1, true) - 1, commit_marks[1][3])
 
         vim.api.nvim_win_close(workspace.queue_win, true)
     end)
@@ -1746,10 +1746,10 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "Not Working  Fix creator context  󰜘 f3e2f7a9 (+2)",
-            "                 󰜘 f3e2f7a9",
-            "                 󰜘 ac39acf4",
-            "                 󰜘 d7258068",
+            "Not Working  Fix creator context  󰜘f3e2f7a9 (+2)",
+            "                 󰜘f3e2f7a9",
+            "                 󰜘ac39acf4",
+            "                 󰜘d7258068",
             "                 Restored context capture",
             "                 Restore macro expansion",
             "",
@@ -1757,7 +1757,7 @@ describe("clodex.ui.queue_workspace", function()
 
         local commit_marks = inline_extmarks(workspace.queue_buf, "ClodexCommitId")
         assert.are.equal(4, #commit_marks)
-        assert.are.equal(lines[2]:find("󰜘 f3e2f7a9", 1, true) - 1, commit_marks[1][3])
+        assert.are.equal(lines[2]:find("󰜘f3e2f7a9", 1, true) - 1, commit_marks[1][3])
         assert.are.equal(2, commit_marks[2][2])
         assert.are.equal(3, commit_marks[3][2])
         assert.are.equal(4, commit_marks[4][2])
@@ -1830,17 +1830,17 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Queued (1)",
-            "Not Working  Fix creator overlay  󰜘 65dea8d0 (+1)",
+            "Not Working  Fix creator overlay  󰜘65dea8d0 (+1)",
             "                 Fails after restart",
-            "                 󰜘 65dea8d0",
-            "                 󰜘 76bc7ad7",
+            "                 󰜘65dea8d0",
+            "                 󰜘76bc7ad7",
             "                 The previous overlay fix regressed",
             "",
         }, lines)
 
         local commit_marks = inline_extmarks(workspace.queue_buf, "ClodexCommitId")
         assert.are.equal(3, #commit_marks)
-        assert.are.equal(lines[2]:find("󰜘 65dea8d0", 1, true) - 1, commit_marks[1][3])
+        assert.are.equal(lines[2]:find("󰜘65dea8d0", 1, true) - 1, commit_marks[1][3])
         assert.are.equal(3, commit_marks[2][2])
         assert.are.equal(4, commit_marks[3][2])
 
@@ -1975,7 +1975,7 @@ describe("clodex.ui.queue_workspace", function()
         local lines = vim.api.nvim_buf_get_lines(workspace.queue_buf, 0, -1, false)
         assert.are.same({
             "Implemented (1)",
-            "       Task  Fix parser  󰜘 abc1234",
+            "       Task  Fix parser  󰜘abc1234",
             "                 Adjust token handling",
             "",
         }, lines)

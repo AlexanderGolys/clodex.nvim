@@ -649,7 +649,6 @@ ClodexStateCommandHint = {
 -- &&&ClodexCommitId&&&Lorem Ipsum&&&
 ClodexCommitId = {
       fg = { from = { "DiagnosticError", "ErrorMsg" } },
-      bold = true,
     },
   },
 }
