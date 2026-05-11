@@ -1243,6 +1243,7 @@ describe("clodex.ui.prompt_creator", function()
                 selection_start_row = 5,
                 selection_end_row = 5,
                 selection_text = "local value = 1",
+                selection_kind = "v",
             },
             initial_kind = "todo",
             on_submit = function() end,
@@ -1283,6 +1284,44 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_false(creator.state.link_file)
         assert.is_false(creator.state.link_line)
         assert.are.equal(0, #creator.state.linked_context)
+    end)
+
+    it("does not link a visual selection from outside the target project", function()
+        local source_buf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_name(source_buf, "/tmp/other/outside.lua")
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            context = {
+                buf = source_buf,
+                file_path = "/tmp/other/outside.lua",
+                project_root = "/tmp/other",
+                relative_path = "outside.lua",
+                cursor_row = 1,
+                selection_start_row = 1,
+                selection_end_row = 1,
+                selection_text = "local outside = true",
+                selection_kind = "v",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        assert.is_false(creator.state.link_selection)
+        assert.are.equal(0, #creator.state.linked_context)
+        local footer_text = table.concat(vim.api.nvim_buf_get_lines(creator.footer_buf, 0, -1, false), "\n")
+        assert.is_nil(footer_text:find("selection link", 1, true))
     end)
 
     it("renders factual link toggle actions and hides selection toggle without selection", function()

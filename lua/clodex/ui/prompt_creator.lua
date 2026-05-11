@@ -146,33 +146,6 @@ local function blank(value)
 end
 
 ---@param context? Clodex.PromptContext.Capture
----@return Clodex.PromptContext.Linked[]
-local function linked_context_for_capture(context)
-    return PromptContext.linked_context(context, { include_selection = true })
-end
-
----@param context? Clodex.PromptContext.Capture
----@param draft table
----@return Clodex.PromptContext.Linked[]
-local function linked_context_for_draft(context, draft)
-    if draft.context or draft.linked_context then
-        return draft.context or draft.linked_context
-    end
-
-    local linked = PromptContext.linked_context(context, {
-        text = table.concat({
-            draft.title or "",
-            draft.details or "",
-        }, "\n"),
-        include_selection = true,
-    })
-    if #linked > 0 then
-        return linked
-    end
-    return linked_context_for_capture(context)
-end
-
----@param context? Clodex.PromptContext.Capture
 ---@return boolean
 local function context_from_project_file(context)
     if not context or not context.file_path or not context.project_root then
@@ -190,6 +163,50 @@ local function context_from_project_file(context)
     return true
 end
 
+---@param context? Clodex.PromptContext.Capture
+---@return boolean
+local function context_has_selection(context)
+    return context ~= nil and type(context.selection_text) == "string" and vim.trim(context.selection_text) ~= ""
+end
+
+---@param context? Clodex.PromptContext.Capture
+---@return boolean
+local function context_has_visual_project_selection(context)
+    return context_from_project_file(context)
+        and context_has_selection(context)
+        and type(context.selection_kind) == "string"
+        and context.selection_kind ~= ""
+end
+
+---@param context? Clodex.PromptContext.Capture
+---@return Clodex.PromptContext.Linked[]
+local function linked_context_for_capture(context)
+    return PromptContext.linked_context(context, {
+        include_selection = context_has_visual_project_selection(context),
+    })
+end
+
+---@param context? Clodex.PromptContext.Capture
+---@param draft table
+---@return Clodex.PromptContext.Linked[]
+local function linked_context_for_draft(context, draft)
+    if draft.context or draft.linked_context then
+        return draft.context or draft.linked_context
+    end
+
+    local linked = PromptContext.linked_context(context, {
+        text = table.concat({
+            draft.title or "",
+            draft.details or "",
+        }, "\n"),
+        include_selection = context_has_visual_project_selection(context),
+    })
+    if #linked > 0 then
+        return linked
+    end
+    return linked_context_for_capture(context)
+end
+
 ---@param items Clodex.PromptContext.Linked[]?
 ---@param kind "file"|"line"
 ---@return boolean
@@ -203,12 +220,6 @@ local function linked_context_has_kind(items, kind)
         end
     end
     return false
-end
-
----@param context Clodex.PromptContext.Capture?
----@return boolean
-local function context_has_selection(context)
-    return context ~= nil and type(context.selection_text) == "string" and vim.trim(context.selection_text) ~= ""
 end
 
 ---@param enabled boolean
@@ -529,7 +540,7 @@ function Creator:sync_state_from_draft()
         or linked_context_has_kind(captured, "selection")
     self.state.link_file = can_link and draft_link_file or false
     self.state.link_line = can_link and draft_link_line or false
-    self.state.link_selection = can_link and context_has_selection(self.context) and draft_link_selection or false
+    self.state.link_selection = can_link and context_has_visual_project_selection(self.context) and draft_link_selection or false
     self.state.linked_context = PromptContext.linked_context(self.context, {
         text = not draft.context and not draft.linked_context and draft_text or nil,
         include_file = self.state.link_file,
@@ -1315,11 +1326,12 @@ function Creator:set_project_index(index)
     if not context_from_project_file(self.state.context) then
         self.state.link_file = false
         self.state.link_line = false
+        self.state.link_selection = false
     end
     self.state.linked_context = PromptContext.linked_context(self.state.context, {
         include_file = self.state.link_file,
         include_line = self.state.link_line,
-        include_selection = true,
+        include_selection = self.state.link_selection and context_has_visual_project_selection(self.state.context),
     })
     self:render_project_list()
     self:refresh_layout_prompt_contexts()

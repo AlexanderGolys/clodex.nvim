@@ -319,7 +319,7 @@ end
 ---@param token? string
 ---@return Clodex.PromptContext.Linked?
 local function selection_context(context, token)
-    if not has_selection(context) then
+    if not has_relative_path(context) or not has_selection(context) then
         return nil
     end
     local start_row = context.selection_start_row or context.cursor_row

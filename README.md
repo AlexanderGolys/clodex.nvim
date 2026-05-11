@@ -206,7 +206,7 @@ Bug prompt accents and queue commit ids prefer Neovim's `DiagnosticError` color,
 - `:ClodexSession skill` (terminal-only: in a `clodex_terminal` window, pastes/submits `$prompt-nvim-clodex`; from normal mode it returns to terminal input)
 - `:ClodexPrompt [kind]`
 
-Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the selected range.
+Use `:'<,'>ClodexPrompt ...` from visual mode to seed prompt context from the selected range. Visual selections are linked as structured prompt context only when the selected file belongs to the chosen target project.
 
 Clodex terminal buffers map `<localleader>s` in normal and terminal mode to insert `$<prompt_execution.skill_name>` into the CLI and submit it. From normal mode inside the CLI window, the mapping returns to terminal input after sending the skill trigger.
 
