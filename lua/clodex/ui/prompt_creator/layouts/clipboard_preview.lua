@@ -172,10 +172,10 @@ end
 ---@return string?
 function ClipboardPreviewLayout:focused_slot(winid)
     winid = winid or vim.api.nvim_get_current_win()
-    if self.title_win and self.title_win:valid() and winid == self.title_win.win then
+    if self.title_block and self.title_block:is_valid() and winid == self.title_block:winid() then
         return "title"
     end
-    if self.preview_win and self.preview_win:valid() and winid == self.preview_win.win then
+    if self.preview_block and self.preview_block:is_valid() and winid == self.preview_block:winid() then
         return "preview"
     end
 end
