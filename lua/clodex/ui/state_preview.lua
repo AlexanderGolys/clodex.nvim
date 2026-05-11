@@ -55,7 +55,7 @@ local FLOAT_RIGHT_MARGIN_COLS = 1
 local FLOAT_CONTENT_PADDING_COLS = 2
 local COMMAND_WIDTH_MIN = 28
 local COMMAND_WIDTH_MAX = 84
-local PANEL_GAP_COLS = 1
+local PANEL_GAP_COLS = 2
 
 --- Checks whether a floating window is valid before accessing win options.
 --- This guard pattern is used across all state-preview window operations.
@@ -309,9 +309,6 @@ local function append_session(self, block, session)
   append_field(self, block, "  cwd", session.cwd)
   append_field(self, block, "  buffer", session.buf or "none")
   append_field(self, block, "  job", session.job_id or "none")
-  append_field(self, block, "  provider", session.terminal_provider or "snacks")
-  append_field(self, block, "  env", session_env_summary(session))
-  append_field(self, block, "  last line", session.last_cli_line ~= "" and session.last_cli_line or "none")
 end
 
 ---@param self Clodex.StatePreview

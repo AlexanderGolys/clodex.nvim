@@ -80,7 +80,7 @@ function ClipboardPreviewLayout:apply_keymaps()
         vim.keymap.set("n", "<Up>", function()
             self:focus_preview()
         end, { buffer = self.title_buf, silent = true })
-        vim.keymap.set("i", "<S-Tab>", function()
+        vim.keymap.set("i", "<Tab>", function()
             self:focus_preview()
             return ""
         end, { buffer = self.title_buf, silent = true, expr = true })

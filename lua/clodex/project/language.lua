@@ -123,7 +123,7 @@ function LanguageProfile:dominant_languages(language_totals)
         return left.name < right.name
     end)
 
-    if #languages <= 1 then
+    if #languages <= 2 then
         return languages
     end
 

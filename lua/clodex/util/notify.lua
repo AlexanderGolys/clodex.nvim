@@ -6,16 +6,14 @@ local function split_message(message)
     local text = vim.trim(message or "")
     if text == "" then
         return {
-            title = "clodex.nvim",
+            title = "Clodex",
             body = "",
-            ft = "text",
         }
     end
 
     return {
-        title = "clodex.nvim",
+        title = "Clodex",
         body = text,
-        ft = "text",
     }
 end
 
@@ -26,7 +24,6 @@ function M.notify(message, level)
     local parts = split_message(message)
     vim.notify(parts.body, level or vim.log.levels.INFO, {
         title = parts.title,
-        ft = parts.ft,
     })
 end
 

@@ -411,6 +411,48 @@ describe("clodex.commands", function()
         assert.are.equal("n,v,i", refresh_mode)
     end)
 
+    it("accepts concatenated mode strings like 'niv'", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                refresh = {
+                    lhs = "<leader>pR",
+                    mode = "niv",
+                },
+            },
+        })
+
+        local refresh_mode = nil
+        for _, item in ipairs(keymaps) do
+            if item.field == "refresh" and item.lhs == "<leader>pR" then
+                refresh_mode = item.mode
+                break
+            end
+        end
+
+        assert.are.equal("n,i,v", refresh_mode)
+    end)
+
+    it("expands concatenated mode strings inside mode lists", function()
+        local keymaps = Commands.list_keymaps({
+            keymaps = {
+                refresh = {
+                    lhs = "<leader>pR",
+                    mode = { "niv" },
+                },
+            },
+        })
+
+        local refresh_mode = nil
+        for _, item in ipairs(keymaps) do
+            if item.field == "refresh" and item.lhs == "<leader>pR" then
+                refresh_mode = item.mode
+                break
+            end
+        end
+
+        assert.are.equal("n,i,v", refresh_mode)
+    end)
+
     it("expands comma-separated mode strings like 'n,i,v'", function()
         local keymaps = Commands.list_keymaps({
             keymaps = {

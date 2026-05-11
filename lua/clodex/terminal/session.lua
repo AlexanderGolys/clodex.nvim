@@ -722,8 +722,7 @@ function Session:insert_prompt_skill()
     return true
 end
 
----@param text string
----@return string
+
 ---@param text string
 ---@return boolean
 function Session:dispatch_prompt(text)

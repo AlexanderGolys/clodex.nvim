@@ -1,9 +1,5 @@
 local Action = require("clodex.ui.panel.action")
-
----@return table
-local function ui_win()
-    return require("clodex.ui.win")
-end
+local ui_win = require("clodex.ui.win")
 
 ---@class Clodex.UiBlock.BufferConfig
 ---@field preset? Clodex.UiWin.BufferPreset|table<string, any>
@@ -64,10 +60,10 @@ local function close_snacks_window(win)
             win:close()
         end)
     else
-        ui_win().close(winid)
+        ui_win.close(winid)
     end
-    if ui_win().is_valid(winid) then
-        ui_win().close(winid)
+    if ui_win.is_valid(winid) then
+        ui_win.close(winid)
     end
     if win.close then
         win.win = nil
@@ -127,7 +123,7 @@ function Block.new(opts)
     return setmetatable({
         id = opts.id,
         panel = opts.panel,
-        buf = opts.buf or ui_win().create_buffer(opts.buffer or { preset = "scratch" }),
+        buf = opts.buf or ui_win.create_buffer(opts.buffer or { preset = "scratch" }),
         win = nil,
         win_opts = vim.deepcopy(opts.win or {}),
         actions = actions,
@@ -194,7 +190,7 @@ function Block:open()
 
     local opts = vim.deepcopy(self.win_opts)
     opts.buf = self.buf
-    self.win = ui_win().open(opts)
+    self.win = ui_win.open(opts)
     apply_zindex(self.win, self.win_opts.zindex)
     apply_accent(self.win, self.accent)
     self:apply_actions()
@@ -204,11 +200,10 @@ end
 
 function Block:update()
     if self:is_valid() and self.win.update then
-        local win_api = ui_win()
         self.win.opts = vim.tbl_deep_extend("force", self.win.opts or {}, self.win_opts)
         self.win:update()
-        if win_api.configure then
-            win_api.configure(self.win.win, {
+        if ui_win.configure then
+            ui_win.configure(self.win.win, {
                 view = self.win_opts.view,
                 theme = self.win_opts.theme,
                 theme_overrides = self.win_opts.theme_overrides,
@@ -238,9 +233,8 @@ end
 ---@param style table<string, any>
 function Block:set_style(style)
     self.win_opts = vim.tbl_deep_extend("force", self.win_opts, style or {})
-    local win_api = ui_win()
-    if self:is_valid() and win_api.configure then
-        win_api.configure(self.win.win, {
+    if self:is_valid() and ui_win.configure then
+        ui_win.configure(self.win.win, {
             view = self.win_opts.view,
             theme = self.win_opts.theme,
             theme_overrides = self.win_opts.theme_overrides,

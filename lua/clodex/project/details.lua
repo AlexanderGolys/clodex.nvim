@@ -204,7 +204,8 @@ local function normalize_snapshot(snapshot)
         avg_lines_per_file = tonumber(snapshot.avg_lines_per_file) or nil,
         remote_name = type(snapshot.remote_name) == "string" and snapshot.remote_name or nil,
         last_file_modified_at = tonumber(snapshot.last_file_modified_at) or nil,
-        project_icon = type(snapshot.project_icon) == "string" and vim.trim(snapshot.project_icon) ~= "" and snapshot.project_icon or nil,
+        project_icon = type(snapshot.project_icon) == "string" and vim.trim(snapshot.project_icon) ~= "" and
+        snapshot.project_icon or nil,
         languages = type(snapshot.languages) == "table" and vim.deepcopy(snapshot.languages) or {},
     }
 end
@@ -416,16 +417,17 @@ function Details:compute(project)
         local stat = fs.stat(path)
         if stat and stat.type == "file" then
             file_count = file_count + 1
-            if stat.mtime and stat.mtime.sec then
-                local mtime = stat.mtime.sec
-                if not last_file_modified_at or mtime > last_file_modified_at then
-                    last_file_modified_at = mtime
-                end
-            end
+
 
             local language = language_profile:language_for_path(path)
             if language then
                 language_totals[language] = (language_totals[language] or 0) + 1
+                if stat.mtime and stat.mtime.sec then
+                    local mtime = stat.mtime.sec
+                    if not last_file_modified_at or mtime > last_file_modified_at then
+                        last_file_modified_at = mtime
+                    end
+                end
             end
 
             local line_count, is_text = line_count_for_file(path, stat)

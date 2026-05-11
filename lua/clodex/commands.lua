@@ -296,40 +296,46 @@ local VALID_KEYMAP_MODES = {
     t = true,
 }
 
+---@param token string
+---@return string[]?
+local function expand_keymap_mode_token(token)
+    if token == "a" then
+        return vim.deepcopy(ALL_KEYMAP_MODES)
+    end
+    if token:find(",", 1, true) or token:find("%s") then
+        local expanded = {} ---@type string[]
+        for item in token:gmatch("[^,%s]+") do
+            local token_modes = expand_keymap_mode_token(item)
+            if token_modes == nil then
+                return nil
+            end
+            vim.list_extend(expanded, token_modes)
+        end
+        return #expanded > 0 and expanded or nil
+    end
+    if #token > 1 then
+        local expanded = {} ---@type string[]
+        for idx = 1, #token do
+            local item = token:sub(idx, idx)
+            if not VALID_KEYMAP_MODES[item] then
+                return nil
+            end
+            expanded[#expanded + 1] = item
+        end
+        return expanded
+    end
+    if VALID_KEYMAP_MODES[token] then
+        return { token }
+    end
+    return nil
+end
+
 ---@param mode string|string[]
 ---@return string|string[]
 local function normalize_keymap_mode(mode)
     if type(mode) == "string" then
-        if mode == "a" then
-            return vim.deepcopy(ALL_KEYMAP_MODES)
-        end
-        if mode:find(",", 1, true) or mode:find("%s") then
-            local expanded = {} ---@type string[]
-            for item in mode:gmatch("[^,%s]+") do
-                if item == "a" then
-                    vim.list_extend(expanded, ALL_KEYMAP_MODES)
-                elseif #item == 1 and VALID_KEYMAP_MODES[item] then
-                    expanded[#expanded + 1] = item
-                else
-                    return mode
-                end
-            end
-            if #expanded > 0 then
-                return expanded
-            end
-        end
-        if #mode > 1 and not mode:find(",", 1, true) and not mode:find("%s") then
-            local expanded = {} ---@type string[]
-            for idx = 1, #mode do
-                local item = mode:sub(idx, idx)
-                if item == "a" then
-                    vim.list_extend(expanded, ALL_KEYMAP_MODES)
-                elseif VALID_KEYMAP_MODES[item] then
-                    expanded[#expanded + 1] = item
-                else
-                    return mode
-                end
-            end
+        local expanded = expand_keymap_mode_token(mode)
+        if expanded ~= nil and #expanded > 1 then
             return expanded
         end
         return mode
@@ -341,8 +347,13 @@ local function normalize_keymap_mode(mode)
 
     local normalized = {} ---@type string[]
     for _, item in ipairs(mode) do
-        if item == "a" then
-            vim.list_extend(normalized, ALL_KEYMAP_MODES)
+        if type(item) == "string" then
+            local expanded = expand_keymap_mode_token(item)
+            if expanded ~= nil then
+                vim.list_extend(normalized, expanded)
+            else
+                normalized[#normalized + 1] = item
+            end
         else
             normalized[#normalized + 1] = item
         end
