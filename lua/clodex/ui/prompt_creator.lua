@@ -1,4 +1,5 @@
 local PromptAssets = require("clodex.prompt.assets")
+local PromptAction = require("clodex.prompt.action")
 local DraftStore = require("clodex.prompt.draft_store")
 local KindRegistry = require("clodex.prompt.kind_registry")
 local Prompt = require("clodex.prompt")
@@ -21,7 +22,7 @@ local fs = require("clodex.util.fs")
 ---@field projects? Clodex.Project[]
 ---@field active_project_root? string
 ---@field initial_kind? Clodex.PromptCategory
----@field submit_actions? Clodex.UiSelect.MultilineAction[]
+---@field submit_actions? Clodex.PromptAction.Config[]|Clodex.PromptAction[]
 ---@field mode? "new"|"edit"
 ---@field lock_kind? boolean
 ---@field initial_draft? table
@@ -29,11 +30,11 @@ local fs = require("clodex.util.fs")
 ---@field on_close? fun(creator: Clodex.PromptCreator)
 
 local DEFAULT_SUBMIT_ACTIONS = {
-    { value = "save", label = "plan", key = "s", insert_key = "<C-s>", reset_key = "S" },
-    { value = "queue", label = "queue", key = "<CR>", insert_key = "<C-q>" },
-    { value = "exec", label = "implement", key = ".", insert_key = "<C-m>", reset_key = "<S-.>" },
-    { value = "plan_exec", label = "plan impl", key = "p", insert_key = "<C-p>" },
-    { value = "chat", label = "chat", key = "c", insert_key = "<C-c>" },
+    PromptAction.new({ value = "save", label = "plan", keymap = { normal = "s", insert = "<C-s>", reset = "S" } }),
+    PromptAction.new({ value = "queue", label = "queue", keymap = { normal = "<CR>", insert = "<C-q>" } }),
+    PromptAction.new({ value = "exec", label = "implement", keymap = { normal = "m", insert = "<C-m>", reset = "M" } }),
+    PromptAction.new({ value = "plan_exec", label = "plan impl", keymap = { normal = "p", insert = "<C-p>" } }),
+    PromptAction.new({ value = "chat", label = "chat", keymap = { normal = "c", insert = "<C-c>" } }),
 }
 
 local RESET_AFTER_SUBMIT_ACTIONS = {}
@@ -54,7 +55,7 @@ local PROMPT_BACKGROUND_OVERLAY = "ClodexPromptBackgroundOverlay"
 ---@field project_index integer
 ---@field active_project_root string
 ---@field context? Clodex.PromptContext.Capture
----@field submit_actions Clodex.UiSelect.MultilineAction[]
+---@field submit_actions Clodex.PromptAction[]
 ---@field mode "new"|"edit"
 ---@field lock_kind boolean
 ---@field on_submit fun(spec: Clodex.AppPromptActions.AddTodoSpec, action?: string, project?: Clodex.Project)
@@ -238,19 +239,29 @@ function Creator:footer_rows(insert_mode)
     local can_link_selection = can_link and context_has_selection(self.state.context)
     local link_actions = {}
     if insert_mode then
-        link_actions[#link_actions + 1] = Helpers.footer_item("C-f", can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a")
-        link_actions[#link_actions + 1] = Helpers.footer_item("C-l", can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a")
+        link_actions[#link_actions + 1] = Helpers.footer_item(
+            "C-f",
+            can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a"
+        )
+        link_actions[#link_actions + 1] = Helpers.footer_item(
+            "C-l",
+            can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a"
+        )
         if can_link_selection then
-            link_actions[#link_actions + 1] = Helpers.footer_item("C-x", toggle_action_label(self.state.link_selection, "selection"))
+            link_actions[#link_actions + 1] =
+                Helpers.footer_item("C-x", toggle_action_label(self.state.link_selection, "selection"))
         end
     else
-        link_actions[#link_actions + 1] = Helpers.footer_item("F", can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a")
-        link_actions[#link_actions + 1] = Helpers.footer_item("L", can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a")
+        link_actions[#link_actions + 1] =
+            Helpers.footer_item("F", can_link and toggle_action_label(self.state.link_file, "file") or "file link n/a")
+        link_actions[#link_actions + 1] =
+            Helpers.footer_item("L", can_link and toggle_action_label(self.state.link_line, "line") or "line link n/a")
         if can_link_selection then
-            link_actions[#link_actions + 1] = Helpers.footer_item("X", toggle_action_label(self.state.link_selection, "selection"))
+            link_actions[#link_actions + 1] =
+                Helpers.footer_item("X", toggle_action_label(self.state.link_selection, "selection"))
         end
     end
-    return Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, link_actions)
+    return Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, self.submit_actions, link_actions)
 end
 
 ---@param item Clodex.PromptContext.Linked
@@ -271,7 +282,8 @@ local function linked_context_value_label(item)
     if item.kind == "selection" then
         local start_line = tonumber(item.start_line)
         local end_line = tonumber(item.end_line) or start_line
-        local range = start_line and (start_line == end_line and tostring(start_line) or ("%d-%d"):format(start_line, end_line))
+        local range = start_line
+                and (start_line == end_line and tostring(start_line) or ("%d-%d"):format(start_line, end_line))
             or "?"
         return ("%s:%s"):format(item.relative_path or "unknown", range)
     end
@@ -374,7 +386,7 @@ function Creator.new(opts)
         project_index = project_index,
         active_project_root = active_project_root,
         context = prompt_context,
-        submit_actions = vim.deepcopy(opts.submit_actions or DEFAULT_SUBMIT_ACTIONS),
+        submit_actions = PromptAction.list(vim.deepcopy(opts.submit_actions or DEFAULT_SUBMIT_ACTIONS)),
         mode = opts.mode or "new",
         lock_kind = opts.lock_kind == true,
         on_submit = opts.on_submit,
@@ -390,7 +402,8 @@ function Creator.new(opts)
             title = "",
             details = "",
             image_path = opts.initial_draft and opts.initial_draft.image_path or nil,
-            linked_context = opts.initial_draft and opts.initial_draft.context or linked_context_for_capture(prompt_context),
+            linked_context = opts.initial_draft and opts.initial_draft.context
+                or linked_context_for_capture(prompt_context),
             link_file = false,
             link_line = false,
             link_selection = false,
@@ -533,14 +546,16 @@ function Creator:sync_state_from_draft()
     }, "\n")
     local captured = linked_context_for_draft(self.context, draft)
     local can_link = context_from_project_file(self.context)
-    local draft_link_file = type(draft.link_file) == "boolean" and draft.link_file or linked_context_has_kind(captured, "file")
-    local draft_link_line = type(draft.link_line) == "boolean" and draft.link_line or linked_context_has_kind(captured, "line")
-    local draft_link_selection = type(draft.link_selection) == "boolean"
-            and draft.link_selection
+    local draft_link_file = type(draft.link_file) == "boolean" and draft.link_file
+        or linked_context_has_kind(captured, "file")
+    local draft_link_line = type(draft.link_line) == "boolean" and draft.link_line
+        or linked_context_has_kind(captured, "line")
+    local draft_link_selection = type(draft.link_selection) == "boolean" and draft.link_selection
         or linked_context_has_kind(captured, "selection")
     self.state.link_file = can_link and draft_link_file or false
     self.state.link_line = can_link and draft_link_line or false
-    self.state.link_selection = can_link and context_has_visual_project_selection(self.context) and draft_link_selection or false
+    self.state.link_selection = can_link and context_has_visual_project_selection(self.context) and draft_link_selection
+        or false
     self.state.linked_context = PromptContext.linked_context(self.context, {
         text = not draft.context and not draft.linked_context and draft_text or nil,
         include_file = self.state.link_file,
@@ -743,7 +758,10 @@ end
 ---@return integer
 function Creator:total_height()
     local _, height = self:editor_size()
-    return math.min(math.max(height - LAYOUT.creator_screen_margin_rows, LAYOUT.min_window_offset), LAYOUT.creator_max_height)
+    return math.min(
+        math.max(height - LAYOUT.creator_screen_margin_rows, LAYOUT.min_window_offset),
+        LAYOUT.creator_max_height
+    )
 end
 
 ---@return integer
@@ -825,7 +843,11 @@ function Creator:preview_width()
         math.max(LAYOUT.preview_min_width, math.min(LAYOUT.preview_max_width, max_preview_width))
     )
     local has_resolved_context = #self:context_preview_items() > 0
-    if self.state.image_path ~= nil or has_resolved_context or not PromptContext.has_linked_context(self.state.linked_context) then
+    if
+        self.state.image_path ~= nil
+        or has_resolved_context
+        or not PromptContext.has_linked_context(self.state.linked_context)
+    then
         return width
     end
 
@@ -835,7 +857,8 @@ function Creator:preview_width()
         max_text_width = math.max(max_text_width, vim.fn.strdisplaywidth(line))
     end
 
-    local fit_width = Helpers.clamp(max_text_width + 4, 18, math.max(18, math.min(LAYOUT.preview_max_width, max_preview_width)))
+    local fit_width =
+        Helpers.clamp(max_text_width + 4, 18, math.max(18, math.min(LAYOUT.preview_max_width, max_preview_width)))
     return math.min(width, fit_width)
 end
 
@@ -977,9 +1000,14 @@ end
 
 ---@return integer
 function Creator:preview_height()
-    local max_height = math.max(self:footer_row() - self:preview_row() + LAYOUT.creator_panel_gap_cols, LAYOUT.preview_min_height)
+    local max_height =
+        math.max(self:footer_row() - self:preview_row() + LAYOUT.creator_panel_gap_cols, LAYOUT.preview_min_height)
     local has_resolved_context = #self:context_preview_items() > 0
-    if self.state.image_path ~= nil or has_resolved_context or not PromptContext.has_linked_context(self.state.linked_context) then
+    if
+        self.state.image_path ~= nil
+        or has_resolved_context
+        or not PromptContext.has_linked_context(self.state.linked_context)
+    then
         return max_height
     end
 
@@ -1157,7 +1185,9 @@ function Creator:restore_focus_context(context)
         return false
     end
     if context.area == "layout" and self.layout and self.layout.focus_slot then
-        if not layout_has_slot(self.layout, context.slot) or not self.layout:focus_slot(context.slot, context.insert) then
+        if
+            not layout_has_slot(self.layout, context.slot) or not self.layout:focus_slot(context.slot, context.insert)
+        then
             return false
         end
         if not context.insert and self:in_insert_mode() then
@@ -1496,7 +1526,7 @@ function Creator:apply_project_keymaps()
         self:move_project(-1)
     end, { buffer = self.project_buf, silent = true })
     for _, action in ipairs(self.submit_actions) do
-        Helpers.apply_action_keymaps(self, self.project_buf, action, RESET_AFTER_SUBMIT_ACTIONS)
+        action:apply(self, self.project_buf, RESET_AFTER_SUBMIT_ACTIONS)
     end
     vim.keymap.set("n", "q", function()
         self:close()
@@ -1549,7 +1579,8 @@ function Creator:render_variant_tabs()
             active_hl_group = Prompt.title_active_group(self.state.kind),
         }
     end
-    self.variant_tab_spans = self:render_tab_line(self.variant_buf, labels, self.variant_index, self:content_frame_width())
+    self.variant_tab_spans =
+        self:render_tab_line(self.variant_buf, labels, self.variant_index, self:content_frame_width())
     self.variant_win = self:open_block(self, "variant_block", "variant_win", "variant_tabs", self.variant_buf, {
         enter = false,
         border = "none",
@@ -1573,12 +1604,7 @@ end
 function Creator:render_footer(insert_mode)
     insert_mode = insert_mode == nil and self:in_insert_mode() or insert_mode
     local key_hl = Prompt.title_group(self.state.kind)
-    local lines, marks =
-        Helpers.render_footer_rows(
-            self:footer_rows(insert_mode),
-            key_hl,
-            self:content_width()
-        )
+    local lines, marks = Helpers.render_footer_rows(self:footer_rows(insert_mode), key_hl, self:content_width())
 
     vim.bo[self.footer_buf].modifiable = true
     vim.api.nvim_buf_set_lines(self.footer_buf, 0, -1, false, lines)
@@ -1947,10 +1973,10 @@ function Creator:render_preview()
 
     local ok, Snacks = pcall(require, "snacks")
     local terminal_env = ok
-        and Snacks.image
-        and Snacks.image.terminal
-        and Snacks.image.terminal.env
-        and Snacks.image.terminal.env()
+            and Snacks.image
+            and Snacks.image.terminal
+            and Snacks.image.terminal.env
+            and Snacks.image.terminal.env()
         or nil
     local terminal_supports_images = terminal_env and terminal_env.supported == true
     if
@@ -2148,7 +2174,7 @@ function Creator:apply_common_keymaps(buf)
         self:switch_variant(-1)
     end, { buffer = buf, silent = true })
     for _, action in ipairs(self.submit_actions) do
-        Helpers.apply_action_keymaps(self, buf, action, RESET_AFTER_SUBMIT_ACTIONS)
+        action:apply(self, buf, RESET_AFTER_SUBMIT_ACTIONS)
     end
     vim.keymap.set({ "n", "i" }, "<C-v>", function()
         self:replace_clipboard_image(false)

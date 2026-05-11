@@ -237,9 +237,18 @@ end
 ---@param insert_mode boolean
 ---@param has_variants boolean
 ---@param has_multiple_projects boolean
+---@param submit_actions Clodex.PromptAction[]
 ---@param link_actions? Clodex.PromptCreator.FooterItem[]
 ---@return Clodex.PromptCreator.FooterItem[][]
-function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, link_actions)
+function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, submit_actions, link_actions)
+    local submit_items = {} ---@type Clodex.PromptCreator.FooterItem[]
+    for _, action in ipairs(submit_actions or {}) do
+        local item = action:footer_item(insert_mode)
+        if item then
+            submit_items[#submit_items + 1] = item
+        end
+    end
+
     if insert_mode then
         local actions = {
             Helpers.footer_item("C-←/→", "kind"),
@@ -248,12 +257,7 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, l
             actions[#actions + 1] = Helpers.footer_item("C-↑/↓", "project")
         end
         vim.list_extend(actions, link_actions or {})
-        vim.list_extend(actions, {
-            Helpers.footer_item("C-s", "plan"),
-            Helpers.footer_item("C-m", "implement"),
-            Helpers.footer_item("C-p", "plan impl"),
-            Helpers.footer_item("C-c", "chat"),
-        })
+        vim.list_extend(actions, submit_items)
         return {
             {
                 Helpers.footer_item({ "Tab", "S-Tab" }, nil, "/"),
@@ -271,20 +275,13 @@ function Helpers.footer_rows(insert_mode, has_variants, has_multiple_projects, l
         row_one[#row_one + 1] = Helpers.footer_item("C-↑/↓", "project")
     end
     if has_variants then
-        row_one[#row_one + 1] = Helpers.footer_item("[/]", "source")
+        row_one[#row_one + 1] = Helpers.footer_item("/", "source")
     end
     row_one[#row_one + 1] = Helpers.footer_item("C-v", "image")
 
     local row_two = {}
     vim.list_extend(row_two, link_actions or {})
-    vim.list_extend(row_two, {
-        Helpers.footer_item("s", "plan"),
-        Helpers.footer_item("S"),
-        Helpers.footer_item("󰌑 ", "queue"),
-        Helpers.footer_item({ ".", "S-." }, "implement", " / "),
-        Helpers.footer_item("p", "plan impl"),
-        Helpers.footer_item("c", "chat"),
-    })
+    vim.list_extend(row_two, submit_items)
 
     return {
         row_one,
@@ -363,53 +360,6 @@ function Helpers.render_footer_rows(rows, key_hl, max_width)
         lines[#lines + 1] = table.concat(parts, "   ")
     end
     return lines, marks
-end
-
--- Normal key
----@param action Clodex.UiSelect.MultilineAction
----@return string?
-function Helpers.normal_action_key(action)
-    return action.key
-end
-
--- Insert key
----@param action Clodex.UiSelect.MultilineAction
----@return string?
-function Helpers.insert_action_key(action)
-    return action.insert_key or action.key
-end
-
--- Apply action
----@param creator Clodex.PromptCreator
----@param buf integer
----@param action Clodex.UiSelect.MultilineAction
----@param reset_actions table<string, boolean>
-function Helpers.apply_action_keymaps(creator, buf, action, reset_actions)
-    local submit = function(reset)
-        creator:submit(action.value, { reset = reset == true or reset_actions[action.value] == true })
-    end
-    local normal_key = Helpers.normal_action_key(action)
-    if normal_key and normal_key ~= "" then
-        vim.keymap.set("n", normal_key, function()
-            submit(false)
-        end, { buffer = buf, silent = true })
-    end
-    local insert_key = Helpers.insert_action_key(action)
-    if insert_key and insert_key ~= "" then
-        vim.keymap.set("i", insert_key, function()
-            submit(false)
-        end, { buffer = buf, silent = true })
-    end
-    if action.reset_key and action.reset_key ~= "" then
-        vim.keymap.set("n", action.reset_key, function()
-            submit(true)
-        end, { buffer = buf, silent = true })
-    end
-    if action.reset_insert_key and action.reset_insert_key ~= "" then
-        vim.keymap.set("i", action.reset_insert_key, function()
-            submit(true)
-        end, { buffer = buf, silent = true })
-    end
 end
 
 -- Tab hit

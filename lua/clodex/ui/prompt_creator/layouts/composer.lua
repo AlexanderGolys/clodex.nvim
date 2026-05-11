@@ -173,11 +173,12 @@ function ComposerLayout:apply_keymaps()
         vim.keymap.set("n", "<Tab>", function()
             self:focus_title(false)
         end, { buffer = self.body_buf, silent = true })
-        vim.keymap.set("i", "<S-Tab>", function()
+        vim.keymap.set("i", "<Tab>", function()
             return schedule_focus(function()
                 self:focus_title(true)
             end)
         end, { buffer = self.body_buf, silent = true, expr = true })
+        vim.keymap.set("i", "<S-Tab>", "<Tab>", { buffer = self.body_buf, silent = true, expr = true })
         vim.keymap.set("i", "<Up>", function()
             if not self:should_focus_title_from_body() then
                 return "<Up>"

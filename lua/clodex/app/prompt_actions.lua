@@ -1,4 +1,5 @@
 local Backend = require("clodex.backend")
+local PromptAction = require("clodex.prompt.action")
 local Prompt = require("clodex.prompt")
 local PromptContext = require("clodex.prompt.context")
 local PromptCreator = require("clodex.ui.prompt_creator")
@@ -30,11 +31,11 @@ local PromptActions = {}
 PromptActions.__index = PromptActions
 
 local SUBMIT_ACTIONS = {
-    { value = "save", label = "plan", key = "s", insert_key = "<C-s>", reset_key = "S" },
-    { value = "queue", label = "queue", key = "<CR>", insert_key = "<C-q>" },
-    { value = "exec", label = "implement", key = ".", insert_key = "<C-.>", reset_key = "<S-.>", reset_insert_key = "<C-S-.>" },
-    { value = "plan_exec", label = "plan impl", key = "p", insert_key = "<C-p>" },
-    { value = "chat", label = "chat", key = "c", insert_key = "<C-c>" },
+    PromptAction.new({ value = "save", label = "plan", keymap = { normal = "s", insert = "<C-s>", reset = "S" } }),
+    PromptAction.new({ value = "queue", label = "queue", keymap = { normal = "<CR>", insert = "<C-q>" } }),
+    PromptAction.new({ value = "exec", label = "implement", keymap = { normal = "m", insert = "<C-m>", reset = "M" } }),
+    PromptAction.new({ value = "plan_exec", label = "plan impl", keymap = { normal = "p", insert = "<C-p>" } }),
+    PromptAction.new({ value = "chat", label = "chat", keymap = { normal = "c", insert = "<C-c>" } }),
 }
 
 ---@param action string?
@@ -217,7 +218,7 @@ function PromptActions:pick_target(opts, callback)
 end
 
 ---@param project Clodex.Project
----@param opts? { category?: Clodex.PromptCategory, context?: Clodex.PromptContext.Capture, initial_draft?: table, submit_actions?: Clodex.UiSelect.MultilineAction[], lock_kind?: boolean, mode?: "new"|"edit", active_project_root?: string, on_submit?: fun(spec: Clodex.AppPromptActions.AddTodoSpec, action?: string, project?: Clodex.Project), on_close?: fun(creator: Clodex.PromptCreator) }
+---@param opts? { category?: Clodex.PromptCategory, context?: Clodex.PromptContext.Capture, initial_draft?: table, submit_actions?: Clodex.PromptAction.Config[]|Clodex.PromptAction[], lock_kind?: boolean, mode?: "new"|"edit", active_project_root?: string, on_submit?: fun(spec: Clodex.AppPromptActions.AddTodoSpec, action?: string, project?: Clodex.Project), on_close?: fun(creator: Clodex.PromptCreator) }
 function PromptActions:open_creator(project, opts)
     opts = opts or {}
     local category = resolve_prompt_category(opts.category)
@@ -225,7 +226,8 @@ function PromptActions:open_creator(project, opts)
     local draft = opts.initial_draft or (opts.context and selection_default_draft(category, context))
     local current_tab = self.app.current_tab and self.app:current_tab() or nil
     local active_project_root = opts.active_project_root or current_tab and current_tab.active_project_root or nil
-    local projects = self.app.projects_for_queue_workspace and self.app:projects_for_queue_workspace(active_project_root)
+    local projects = self.app.projects_for_queue_workspace
+            and self.app:projects_for_queue_workspace(active_project_root)
         or (self.app.registry and self.app.registry.list and self.app.registry:list() or nil)
     return PromptCreator.open({
         app = self.app,

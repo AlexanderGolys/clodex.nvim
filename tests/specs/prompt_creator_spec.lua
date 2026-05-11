@@ -893,7 +893,10 @@ describe("clodex.ui.prompt_creator", function()
         })
 
         assert.are.same({ "Real title" }, vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, -1, false))
-        assert.are.same({ "Real details", "Second line" }, vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false))
+        assert.are.same(
+            { "Real details", "Second line" },
+            vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false)
+        )
 
         creator:close()
         creator = Creator.open({
@@ -919,7 +922,10 @@ describe("clodex.ui.prompt_creator", function()
         })
 
         assert.are.same({ "Real title" }, vim.api.nvim_buf_get_lines(creator.layout.title_buf, 0, -1, false))
-        assert.are.same({ "Real details", "Second line" }, vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false))
+        assert.are.same(
+            { "Real details", "Second line" },
+            vim.api.nvim_buf_get_lines(creator.layout.body_buf, 0, -1, false)
+        )
     end)
 
     it("opens with the title focused in insert mode", function()
@@ -984,21 +990,13 @@ describe("clodex.ui.prompt_creator", function()
 
         wait_for(function()
             return vim.api.nvim_get_current_win() == creator.layout.body_win.win
-                and vim.wo[creator.layout.body_win.win].winhl:find(
-                    "NormalFloat:ClodexPromptEditorNormal",
-                    1,
-                    true
-                )
+                and vim.wo[creator.layout.body_win.win].winhl:find("NormalFloat:ClodexPromptEditorNormal", 1, true)
                 and vim.wo[creator.layout.body_win.win].winhl:find(
                     "FloatBorder:ClodexPromptImprovementTitleBorder",
                     1,
                     true
                 )
-                and vim.wo[creator.layout.title_win.win].winhl:find(
-                    "NormalFloat:ClodexPromptEditorNormal",
-                    1,
-                    true
-                )
+                and vim.wo[creator.layout.title_win.win].winhl:find("NormalFloat:ClodexPromptEditorNormal", 1, true)
                 and vim.wo[creator.layout.title_win.win].winhl:find(
                     "FloatBorder:ClodexPromptImprovementTitleBorder",
                     1,
@@ -1202,19 +1200,17 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_nil(table.concat(insert_lines, "\n"):find("move focus", 1, true))
         assert.is_nil(table.concat(normal_lines, "\n"):find("kind (insert)", 1, true))
         assert.is_truthy(table.concat(insert_lines, "\n"):find("C-←/→", 1, true))
-        assert.is_nil(table.concat(insert_lines, "\n"):find("C-q", 1, true))
-        assert.is_nil(table.concat(insert_lines, "\n"):find("queue", 1, true))
+        assert.is_truthy(table.concat(insert_lines, "\n"):find("<C-q>: queue", 1, true))
         assert.is_nil(table.concat(normal_lines, "\n"):find("close", 1, true))
         assert.is_nil(table.concat(insert_lines, "\n"):find("close", 1, true))
         assert.is_nil(table.concat(normal_lines, "\n"):find("plan+reset", 1, true))
         assert.is_nil(table.concat(normal_lines, "\n"):find("implement+reset", 1, true))
         assert.is_nil(table.concat(insert_lines, "\n"):find("implement+reset", 1, true))
         assert.is_truthy(table.concat(normal_lines, "\n"):find("S", 1, true))
-        assert.is_truthy(table.concat(normal_lines, "\n"):find(". / S-.: implement", 1, true))
+        assert.is_truthy(table.concat(normal_lines, "\n"):find("m / M: implement", 1, true))
         assert.is_truthy(table.concat(normal_lines, "\n"):find("p: plan impl", 1, true))
-        assert.is_truthy(table.concat(insert_lines, "\n"):find("C-m: implement", 1, true))
-        assert.is_truthy(table.concat(insert_lines, "\n"):find("C-p: plan impl", 1, true))
-        assert.is_nil(table.concat(normal_lines, "\n"):find("M", 1, true))
+        assert.is_truthy(table.concat(insert_lines, "\n"):find("<C-m>: implement", 1, true))
+        assert.is_truthy(table.concat(insert_lines, "\n"):find("<C-p>: plan impl", 1, true))
     end)
 
     it("toggles file and line linked context only for project files", function()
@@ -1405,7 +1401,9 @@ describe("clodex.ui.prompt_creator", function()
         assert.is_truthy(
             vim.wo[creator.layout.title_win.win].winhl:find("FloatBorder:ClodexPromptBugTitleBorder", 1, true)
         )
-        assert.is_truthy(vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptBugTitleBorder", 1, true))
+        assert.is_truthy(
+            vim.wo[creator.layout.body_win.win].winhl:find("FloatBorder:ClodexPromptBugTitleBorder", 1, true)
+        )
     end)
 
     it("supports context token highlighting, completion, and expansion in composer fields", function()
@@ -1483,9 +1481,12 @@ describe("clodex.ui.prompt_creator", function()
         local body_groups = extmark_groups(body_buf)
 
         assert.is_false(vim.tbl_contains(title_groups, "ClodexPromptEditorContext"))
-        assert.are.equal(7, vim.tbl_count(vim.tbl_filter(function(group)
-            return group == "ClodexPromptEditorContext"
-        end, body_groups)))
+        assert.are.equal(
+            7,
+            vim.tbl_count(vim.tbl_filter(function(group)
+                return group == "ClodexPromptEditorContext"
+            end, body_groups))
+        )
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
         vim.api.nvim_win_set_cursor(creator.layout.title_win.win, { 1, 11 })
@@ -1645,15 +1646,15 @@ describe("clodex.ui.prompt_creator", function()
                 has_h_switch = true
             elseif map.lhs == "l" then
                 has_l_switch = true
-            elseif map.lhs == "." then
+            elseif map.lhs == "m" then
                 has_implement_action = true
-            elseif map.lhs == "<S-.>" then
+            elseif map.lhs == "M" then
                 has_reset_implement_action = true
             elseif map.lhs == "p" then
                 has_plan_implement_action = true
-            elseif map.lhs == "m" then
+            elseif map.lhs == "." then
                 has_legacy_implement_action = true
-            elseif map.lhs == "M" then
+            elseif map.lhs == "<S-.>" then
                 has_legacy_reset_implement_action = true
             elseif map.lhs == "<" then
                 has_old_left_switch = true
@@ -1870,16 +1871,14 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.equal(creator.layout.title_win.win, vim.api.nvim_get_current_win())
 
         wait_for(function()
-            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
-                and vim.api.nvim_get_mode().mode == "n"
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win and vim.api.nvim_get_mode().mode == "n"
         end)
 
         vim.api.nvim_set_current_win(creator.layout.title_win.win)
         trigger_buffer_mapping(creator.layout.title_buf, "<Tab>")
 
         wait_for(function()
-            return vim.api.nvim_get_current_win() == creator.layout.body_win.win
-                and vim.api.nvim_get_mode().mode == "n"
+            return vim.api.nvim_get_current_win() == creator.layout.body_win.win and vim.api.nvim_get_mode().mode == "n"
         end)
 
         trigger_buffer_mapping(creator.layout.body_buf, "<Up>")
@@ -1945,6 +1944,7 @@ describe("clodex.ui.prompt_creator", function()
         assert.are_not.equal("", body_down())
         assert.are.equal(creator.layout.body_win.win, vim.api.nvim_get_current_win())
 
+        vim.api.nvim_set_current_win(creator.layout.title_win.win)
         assert.are.equal("", trigger_buffer_mapping(creator.layout.title_buf, "<S-Tab>", "i"))
 
         wait_for(function()
@@ -2813,7 +2813,10 @@ describe("clodex.ui.prompt_creator", function()
             string.rep(" ", background_config.width),
             vim.api.nvim_buf_get_lines(creator.project_bg_buf, 0, 1, false)[1]
         )
-        assert.are.equal(background_config.height, #line_extmarks_with_group(creator.project_bg_buf, "ClodexPromptBackgroundOverlay"))
+        assert.are.equal(
+            background_config.height,
+            #line_extmarks_with_group(creator.project_bg_buf, "ClodexPromptBackgroundOverlay")
+        )
         assert.are.equal(left - 1, background_config.col)
         assert.are.equal(top - 1, background_config.row)
         assert.are.equal(math.min((right - left) + 3, vim.o.columns), background_config.width)
@@ -2907,9 +2910,7 @@ describe("clodex.ui.prompt_creator", function()
 
         creator:switch_kind(1)
         wait_for(function()
-            return creator.state.kind == "bug"
-                and creator.variant_win
-                and creator.variant_win:valid()
+            return creator.state.kind == "bug" and creator.variant_win and creator.variant_win:valid()
         end)
 
         creator.state.image_path = "/tmp/clipboard.png"
@@ -3366,7 +3367,7 @@ describe("clodex.ui.prompt_creator", function()
             end,
         })
 
-        trigger_buffer_mapping(creator.layout.title_buf, ".", "n")
+        trigger_buffer_mapping(creator.layout.title_buf, "m", "n")
 
         wait_for(function()
             return submitted_actions[2] == "exec" and creator.footer_win == nil and creator.layout == nil
@@ -3508,7 +3509,7 @@ describe("clodex.ui.prompt_creator", function()
         end)
 
         vim.api.nvim_buf_set_lines(creator.layout.title_buf, 0, -1, false, { "Reset prompt again" })
-        trigger_buffer_mapping(creator.layout.title_buf, "<S-.>", "n")
+        trigger_buffer_mapping(creator.layout.title_buf, "M", "n")
 
         wait_for(function()
             return submitted_actions[2] == "exec"
