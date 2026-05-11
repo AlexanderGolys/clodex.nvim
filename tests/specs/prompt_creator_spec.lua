@@ -1769,6 +1769,28 @@ describe("clodex.ui.prompt_creator", function()
         assert.are.same({ 1, 5 }, vim.api.nvim_win_get_cursor(creator.layout.title_win.win))
     end)
 
+    it("does not restore layout focus without a captured slot", function()
+        creator = Creator.open({
+            app = {
+                config = {
+                    get = function()
+                        return {
+                            storage = { workspaces_dir = "/tmp" },
+                        }
+                    end,
+                },
+            },
+            project = {
+                name = "Demo",
+                root = "/tmp/demo",
+            },
+            initial_kind = "todo",
+            on_submit = function() end,
+        })
+
+        assert.is_false(creator:restore_focus_context({ area = "layout", insert = false }))
+    end)
+
     it("places the footer below the body area", function()
         creator = Creator.open({
             app = {

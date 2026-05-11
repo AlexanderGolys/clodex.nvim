@@ -1126,12 +1126,9 @@ function Creator:in_insert_mode()
 end
 
 ---@param layout table
----@param slot? string
+---@param slot string
 ---@return boolean
 local function layout_has_slot(layout, slot)
-    if not slot or not layout then
-        return false
-    end
     local win = layout[slot .. "_win"]
     return win and win.valid and win:valid() or false
 end
@@ -1186,8 +1183,11 @@ function Creator:restore_focus_context(context)
         return false
     end
     if context.area == "layout" and self.layout and self.layout.focus_slot then
+        local slot = context.slot
         if
-            not layout_has_slot(self.layout, context.slot) or not self.layout:focus_slot(context.slot, context.insert)
+            slot == nil
+            or not layout_has_slot(self.layout, slot)
+            or not self.layout:focus_slot(slot, context.insert)
         then
             return false
         end
